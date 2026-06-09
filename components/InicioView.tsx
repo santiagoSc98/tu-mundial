@@ -632,6 +632,7 @@ export default function InicioView({
         <div className="space-y-4">
           {/* Featured match */}
           <FeaturedMatchPanel
+            key={featured?.id ?? 'none'}
             prediction={featured}
             existingAnswer={featured ? (existingAnswers[featured.id] ?? null) : null}
             voteData={featured ? (voteDistributions[featured.id] ?? {}) : {}}
@@ -684,6 +685,7 @@ export default function InicioView({
                     />
                     {expandedId === p.id && (
                       <PredictPanel
+                        key={p.id}
                         prediction={p}
                         existingAnswer={existingAnswers[p.id] ?? null}
                         voteData={voteDistributions[p.id] ?? {}}
