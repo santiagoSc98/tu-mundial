@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar } from 'lucide-react'
+import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList } from 'lucide-react'
 import AuthButton from '@/components/AuthButton'
 import { createClient } from '@/lib/supabase/client'
 import InicioView from '@/components/InicioView'
@@ -13,6 +13,7 @@ import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 import RankingsTab from '@/components/RankingsTab'
+import MisPrediccionesTab from '@/components/MisPrediccionesTab'
 import EspecialesTab from '@/components/EspecialesTab'
 import AdminTab from '@/components/AdminTab'
 
@@ -26,24 +27,26 @@ function SidebarDecoration() {
   )
 }
 
-type Tab = 'inicio' | 'predicciones' | 'posiciones' | 'especiales' | 'calendario' | 'admin' | 'reglas'
+type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'especiales' | 'calendario' | 'admin' | 'reglas'
 
 const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'inicio',      label: 'Inicio',         icon: <Home     size={18} strokeWidth={1.5} /> },
-  { id: 'posiciones',  label: 'Rankings',       icon: <Trophy   size={18} strokeWidth={1.5} /> },
-  { id: 'especiales',  label: 'Mis Especiales', icon: <Star     size={18} strokeWidth={1.5} /> },
-  { id: 'calendario',  label: 'Calendario',     icon: <Calendar size={18} strokeWidth={1.5} /> },
-  { id: 'reglas',      label: 'Reglas',         icon: <BookOpen size={18} strokeWidth={1.5} /> },
+  { id: 'inicio',             label: 'Inicio',            icon: <Home          size={18} strokeWidth={1.5} /> },
+  { id: 'mis-predicciones',   label: 'Mis Predicciones',  icon: <ClipboardList size={18} strokeWidth={1.5} /> },
+  { id: 'posiciones',         label: 'Rankings',          icon: <Trophy        size={18} strokeWidth={1.5} /> },
+  { id: 'especiales',         label: 'Mis Especiales',    icon: <Star          size={18} strokeWidth={1.5} /> },
+  { id: 'calendario',         label: 'Calendario',        icon: <Calendar      size={18} strokeWidth={1.5} /> },
+  { id: 'reglas',             label: 'Reglas',            icon: <BookOpen      size={18} strokeWidth={1.5} /> },
 ]
 
 const MOBILE_LABELS: Record<Tab, string> = {
-  inicio:        'Inicio',
-  predicciones:  'Predic.',
-  posiciones:    'Ranking',
-  especiales:    'Espec.',
-  calendario:    'Calend.',
-  reglas:        'Reglas',
-  admin:         'Admin',
+  inicio:             'Inicio',
+  'mis-predicciones': 'Mis Pred.',
+  predicciones:       'Predic.',
+  posiciones:         'Ranking',
+  especiales:         'Espec.',
+  calendario:         'Calend.',
+  reglas:             'Reglas',
+  admin:              'Admin',
 }
 
 type RankEntry   = { id: string; username: string | null; avatar_url: string | null; total_points: number }
@@ -350,6 +353,13 @@ export default function HomeClient({
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
             </ErrorBoundary>
+          )}
+          {activeTab === 'mis-predicciones' && (
+            <MisPrediccionesTab
+              predictions={predictions}
+              existingAnswers={existingAnswers}
+              existingScores={existingScores}
+            />
           )}
           {activeTab === 'predicciones' && (
             <PrediccionesTab
