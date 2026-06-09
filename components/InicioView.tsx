@@ -625,6 +625,10 @@ export default function InicioView({
     setExpandedId(null)
 
     try {
+      console.log('[Predict] userId:', userId)
+      console.log('[Predict] predictionId:', predictionId)
+      console.log('[Predict] answer:', answer)
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('user_predictions')
@@ -636,6 +640,7 @@ export default function InicioView({
           home_score_prediction:  homeScore ?? null,
           away_score_prediction:  awayScore ?? null,
         })
+        .select()
 
       console.log('[Predict] resultado:', { data, error })
 
