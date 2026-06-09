@@ -2,7 +2,7 @@
 
 import { useState, useCallback } from 'react'
 import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { createGroup, joinGroup, getGroupMembers } from '@/app/actions/groups'
 
 export interface Group {
   id: string
@@ -27,13 +27,6 @@ const CARD: React.CSSProperties = {
   background: 'rgba(255,255,255,0.04)',
   border: '1px solid rgba(255,255,255,0.08)',
   borderRadius: 20,
-}
-
-function generateCode(name: string): string {
-  const prefix = name.replace(/[^a-zA-Z]/g, '').toUpperCase().slice(0, 4).padEnd(4, 'X')
-  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-  const rand = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-  return prefix + rand
 }
 
 function WhatsAppIcon() {
@@ -65,8 +58,6 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
   const [copied, setCopied] = useState(false)
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
 
-  const supabase = createClient()
-
   const copyCode = useCallback((code: string) => {
     navigator.clipboard.writeText(code)
     setCopied(true)
@@ -77,23 +68,12 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     if (!createName.trim()) return
     setLoading(true)
     setError(null)
-    const code = generateCode(createName)
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: group, error: gErr } = await (supabase as any)
-        .from('groups')
-        .insert({ name: createName.trim(), code, created_by: userId })
-        .select()
-        .single()
-      if (gErr) throw new Error(gErr.message)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: mErr } = await (supabase as any)
-        .from('group_members')
-        .insert({ group_id: group.id, user_id: userId })
-      if (mErr) throw new Error(mErr.message)
-      setGroups(prev => [...prev, group as Group])
-      setCreatedCode(code)
-      setSelectedGroup(group as Group)
+      const result = await createGroup(createName.trim())
+      if (result.error || !result.data) throw new Error(result.error ?? 'Error al crear grupo')
+      setGroups(prev => [...prev, result.data!])
+      setCreatedCode(result.data!.code)
+      setSelectedGroup(result.data!)
       setCreateName('')
       setModal('share')
     } catch (e) {
@@ -101,28 +81,16 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [createName, userId, supabase])
+  }, [createName])
 
   const handleJoin = useCallback(async () => {
-    const code = joinCode.trim().toUpperCase()
-    if (!code) return
+    if (!joinCode.trim()) return
     setLoading(true)
     setError(null)
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data: group, error: gErr } = await (supabase as any)
-        .from('groups')
-        .select('id, name, code, created_by')
-        .eq('code', code)
-        .single()
-      if (gErr || !group) throw new Error('Código de grupo no encontrado')
-      if (groups.some(g => g.id === group.id)) throw new Error('Ya sos miembro de este grupo')
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error: mErr } = await (supabase as any)
-        .from('group_members')
-        .insert({ group_id: group.id, user_id: userId })
-      if (mErr) throw new Error(mErr.message)
-      setGroups(prev => [...prev, group as Group])
+      const result = await joinGroup(joinCode.trim())
+      if (result.error || !result.data) throw new Error(result.error ?? 'Error al unirse')
+      setGroups(prev => [...prev, result.data!])
       setJoinCode('')
       setModal(null)
     } catch (e) {
@@ -130,30 +98,25 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     } finally {
       setLoading(false)
     }
-  }, [joinCode, userId, groups, supabase])
+  }, [joinCode])
 
   const openDetail = useCallback(async (group: Group) => {
     setViewingGroup(group)
     setMembersLoading(true)
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data } = await (supabase as any)
-        .from('group_members')
-        .select('user_id, profiles(username, avatar_url, total_points)')
-        .eq('group_id', group.id)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const rows: GroupMember[] = (data ?? []).map((r: any) => ({
+      const result = await getGroupMembers(group.id)
+      const rows: GroupMember[] = (result.data ?? []).map(r => ({
         user_id: r.user_id,
         username: r.profiles?.username ?? null,
         avatar_url: r.profiles?.avatar_url ?? null,
         total_points: r.profiles?.total_points ?? 0,
-      })).sort((a: GroupMember, b: GroupMember) => b.total_points - a.total_points)
+      })).sort((a, b) => b.total_points - a.total_points)
       setMembers(rows)
       setMemberCounts(prev => ({ ...prev, [group.id]: rows.length }))
     } finally {
       setMembersLoading(false)
     }
-  }, [supabase])
+  }, [])
 
   // ── Group detail ────────────────────────────────────────────────────────────
   if (viewingGroup) {
