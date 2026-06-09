@@ -1,8 +1,9 @@
 'use client'
 
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import {
   Calendar, Target, Trophy, CheckCircle, BarChart3, Zap, Clock,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
@@ -563,15 +564,32 @@ export default function InicioView({
     [openPredictions, existingAnswers, predictions]
   )
 
-  const byDate = useMemo(() => {
+  const matchdays = useMemo(() => {
     const map: Record<string, Prediction[]> = {}
-    predictions.forEach(p => {
-      const key = pyISODate(kickoff(p))
+    for (const p of predictions) {
+      if (!p.deadline) continue
+      const d = new Date(p.deadline)
+      if (isNaN(d.getTime())) continue
+      const key = pyISODate(d)
       if (!map[key]) map[key] = []
       map[key].push(p)
-    })
-    return Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
+    }
+    return Object.entries(map)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, preds]) => ({
+        date,
+        preds: preds.sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()),
+      }))
   }, [predictions])
+
+  const [dayIdx, setDayIdx] = useState(0)
+
+  useEffect(() => {
+    if (matchdays.length === 0) return
+    const today = pyISODate(new Date())
+    const i = matchdays.findIndex(m => m.date >= today)
+    setDayIdx(i === -1 ? matchdays.length - 1 : i)
+  }, [matchdays])
 
   const totalAnswered = Object.keys(existingAnswers).length
   const pendingCount  = openPredictions.filter(p => !existingAnswers[p.id]).length
@@ -621,39 +639,58 @@ export default function InicioView({
           />
 
           {/* Match list */}
-          {byDate.length > 0 && (
+          {matchdays.length > 0 && (
             <div>
-              <h3 className="text-base font-black mb-4 tracking-wider" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
+              <h3 className="text-base font-black mb-3 tracking-wider" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
                 PARTIDOS
               </h3>
-              <div className="space-y-6">
-                {byDate.map(([dateKey, matches]) => (
-                  <div key={dateKey}>
-                    <p className="text-xs font-semibold mb-3" style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
-                      {pyDateLabel(dateKey).toUpperCase()}
-                    </p>
-                    <div className="space-y-2">
-                      {matches.map(p => (
-                        <div key={p.id}>
-                          <MatchRow
-                            prediction={p}
-                            answered={!!existingAnswers[p.id]}
-                            onExpand={() => handleExpand(p.id)}
-                          />
-                          {expandedId === p.id && (
-                            <PredictPanel
-                              prediction={p}
-                              existingAnswer={existingAnswers[p.id] ?? null}
-                              voteData={voteDistributions[p.id] ?? {}}
-                              loading={false}
-                              submitting={false}
-                              localScore={existingScores?.[p.id]}
-                              onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}
-                            />
-                          )}
-                        </div>
-                      ))}
-                    </div>
+
+              {/* Day navigation */}
+              <div className="flex items-center justify-between mb-2">
+                <button
+                  onClick={() => setDayIdx(i => Math.max(0, i - 1))}
+                  disabled={dayIdx === 0}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: dayIdx === 0 ? 'not-allowed' : 'pointer', opacity: dayIdx === 0 ? 0.4 : 1 }}
+                >
+                  <ChevronLeft className="h-4 w-4" style={{ color: '#fff' }} />
+                </button>
+                <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.70)' }}>
+                  Día {dayIdx + 1}
+                </span>
+                <button
+                  onClick={() => setDayIdx(i => Math.min(matchdays.length - 1, i + 1))}
+                  disabled={dayIdx === matchdays.length - 1}
+                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: dayIdx === matchdays.length - 1 ? 'not-allowed' : 'pointer', opacity: dayIdx === matchdays.length - 1 ? 0.4 : 1 }}
+                >
+                  <ChevronRight className="h-4 w-4" style={{ color: '#fff' }} />
+                </button>
+              </div>
+
+              {/* Date label */}
+              <p className="text-xs font-semibold mb-3 capitalize" style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
+                {pyDateLabel(matchdays[dayIdx].date)}
+              </p>
+
+              {/* Matches for current day */}
+              <div className="space-y-2">
+                {matchdays[dayIdx].preds.map(p => (
+                  <div key={p.id}>
+                    <MatchRow
+                      prediction={p}
+                      answered={!!existingAnswers[p.id]}
+                      onExpand={() => handleExpand(p.id)}
+                    />
+                    {expandedId === p.id && (
+                      <PredictPanel
+                        prediction={p}
+                        existingAnswer={existingAnswers[p.id] ?? null}
+                        voteData={voteDistributions[p.id] ?? {}}
+                        loading={false}
+                        submitting={false}
+                        localScore={existingScores?.[p.id]}
+                        onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}
+                      />
+                    )}
                   </div>
                 ))}
               </div>
