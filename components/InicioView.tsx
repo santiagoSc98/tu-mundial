@@ -630,7 +630,7 @@ export default function InicioView({
       console.log('[Predict] answer:', answer)
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      const insertPromise = (supabase as any)
         .from('user_predictions')
         .insert({
           user_id:                userId,
@@ -642,12 +642,18 @@ export default function InicioView({
         })
         .select()
 
+      const timeoutPromise = new Promise<{ data: null; error: Error }>(resolve =>
+        setTimeout(() => resolve({ data: null, error: new Error('Insert timeout (10s)') }), 10000)
+      )
+
+      const { data, error } = await Promise.race([insertPromise, timeoutPromise])
+
       console.log('[Predict] resultado:', { data, error })
 
       if (error) {
-        console.error('[Predict] ERROR:', JSON.stringify(error))
+        console.error('[Predict] ERROR:', error instanceof Error ? error.message : JSON.stringify(error))
         revertPredict(predictionId, answer)
-        showPredictError(error.message ?? 'Error al guardar predicción')
+        showPredictError(error instanceof Error ? error.message : (error as { message?: string }).message ?? 'Error al guardar predicción')
       }
     } catch (err) {
       console.error('[Predict] EXCEPTION:', err)
