@@ -67,7 +67,7 @@ async function HomeData() {
   const t1 = Date.now()
   const [
     specialRes, profileRes, predsRes, answersRes,
-    rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes,
+    rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes, allVotesRes,
   ] = await withRetry(() =>
     withTimeout(
       Promise.all([
@@ -86,6 +86,7 @@ async function HomeData() {
           .from('predictions')
           .select(PRED_COLS)
           .order('deadline', { ascending: true }),
+        // Current user's predictions — for existingAnswers + existingScores
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from('user_predictions')
@@ -101,12 +102,17 @@ async function HomeData() {
           .select('is_correct')
           .eq('user_id', user.id)
           .not('is_correct', 'is', null),
+        // All users — for predCounts + globalStats (needs user_id + is_correct)
         supabase
           .from('user_predictions')
-          .select('user_id, is_correct, prediction_id, predicted_answer'),
+          .select('user_id, is_correct'),
         supabase
           .from('profiles')
           .select('*', { count: 'exact', head: true }),
+        // All users — for voteDistributions (no user filter — requires RLS SELECT policy)
+        supabase
+          .from('user_predictions')
+          .select('prediction_id, predicted_answer'),
       ]),
       18000,
       'all-data'
@@ -147,20 +153,26 @@ async function HomeData() {
     correct: myStatsRows.filter(r => r.is_correct === true).length,
   }
 
-  // Build predCounts + globalStats + voteDistributions from allUserPreds
-  const allUserPreds = (allUserPredsRes.data ?? []) as { user_id: string; is_correct: boolean | null; prediction_id: string; predicted_answer: string }[]
+  // Build predCounts + globalStats from allUserPreds (user_id + is_correct only)
+  const allUserPreds = (allUserPredsRes.data ?? []) as { user_id: string; is_correct: boolean | null }[]
   const predCounts: Record<string, number> = {}
-  const voteDistributions: Record<string, Record<string, number>> = {}
   allUserPreds.forEach(r => {
     predCounts[r.user_id] = (predCounts[r.user_id] ?? 0) + 1
-    if (r.prediction_id && r.predicted_answer) {
-      if (!voteDistributions[r.prediction_id]) voteDistributions[r.prediction_id] = {}
-      voteDistributions[r.prediction_id][r.predicted_answer] =
-        (voteDistributions[r.prediction_id][r.predicted_answer] ?? 0) + 1
-    }
   })
   const resolvedPreds = allUserPreds.filter(r => r.is_correct !== null)
   const correctPreds  = resolvedPreds.filter(r => r.is_correct === true)
+
+  // Build voteDistributions from ALL users' votes (no user filter)
+  // Requires RLS policy: CREATE POLICY "public vote distributions"
+  //   ON user_predictions FOR SELECT TO authenticated USING (true);
+  const voteDistributions: Record<string, Record<string, number>> = {}
+  const allVotes = (allVotesRes.data ?? []) as { prediction_id: string; predicted_answer: string }[]
+  allVotes.forEach(r => {
+    if (!r.prediction_id || !r.predicted_answer) return
+    if (!voteDistributions[r.prediction_id]) voteDistributions[r.prediction_id] = {}
+    voteDistributions[r.prediction_id][r.predicted_answer] =
+      (voteDistributions[r.prediction_id][r.predicted_answer] ?? 0) + 1
+  })
   const globalStats = {
     totalUsers:       (totalUsersRes as { count: number | null }).count ?? 0,
     totalPredictions: allUserPreds.length,
