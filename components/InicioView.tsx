@@ -476,55 +476,44 @@ function MatchRow({
 
   return (
     <div
-      className="flex items-center justify-between gap-3 px-4 py-3"
-      style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 16, transition: 'background 0.12s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+      onClick={onExpand}
+      className="flex items-center gap-3 px-3 py-2.5"
+      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, cursor: 'pointer', transition: 'background 0.12s' }}
+      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
     >
-      <div className="shrink-0 w-14 text-right">
+      <div className="shrink-0 w-10">
         <p className="text-xs font-semibold" style={{ color: '#fff' }}>{pyTime(ko)}</p>
         {stage && <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{stage}</p>}
       </div>
 
-      <div className="flex items-center gap-2 flex-1 min-w-0">
+      <div className="flex items-center gap-1.5 flex-1 min-w-0">
         {homeFlag
-          ? <img src={homeFlag} alt={home} style={{ width: 24, height: 17, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
-          : <div style={{ width: 24, height: 17, borderRadius: 3, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
+          ? <img src={homeFlag} alt={home} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+          : <div style={{ width: 20, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
         }
-        <span className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{home}</span>
-        <span className="text-xs shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>vs</span>
-        <span className="text-xs font-medium truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{away}</span>
+        <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{home}</span>
+        <span className="text-[10px] shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>vs</span>
+        <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{away}</span>
         {awayFlag
-          ? <img src={awayFlag} alt={away} style={{ width: 24, height: 17, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />
-          : <div style={{ width: 24, height: 17, borderRadius: 3, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
+          ? <img src={awayFlag} alt={away} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+          : <div style={{ width: 20, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
         }
       </div>
 
       <div className="shrink-0">
         {answered ? (
-          <button
-            onClick={onExpand}
-            className="flex items-center gap-1 text-xs font-semibold"
-            style={{ color: '#22c55e', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            <CheckCircle className="h-3.5 w-3.5" /> Ver votos
-          </button>
+          <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ color: '#22c55e', border: '1px solid rgba(34,197,94,0.30)' }}>
+            Ver votos
+          </span>
         ) : open ? (
-          <button
-            onClick={onExpand}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg"
-            style={{ background: 'rgba(0,82,165,0.15)', border: '1px solid rgba(0,82,165,0.30)', color: '#60a5fa', cursor: 'pointer' }}
-          >
+          <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: '#0052A5', color: '#fff' }}>
             Pronostica
-          </button>
+          </span>
         ) : (
-          <button
-            onClick={onExpand}
-            className="flex items-center text-xs"
-            style={{ color: 'rgba(255,255,255,0.25)', background: 'none', border: 'none', cursor: 'pointer' }}
-          >
-            <Clock className="h-3.5 w-3.5 mr-1" />Ver votos
-          </button>
+          <span className="text-xs px-2 py-1 rounded-lg" style={{ color: 'rgba(255,255,255,0.30)', border: '1px solid rgba(255,255,255,0.10)' }}>
+            <Clock className="h-3 w-3 inline mr-0.5" />Ver votos
+          </span>
         )}
       </div>
     </div>
@@ -542,13 +531,13 @@ interface Props {
   existingScores?: Record<string, { home: number; away: number }>
   voteDistributions: Record<string, Record<string, number>>
   onPredict: (predictionId: string, answer: string, homeScore: number, awayScore: number) => void
-  onGoToPredicciones: () => void
+  onGoToMisPredicciones: () => void
   onCalendarioClick: () => void
 }
 
 export default function InicioView({
   points, rank, predictions, existingAnswers, existingScores, voteDistributions,
-  onPredict, onGoToPredicciones, onCalendarioClick,
+  onPredict, onGoToMisPredicciones, onCalendarioClick,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -641,38 +630,39 @@ export default function InicioView({
           {/* Match list */}
           {matchdays.length > 0 && (
             <div>
-              <h3 className="text-base font-black mb-3 tracking-wider" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
-                PARTIDOS
-              </h3>
-
-              {/* Day navigation */}
+              {/* Header: title + day nav inline */}
               <div className="flex items-center justify-between mb-2">
-                <button
-                  onClick={() => setDayIdx(i => Math.max(0, i - 1))}
-                  disabled={dayIdx === 0}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: dayIdx === 0 ? 'not-allowed' : 'pointer', opacity: dayIdx === 0 ? 0.4 : 1 }}
-                >
-                  <ChevronLeft className="h-4 w-4" style={{ color: '#fff' }} />
-                </button>
-                <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.70)' }}>
-                  Día {dayIdx + 1}
-                </span>
-                <button
-                  onClick={() => setDayIdx(i => Math.min(matchdays.length - 1, i + 1))}
-                  disabled={dayIdx === matchdays.length - 1}
-                  style={{ background: 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 6, padding: '4px 8px', cursor: dayIdx === matchdays.length - 1 ? 'not-allowed' : 'pointer', opacity: dayIdx === matchdays.length - 1 ? 0.4 : 1 }}
-                >
-                  <ChevronRight className="h-4 w-4" style={{ color: '#fff' }} />
-                </button>
+                <p className="text-sm font-black uppercase tracking-wider" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
+                  Partidos
+                </p>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setDayIdx(i => Math.max(0, i - 1))}
+                    disabled={dayIdx === 0}
+                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: dayIdx === 0 ? 'not-allowed' : 'pointer', opacity: dayIdx === 0 ? 0.3 : 1, color: '#fff' }}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </button>
+                  <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.70)', minWidth: 40, textAlign: 'center' }}>
+                    Día {dayIdx + 1}
+                  </span>
+                  <button
+                    onClick={() => setDayIdx(i => Math.min(matchdays.length - 1, i + 1))}
+                    disabled={dayIdx === matchdays.length - 1}
+                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: dayIdx === matchdays.length - 1 ? 'not-allowed' : 'pointer', opacity: dayIdx === matchdays.length - 1 ? 0.3 : 1, color: '#fff' }}
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               {/* Date label */}
-              <p className="text-xs font-semibold mb-3 capitalize" style={{ color: 'rgba(255,255,255,0.35)', letterSpacing: '0.05em' }}>
+              <p className="text-xs mb-3 capitalize" style={{ color: 'rgba(255,255,255,0.40)' }}>
                 {pyDateLabel(matchdays[dayIdx].date)}
               </p>
 
               {/* Matches for current day */}
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 {matchdays[dayIdx].preds.map(p => (
                   <div key={p.id}>
                     <MatchRow
@@ -694,6 +684,14 @@ export default function InicioView({
                   </div>
                 ))}
               </div>
+
+              {/* Ver calendario completo */}
+              <button
+                onClick={onCalendarioClick}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006A33', fontSize: 12, fontWeight: 600, marginTop: 10, display: 'block', marginLeft: 'auto' }}
+              >
+                Ver calendario completo →
+              </button>
             </div>
           )}
         </div>
@@ -706,7 +704,7 @@ export default function InicioView({
                 MIS ESTADÍSTICAS
               </h3>
               <button
-                onClick={onGoToPredicciones}
+                onClick={onGoToMisPredicciones}
                 className="text-xs font-semibold"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006A33' }}
               >
@@ -745,15 +743,6 @@ export default function InicioView({
             </div>
           </div>
 
-          <button
-            onClick={onCalendarioClick}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-xl text-sm font-semibold"
-            style={{ background: 'transparent', border: '1px solid rgba(0,106,51,0.30)', color: '#22c55e', cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,106,51,0.08)')}
-            onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
-          >
-            <Calendar className="h-4 w-4" /> Ver calendario completo →
-          </button>
         </div>
       </div>
     </div>

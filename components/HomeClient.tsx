@@ -407,7 +407,7 @@ export default function HomeClient({
                 existingScores={mergedScores}
                 voteDistributions={localVotes}
                 onPredict={handlePredict}
-                onGoToPredicciones={() => setActiveTab('predicciones')}
+                onGoToMisPredicciones={() => setActiveTab('mis-predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
             </ErrorBoundary>
