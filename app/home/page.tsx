@@ -63,9 +63,12 @@ async function HomeData() {
   console.log(`[home] auth: ${Date.now() - t0}ms`)
   if (!user) redirect('/')
 
-  // 2. Special predictions + profile + predictions + userAnswers (all parallel)
+  // 2. All data in one parallel batch
   const t1 = Date.now()
-  const [specialRes, profileRes, predsRes, answersRes] = await withRetry(() =>
+  const [
+    specialRes, profileRes, predsRes, answersRes,
+    rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes,
+  ] = await withRetry(() =>
     withTimeout(
       Promise.all([
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -83,13 +86,30 @@ async function HomeData() {
           .from('predictions')
           .select(PRED_COLS)
           .order('deadline', { ascending: true }),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from('user_predictions')
+          .select('prediction_id, predicted_answer, home_score_prediction, away_score_prediction')
+          .eq('user_id', user.id),
+        supabase
+          .from('profiles')
+          .select('id, username, avatar_url, total_points')
+          .order('total_points', { ascending: false })
+          .limit(50),
         supabase
           .from('user_predictions')
-          .select('prediction_id, predicted_answer')
-          .eq('user_id', user.id),
+          .select('is_correct')
+          .eq('user_id', user.id)
+          .not('is_correct', 'is', null),
+        supabase
+          .from('user_predictions')
+          .select('user_id, is_correct, prediction_id, predicted_answer'),
+        supabase
+          .from('profiles')
+          .select('*', { count: 'exact', head: true }),
       ]),
-      12000,
-      'special+profile+preds+answers'
+      18000,
+      'all-data'
     )
   )
   console.log(`[home] parallel fetch: ${Date.now() - t1}ms`)
@@ -97,32 +117,57 @@ async function HomeData() {
   const special     = specialRes.data
   const profileData = profileRes.data
 
-  // Build existingAnswers map from server
+  // Build existingAnswers + existingScores maps
   const existingAnswers: Record<string, string> = {}
-  answersRes.data?.forEach((up: { prediction_id: string; predicted_answer: string }) => {
+  const existingScores: Record<string, { home: number; away: number }> = {}
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  answersRes.data?.forEach((up: any) => {
     existingAnswers[up.prediction_id] = up.predicted_answer
+    if (up.home_score_prediction != null && up.away_score_prediction != null) {
+      existingScores[up.prediction_id] = {
+        home: up.home_score_prediction,
+        away: up.away_score_prediction,
+      }
+    }
   })
 
   if (!special?.champion_team && !special?.top_scorer) redirect('/')
 
   const profile = profileData ?? { total_points: 0, avatar_url: null, username: null }
 
-  // 3. Rank
-  const t2 = Date.now()
-  const rankRes = await withRetry(() =>
-    withTimeout(
-      supabase
-        .from('profiles')
-        .select('id', { count: 'exact', head: true })
-        .gt('total_points', profile.total_points),
-      9000,
-      'rank'
-    )
-  )
-  const rankAbove = (rankRes as { count: number | null }).count
-  console.log(`[home] rank: ${Date.now() - t2}ms | total: ${Date.now() - t0}ms`)
+  // Build rank
+  const rankings = (rankingsRes.data ?? []) as { id: string; username: string | null; avatar_url: string | null; total_points: number }[]
+  const rankIdx   = rankings.findIndex(r => r.id === user.id)
+  const rank      = rankIdx >= 0 ? rankIdx + 1 : (rankings.filter(r => r.total_points > profile.total_points).length + 1)
 
-  const rank = (rankAbove ?? 0) + 1
+  // Build myStats
+  const myStatsRows = (myStatsRes.data ?? []) as { is_correct: boolean | null }[]
+  const myStats = {
+    total:   myStatsRows.length,
+    correct: myStatsRows.filter(r => r.is_correct === true).length,
+  }
+
+  // Build predCounts + globalStats + voteDistributions from allUserPreds
+  const allUserPreds = (allUserPredsRes.data ?? []) as { user_id: string; is_correct: boolean | null; prediction_id: string; predicted_answer: string }[]
+  const predCounts: Record<string, number> = {}
+  const voteDistributions: Record<string, Record<string, number>> = {}
+  allUserPreds.forEach(r => {
+    predCounts[r.user_id] = (predCounts[r.user_id] ?? 0) + 1
+    if (r.prediction_id && r.predicted_answer) {
+      if (!voteDistributions[r.prediction_id]) voteDistributions[r.prediction_id] = {}
+      voteDistributions[r.prediction_id][r.predicted_answer] =
+        (voteDistributions[r.prediction_id][r.predicted_answer] ?? 0) + 1
+    }
+  })
+  const resolvedPreds = allUserPreds.filter(r => r.is_correct !== null)
+  const correctPreds  = resolvedPreds.filter(r => r.is_correct === true)
+  const globalStats = {
+    totalUsers:       (totalUsersRes as { count: number | null }).count ?? 0,
+    totalPredictions: allUserPreds.length,
+    avgAccuracy:      resolvedPreds.length > 0 ? Math.round((correctPreds.length / resolvedPreds.length) * 100) : 0,
+  }
+
+  console.log(`[home] total: ${Date.now() - t0}ms`)
 
   const username =
     profileData?.username ??
@@ -152,6 +197,12 @@ async function HomeData() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       predictions={(predsRes.data ?? []) as any[]}
       existingAnswers={existingAnswers}
+      existingScores={existingScores}
+      rankings={rankings}
+      myStats={myStats}
+      predCounts={predCounts}
+      globalStats={globalStats}
+      voteDistributions={voteDistributions}
     />
   )
 }

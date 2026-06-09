@@ -46,6 +46,10 @@ const MOBILE_LABELS: Record<Tab, string> = {
   admin:         'Admin',
 }
 
+type RankEntry   = { id: string; username: string | null; avatar_url: string | null; total_points: number }
+type MyStats     = { total: number; correct: number }
+type GlobalStats = { totalUsers: number; totalPredictions: number; avgAccuracy: number }
+
 interface Props {
   userId: string
   points: number
@@ -57,6 +61,12 @@ interface Props {
   isAdmin: boolean
   predictions: Prediction[]
   existingAnswers: Record<string, string>
+  existingScores: Record<string, { home: number; away: number }>
+  rankings: RankEntry[]
+  myStats: MyStats
+  predCounts: Record<string, number>
+  globalStats: GlobalStats
+  voteDistributions: Record<string, Record<string, number>>
 }
 
 function ReglasTab() {
@@ -126,7 +136,7 @@ function ReglasTab() {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab, setActiveTab] = useState<Tab>('inicio')
@@ -334,13 +344,29 @@ export default function HomeClient({
                 rank={rank}
                 predictions={predictions}
                 existingAnswers={existingAnswers}
+                existingScores={existingScores}
                 onGoToPredicciones={() => setActiveTab('predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
             </ErrorBoundary>
           )}
-          {activeTab === 'predicciones' && <PrediccionesTab userId={userId} />}
-          {activeTab === 'posiciones'   && <RankingsTab currentUserId={userId} />}
+          {activeTab === 'predicciones' && (
+            <PrediccionesTab
+              userId={userId}
+              predictions={predictions}
+              existingAnswers={existingAnswers}
+              voteDistributions={voteDistributions}
+            />
+          )}
+          {activeTab === 'posiciones'   && (
+            <RankingsTab
+              currentUserId={userId}
+              rankings={rankings}
+              myStats={myStats}
+              predCounts={predCounts}
+              globalStats={globalStats}
+            />
+          )}
           {activeTab === 'especiales'   && (
             <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} />
           )}

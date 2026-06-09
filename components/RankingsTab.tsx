@@ -1,18 +1,7 @@
 'use client'
 
-import { useRef, useState, useEffect } from 'react'
-import { useQuery } from '@tanstack/react-query'
-import { createClient } from '@/lib/supabase/client'
-import { queryWithRetry } from '@/lib/supabase-utils'
-
-type RankEntry = {
-  id: string
-  username: string | null
-  avatar_url: string | null
-  total_points: number
-}
-
-type MyStats    = { total: number; correct: number }
+type RankEntry   = { id: string; username: string | null; avatar_url: string | null; total_points: number }
+type MyStats     = { total: number; correct: number }
 type GlobalStats = { totalUsers: number; totalPredictions: number; avgAccuracy: number }
 
 const MEDAL = ['#F6B73C', '#C0C0C0', '#CD7F32'] as const
@@ -126,110 +115,16 @@ function Skeleton() {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function RankingsTab({ currentUserId }: { currentUserId: string | null }) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = useRef(createClient() as any).current
-  const [showReload, setShowReload] = useState(false)
-
-  const { data: rankings = [], isLoading } = useQuery<RankEntry[]>({
-    queryKey: ['rankings'],
-    queryFn: async () => {
-      const { data, error } = await queryWithRetry(() =>
-        supabase
-          .from('profiles')
-          .select('id, username, avatar_url, total_points')
-          .order('total_points', { ascending: false })
-          .limit(50)
-      )
-      if (error) throw error
-      return (data ?? []) as RankEntry[]
-    },
-    staleTime: 3 * 60 * 1000,
-    retry: false,
-  })
-
-  const { data: myStats } = useQuery<MyStats>({
-    queryKey: ['my-stats', currentUserId],
-    queryFn: async () => {
-      const { data, error } = await queryWithRetry(() =>
-        supabase
-          .from('user_predictions')
-          .select('is_correct')
-          .eq('user_id', currentUserId)
-          .not('is_correct', 'is', null)
-      )
-      if (error) throw error
-      const rows = (data ?? []) as { is_correct: boolean | null }[]
-      return { total: rows.length, correct: rows.filter(r => r.is_correct === true).length }
-    },
-    enabled: !!currentUserId,
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
-  const { data: predCounts = {} } = useQuery<Record<string, number>>({
-    queryKey: ['pred-counts'],
-    queryFn: async () => {
-      const { data: rawData } = await queryWithRetry(() =>
-        supabase.from('user_predictions').select('user_id')
-      )
-      const rows = (rawData ?? []) as { user_id: string }[]
-      const map: Record<string, number> = {}
-      rows.forEach(r => { map[r.user_id] = (map[r.user_id] ?? 0) + 1 })
-      return map
-    },
-    staleTime: 5 * 60 * 1000,
-    retry: false,
-  })
-
-  const { data: globalStats } = useQuery<GlobalStats>({
-    queryKey: ['global-stats'],
-    queryFn: async () => {
-      const [usersRes, predsRes] = await Promise.all([
-        queryWithRetry(() => supabase.from('profiles').select('*', { count: 'exact', head: true })) as Promise<{ count: number | null; data: null; error: unknown }>,
-        queryWithRetry(() => supabase.from('user_predictions').select('*', { count: 'exact', head: true })) as Promise<{ count: number | null; data: null; error: unknown }>,
-      ])
-      const { data: accData } = await queryWithRetry(() =>
-        supabase.from('user_predictions').select('is_correct').not('is_correct', 'is', null)
-      )
-      const rows = (accData ?? []) as { is_correct: boolean | null }[]
-      const correct = rows.filter(r => r.is_correct === true).length
-      return {
-        totalUsers:       usersRes.count  ?? 0,
-        totalPredictions: predsRes.count  ?? 0,
-        avgAccuracy:      rows.length > 0 ? Math.round((correct / rows.length) * 100) : 0,
-      }
-    },
-    staleTime: 10 * 60 * 1000,
-    retry: false,
-  })
-
-  useEffect(() => {
-    if (!isLoading) return
-    const t = setTimeout(() => setShowReload(true), 10000)
-    return () => clearTimeout(t)
-  }, [isLoading])
-
-  if (isLoading) return (
-    <>
-      <Skeleton />
-      {showReload && (
-        <div style={{ textAlign: 'center', marginTop: 24 }}>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', marginBottom: 12 }}>
-            Tardando más de lo esperado…
-          </p>
-          <button
-            onClick={() => window.location.reload()}
-            style={{ padding: '10px 24px', borderRadius: 12, background: '#006A33', border: 'none', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-          >
-            Recargar página
-          </button>
-        </div>
-      )}
-    </>
-  )
-
-  const myRank    = rankings.findIndex(r => r.id === currentUserId) + 1
+export default function RankingsTab({
+  currentUserId, rankings, myStats, predCounts, globalStats,
+}: {
+  currentUserId: string | null
+  rankings: RankEntry[]
+  myStats: MyStats
+  predCounts: Record<string, number>
+  globalStats: GlobalStats
+}) {
+  const myRank    = rankings.findIndex((r: RankEntry) => r.id === currentUserId) + 1
   const accuracy  = myStats && myStats.total > 0 ? Math.round((myStats.correct / myStats.total) * 100) : 0
   const [p1, p2, p3] = rankings
 

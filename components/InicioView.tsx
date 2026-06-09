@@ -541,19 +541,21 @@ interface Props {
   rank: number
   predictions: Prediction[]
   existingAnswers: Record<string, string>
+  existingScores?: Record<string, { home: number; away: number }>
   onGoToPredicciones: () => void
   onCalendarioClick: () => void
 }
 
 export default function InicioView({
-  userId, points, rank, predictions, existingAnswers, onGoToPredicciones, onCalendarioClick,
+  userId, points, rank, predictions, existingAnswers, existingScores,
+  onGoToPredicciones, onCalendarioClick,
 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = useRef(createClient() as any).current
 
   const [expandedId,   setExpandedId]   = useState<string | null>(null)
   const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
-  const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>({})
+  const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
   const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>({})
   const [loadingVotes, setLoadingVotes] = useState<string | null>(null)
 
