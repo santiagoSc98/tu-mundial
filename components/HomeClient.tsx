@@ -1,10 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
 import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList } from 'lucide-react'
 import AuthButton from '@/components/AuthButton'
 import { createClient } from '@/lib/supabase/client'
+import { savePrediction } from '@/app/actions/predictions'
 import InicioView from '@/components/InicioView'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PrediccionesTab from '@/components/PrediccionesTab'
@@ -142,8 +143,49 @@ export default function HomeClient({
   predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
-  const [activeTab, setActiveTab] = useState<Tab>('inicio')
-  const [imgError,  setImgError]  = useState(false)
+  const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
+  const [imgError,     setImgError]     = useState(false)
+  const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
+  const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => ({ ...existingScores }))
+  const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => ({ ...voteDistributions }))
+  const [predictError, setPredictError] = useState<string | null>(null)
+
+  const mergedAnswers = useMemo(() => ({ ...existingAnswers, ...localAnswers }), [existingAnswers, localAnswers])
+  const mergedScores  = useMemo(() => ({ ...existingScores,  ...localScores  }), [existingScores,  localScores])
+
+  const revertPredict = useCallback((predictionId: string, answer: string) => {
+    setLocalAnswers(prev => { const n = { ...prev }; delete n[predictionId]; return n })
+    setLocalScores(prev  => { const n = { ...prev }; delete n[predictionId]; return n })
+    setLocalVotes(prev => {
+      const dist = { ...(prev[predictionId] ?? {}) }
+      if ((dist[answer] ?? 0) > 1) dist[answer]--
+      else delete dist[answer]
+      return { ...prev, [predictionId]: dist }
+    })
+  }, [])
+
+  const showPredictError = useCallback((msg: string) => {
+    setPredictError(msg)
+    setTimeout(() => setPredictError(null), 5000)
+  }, [])
+
+  const handlePredict = useCallback(async (predictionId: string, answer: string, homeScore: number, awayScore: number) => {
+    if (mergedAnswers[predictionId]) return
+    setLocalAnswers(prev => ({ ...prev, [predictionId]: answer }))
+    setLocalScores(prev  => ({ ...prev, [predictionId]: { home: homeScore, away: awayScore } }))
+    setLocalVotes(prev => {
+      const dist = { ...(prev[predictionId] ?? {}) }
+      dist[answer] = (dist[answer] ?? 0) + 1
+      return { ...prev, [predictionId]: dist }
+    })
+    try {
+      const result = await savePrediction({ predictionId, answer, homeScore: homeScore ?? null, awayScore: awayScore ?? null })
+      if (result.error) { revertPredict(predictionId, answer); showPredictError(result.error) }
+    } catch {
+      revertPredict(predictionId, answer)
+      showPredictError('Error de conexión')
+    }
+  }, [mergedAnswers, revertPredict, showPredictError])
 
   const signOut = () => {
     createClient().auth.signOut()
@@ -157,6 +199,21 @@ export default function HomeClient({
       className="flex flex-col md:flex-row"
       style={{ height: '100dvh', background: 'var(--page-bg-home)', overflow: 'hidden' }}
     >
+      {predictError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          padding: '12px 18px', borderRadius: 14,
+          background: 'rgba(239,68,68,0.13)',
+          border: '1px solid rgba(239,68,68,0.35)',
+          backdropFilter: 'blur(16px)',
+          color: '#f87171', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          maxWidth: 320,
+        }}>
+          ⚠️ {predictError}
+        </div>
+      )}
       {/* ── Desktop sidebar ─────────────────────────────────────────────── */}
       <aside
         className="hidden md:flex flex-col w-60 shrink-0"
@@ -346,9 +403,10 @@ export default function HomeClient({
                 points={points}
                 rank={rank}
                 predictions={predictions}
-                existingAnswers={existingAnswers}
-                existingScores={existingScores}
-                voteDistributions={voteDistributions}
+                existingAnswers={mergedAnswers}
+                existingScores={mergedScores}
+                voteDistributions={localVotes}
+                onPredict={handlePredict}
                 onGoToPredicciones={() => setActiveTab('predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
@@ -357,16 +415,16 @@ export default function HomeClient({
           {activeTab === 'mis-predicciones' && (
             <MisPrediccionesTab
               predictions={predictions}
-              existingAnswers={existingAnswers}
-              existingScores={existingScores}
+              existingAnswers={mergedAnswers}
+              existingScores={mergedScores}
             />
           )}
           {activeTab === 'predicciones' && (
             <PrediccionesTab
               userId={userId}
               predictions={predictions}
-              existingAnswers={existingAnswers}
-              voteDistributions={voteDistributions}
+              existingAnswers={mergedAnswers}
+              voteDistributions={localVotes}
             />
           )}
           {activeTab === 'posiciones'   && (

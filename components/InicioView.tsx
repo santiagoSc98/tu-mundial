@@ -6,7 +6,6 @@ import {
 } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
-import { savePrediction } from '@/app/actions/predictions'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -541,24 +540,16 @@ interface Props {
   existingAnswers: Record<string, string>
   existingScores?: Record<string, { home: number; away: number }>
   voteDistributions: Record<string, Record<string, number>>
+  onPredict: (predictionId: string, answer: string, homeScore: number, awayScore: number) => void
   onGoToPredicciones: () => void
   onCalendarioClick: () => void
 }
 
 export default function InicioView({
   points, rank, predictions, existingAnswers, existingScores, voteDistributions,
-  onGoToPredicciones, onCalendarioClick,
+  onPredict, onGoToPredicciones, onCalendarioClick,
 }: Props) {
-  const [expandedId,    setExpandedId]   = useState<string | null>(null)
-  const [localAnswers,  setLocalAnswers] = useState<Record<string, string>>({})
-  const [localScores,   setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
-  const [localVotes,    setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => voteDistributions ?? {})
-  const [predictError,  setPredictError] = useState<string | null>(null)
-
-  const mergedAnswers = useMemo(
-    () => ({ ...existingAnswers, ...localAnswers }),
-    [existingAnswers, localAnswers]
-  )
+  const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const now = useMemo(() => new Date(), [])
 
@@ -568,8 +559,8 @@ export default function InicioView({
   )
 
   const featured = useMemo(
-    () => openPredictions.find(p => !mergedAnswers[p.id]) ?? openPredictions[0] ?? predictions[0] ?? null,
-    [openPredictions, mergedAnswers, predictions]
+    () => openPredictions.find(p => !existingAnswers[p.id]) ?? openPredictions[0] ?? predictions[0] ?? null,
+    [openPredictions, existingAnswers, predictions]
   )
 
   const byDate = useMemo(() => {
@@ -582,88 +573,18 @@ export default function InicioView({
     return Object.entries(map).sort(([a], [b]) => a.localeCompare(b))
   }, [predictions])
 
-  const totalAnswered = Object.keys(mergedAnswers).length
-  const pendingCount  = openPredictions.filter(p => !mergedAnswers[p.id]).length
+  const totalAnswered = Object.keys(existingAnswers).length
+  const pendingCount  = openPredictions.filter(p => !existingAnswers[p.id]).length
 
-  // ── Expand / collapse ────────────────────────────────────────────────────────
-  const handleExpand = (id: string) => {
-    setExpandedId(prev => prev === id ? null : id)
-  }
+  const handleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
 
-  // ── Revert helpers ───────────────────────────────────────────────────────────
-  const revertPredict = useCallback((predictionId: string, answer: string) => {
-    setLocalAnswers(prev => { const n = { ...prev }; delete n[predictionId]; return n })
-    setLocalScores(prev  => { const n = { ...prev }; delete n[predictionId]; return n })
-    setLocalVotes(prev => {
-      const dist = { ...(prev[predictionId] ?? {}) }
-      if ((dist[answer] ?? 0) > 1) dist[answer]--
-      else delete dist[answer]
-      return { ...prev, [predictionId]: dist }
-    })
-  }, [])
-
-  const showPredictError = useCallback((msg: string) => {
-    setPredictError(msg)
-    setTimeout(() => setPredictError(null), 5000)
-  }, [])
-
-  // ── Save prediction (optimistic) ────────────────────────────────────────────
-  const handlePredict = useCallback(async (predictionId: string, answer: string, homeScore: number, awayScore: number) => {
-    if (mergedAnswers[predictionId]) return
-
-    // Optimistic update
-    setLocalAnswers(prev => ({ ...prev, [predictionId]: answer }))
-    setLocalScores(prev => ({ ...prev, [predictionId]: { home: homeScore, away: awayScore } }))
-    setLocalVotes(prev => {
-      const dist = { ...(prev[predictionId] ?? {}) }
-      dist[answer] = (dist[answer] ?? 0) + 1
-      return { ...prev, [predictionId]: dist }
-    })
+  const handlePredict = useCallback((predictionId: string, answer: string, homeScore: number, awayScore: number) => {
     setExpandedId(null)
-
-    try {
-      console.log('[Predict] predictionId:', predictionId, 'answer:', answer)
-
-      const result = await savePrediction({
-        predictionId,
-        answer,
-        homeScore: homeScore ?? null,
-        awayScore: awayScore ?? null,
-      })
-
-      console.log('[Predict] resultado:', result)
-
-      if (result.error) {
-        console.error('[Predict] ERROR:', result.error)
-        revertPredict(predictionId, answer)
-        showPredictError(result.error)
-      }
-    } catch (err) {
-      console.error('[Predict] EXCEPTION:', err)
-      revertPredict(predictionId, answer)
-      showPredictError('Error de conexión')
-    }
-  }, [mergedAnswers, revertPredict, showPredictError])
+    onPredict(predictionId, answer, homeScore, awayScore)
+  }, [onPredict])
 
   return (
     <div>
-      {/* ── Error toast ────────────────────────────────────────────────── */}
-      {predictError && (
-        <div style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
-          padding: '12px 18px', borderRadius: 14,
-          background: 'rgba(239,68,68,0.13)',
-          border: '1px solid rgba(239,68,68,0.35)',
-          backdropFilter: 'blur(16px)',
-          color: '#f87171', fontSize: 13, fontWeight: 600,
-          boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
-          display: 'flex', alignItems: 'center', gap: 8,
-          maxWidth: 320,
-        }}>
-          ⚠️ {predictError}
-        </div>
-      )}
-
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-8">
         <div>
@@ -693,9 +614,9 @@ export default function InicioView({
           {/* Featured match */}
           <FeaturedMatchPanel
             prediction={featured}
-            existingAnswer={featured ? (mergedAnswers[featured.id] ?? null) : null}
-            voteData={featured ? (localVotes[featured.id] ?? {}) : {}}
-            localScore={featured ? localScores[featured.id] : undefined}
+            existingAnswer={featured ? (existingAnswers[featured.id] ?? null) : null}
+            voteData={featured ? (voteDistributions[featured.id] ?? {}) : {}}
+            localScore={featured ? existingScores?.[featured.id] : undefined}
             onPredict={(answer, hs, as) => featured && handlePredict(featured.id, answer, hs, as)}
           />
 
@@ -716,17 +637,17 @@ export default function InicioView({
                         <div key={p.id}>
                           <MatchRow
                             prediction={p}
-                            answered={!!mergedAnswers[p.id]}
+                            answered={!!existingAnswers[p.id]}
                             onExpand={() => handleExpand(p.id)}
                           />
                           {expandedId === p.id && (
                             <PredictPanel
                               prediction={p}
-                              existingAnswer={mergedAnswers[p.id] ?? null}
-                              voteData={localVotes[p.id] ?? {}}
+                              existingAnswer={existingAnswers[p.id] ?? null}
+                              voteData={voteDistributions[p.id] ?? {}}
                               loading={false}
                               submitting={false}
-                              localScore={localScores[p.id]}
+                              localScore={existingScores?.[p.id]}
                               onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}
                             />
                           )}
