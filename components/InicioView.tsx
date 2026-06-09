@@ -515,7 +515,7 @@ function MatchRow({
             className="text-xs font-bold px-3 py-1.5 rounded-lg"
             style={{ background: 'rgba(0,82,165,0.15)', border: '1px solid rgba(0,82,165,0.30)', color: '#60a5fa', cursor: 'pointer' }}
           >
-            Predice
+            Pronostica
           </button>
         ) : (
           <button
@@ -682,7 +682,7 @@ export default function InicioView({
             Predicciones
           </h1>
           <p className="text-sm" style={{ color: 'rgba(255,255,255,0.40)' }}>
-            Vive el mundial, predice cada partido y compite con tus amigos.
+            Vive el mundial, pronostica cada partido y compite con tus amigos.
           </p>
         </div>
         <button
