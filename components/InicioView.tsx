@@ -7,7 +7,6 @@ import {
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import { createClient } from '@/lib/supabase/client'
-import { queryWithTimeout } from '@/lib/supabase-utils'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -553,10 +552,11 @@ export default function InicioView({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const supabase = useRef(createClient() as any).current
 
-  const [expandedId,   setExpandedId]   = useState<string | null>(null)
-  const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
-  const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
-  const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => voteDistributions ?? {})
+  const [expandedId,    setExpandedId]   = useState<string | null>(null)
+  const [localAnswers,  setLocalAnswers] = useState<Record<string, string>>({})
+  const [localScores,   setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
+  const [localVotes,    setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => voteDistributions ?? {})
+  const [predictError,  setPredictError] = useState<string | null>(null)
 
   const mergedAnswers = useMemo(
     () => ({ ...existingAnswers, ...localAnswers }),
@@ -593,11 +593,28 @@ export default function InicioView({
     setExpandedId(prev => prev === id ? null : id)
   }
 
+  // ── Revert helpers ───────────────────────────────────────────────────────────
+  const revertPredict = useCallback((predictionId: string, answer: string) => {
+    setLocalAnswers(prev => { const n = { ...prev }; delete n[predictionId]; return n })
+    setLocalScores(prev  => { const n = { ...prev }; delete n[predictionId]; return n })
+    setLocalVotes(prev => {
+      const dist = { ...(prev[predictionId] ?? {}) }
+      if ((dist[answer] ?? 0) > 1) dist[answer]--
+      else delete dist[answer]
+      return { ...prev, [predictionId]: dist }
+    })
+  }, [])
+
+  const showPredictError = useCallback((msg: string) => {
+    setPredictError(msg)
+    setTimeout(() => setPredictError(null), 5000)
+  }, [])
+
   // ── Save prediction (optimistic) ────────────────────────────────────────────
   const handlePredict = useCallback(async (predictionId: string, answer: string, homeScore: number, awayScore: number) => {
     if (mergedAnswers[predictionId]) return
 
-    // Update UI immediately
+    // Optimistic update
     setLocalAnswers(prev => ({ ...prev, [predictionId]: answer }))
     setLocalScores(prev => ({ ...prev, [predictionId]: { home: homeScore, away: awayScore } }))
     setLocalVotes(prev => {
@@ -607,37 +624,52 @@ export default function InicioView({
     })
     setExpandedId(null)
 
-    // Persist in background
     try {
-      const { error } = await queryWithTimeout(
-        supabase
-          .from('user_predictions')
-          .insert({
-            user_id: userId,
-            prediction_id: predictionId,
-            predicted_answer: answer,
-            confidence_level: 50,
-            home_score_prediction: homeScore,
-            away_score_prediction: awayScore,
-          }),
-        8000,
-      )
-      if (error) throw error
-    } catch {
-      // Revert on failure
-      setLocalAnswers(prev => { const next = { ...prev }; delete next[predictionId]; return next })
-      setLocalScores(prev => { const next = { ...prev }; delete next[predictionId]; return next })
-      setLocalVotes(prev => {
-        const dist = { ...(prev[predictionId] ?? {}) }
-        if (dist[answer] > 1) dist[answer]--
-        else delete dist[answer]
-        return { ...prev, [predictionId]: dist }
-      })
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('user_predictions')
+        .insert({
+          user_id:                userId,
+          prediction_id:          predictionId,
+          predicted_answer:       answer,
+          confidence_level:       50,
+          home_score_prediction:  homeScore ?? null,
+          away_score_prediction:  awayScore ?? null,
+        })
+
+      console.log('[Predict] resultado:', { data, error })
+
+      if (error) {
+        console.error('[Predict] ERROR:', JSON.stringify(error))
+        revertPredict(predictionId, answer)
+        showPredictError(error.message ?? 'Error al guardar predicción')
+      }
+    } catch (err) {
+      console.error('[Predict] EXCEPTION:', err)
+      revertPredict(predictionId, answer)
+      showPredictError('Error de conexión')
     }
-  }, [mergedAnswers, userId, supabase])
+  }, [mergedAnswers, userId, supabase, revertPredict, showPredictError])
 
   return (
     <div>
+      {/* ── Error toast ────────────────────────────────────────────────── */}
+      {predictError && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 9999,
+          padding: '12px 18px', borderRadius: 14,
+          background: 'rgba(239,68,68,0.13)',
+          border: '1px solid rgba(239,68,68,0.35)',
+          backdropFilter: 'blur(16px)',
+          color: '#f87171', fontSize: 13, fontWeight: 600,
+          boxShadow: '0 8px 32px rgba(0,0,0,0.30)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          maxWidth: 320,
+        }}>
+          ⚠️ {predictError}
+        </div>
+      )}
+
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div className="flex items-start justify-between mb-8">
         <div>
