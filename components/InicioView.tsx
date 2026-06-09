@@ -1,12 +1,12 @@
 'use client'
 
-import { useMemo, useRef, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import {
   Calendar, Target, Trophy, CheckCircle, BarChart3, Zap, Clock,
 } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
-import { createClient } from '@/lib/supabase/client'
+import { savePrediction } from '@/app/actions/predictions'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -546,12 +546,9 @@ interface Props {
 }
 
 export default function InicioView({
-  userId, points, rank, predictions, existingAnswers, existingScores, voteDistributions,
+  points, rank, predictions, existingAnswers, existingScores, voteDistributions,
   onGoToPredicciones, onCalendarioClick,
 }: Props) {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const supabase = useRef(createClient() as any).current
-
   const [expandedId,    setExpandedId]   = useState<string | null>(null)
   const [localAnswers,  setLocalAnswers] = useState<Record<string, string>>({})
   const [localScores,   setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
@@ -625,42 +622,28 @@ export default function InicioView({
     setExpandedId(null)
 
     try {
-      console.log('[Predict] userId:', userId)
-      console.log('[Predict] predictionId:', predictionId)
-      console.log('[Predict] answer:', answer)
+      console.log('[Predict] predictionId:', predictionId, 'answer:', answer)
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const insertPromise = (supabase as any)
-        .from('user_predictions')
-        .insert({
-          user_id:                userId,
-          prediction_id:          predictionId,
-          predicted_answer:       answer,
-          confidence_level:       50,
-          home_score_prediction:  homeScore ?? null,
-          away_score_prediction:  awayScore ?? null,
-        })
-        .select()
+      const result = await savePrediction({
+        predictionId,
+        answer,
+        homeScore: homeScore ?? null,
+        awayScore: awayScore ?? null,
+      })
 
-      const timeoutPromise = new Promise<{ data: null; error: Error }>(resolve =>
-        setTimeout(() => resolve({ data: null, error: new Error('Insert timeout (10s)') }), 10000)
-      )
+      console.log('[Predict] resultado:', result)
 
-      const { data, error } = await Promise.race([insertPromise, timeoutPromise])
-
-      console.log('[Predict] resultado:', { data, error })
-
-      if (error) {
-        console.error('[Predict] ERROR:', error instanceof Error ? error.message : JSON.stringify(error))
+      if (result.error) {
+        console.error('[Predict] ERROR:', result.error)
         revertPredict(predictionId, answer)
-        showPredictError(error instanceof Error ? error.message : (error as { message?: string }).message ?? 'Error al guardar predicción')
+        showPredictError(result.error)
       }
     } catch (err) {
       console.error('[Predict] EXCEPTION:', err)
       revertPredict(predictionId, answer)
       showPredictError('Error de conexión')
     }
-  }, [mergedAnswers, userId, supabase, revertPredict, showPredictError])
+  }, [mergedAnswers, revertPredict, showPredictError])
 
   return (
     <div>

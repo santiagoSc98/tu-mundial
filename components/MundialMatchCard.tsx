@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
+import { savePrediction } from '@/app/actions/predictions'
 import { Trophy, Users, Check, AlertCircle } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import { getFlagUrl } from '@/lib/flagCodes'
@@ -77,7 +77,6 @@ export default function MundialMatchCard({
     visible: false,
   })
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const supabase = useRef(createClient()).current
 
   const options = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
   const homeTeam = getTeamNameES(options[0] ?? '')
@@ -113,14 +112,14 @@ export default function MundialMatchCard({
     if (!userId) { fireToast('error', 'Iniciá sesión para predecir'); return }
     setSaving(true)
     try {
-      const { data, error } = await supabase.from('user_predictions').insert({
-        user_id: userId,
-        prediction_id: prediction.id,
-        predicted_answer: option,
-        confidence_level: 50,
-      }).select()
-      console.log('[handleSelect] Supabase response:', { data, error })
-      if (error) throw error
+      const result = await savePrediction({
+        predictionId: prediction.id,
+        answer: option,
+        homeScore: null,
+        awayScore: null,
+      })
+      console.log('[handleSelect] result:', result)
+      if (result.error) throw new Error(result.error)
       setSelected(option)
       setLocalVotes(prev => ({ ...prev, [option]: (prev[option] ?? 0) + 1 }))
       confetti({
