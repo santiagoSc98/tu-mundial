@@ -1,0 +1,52 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p /Users/santiagocampuzano/Downloads/predique/app/auth/callback)",
+      "Bash(npm install *)",
+      "Bash(node -e \"require\\('framer-motion'\\); console.log\\('framer-motion OK'\\)\")",
+      "Bash(node -e \"require\\('canvas-confetti'\\); console.log\\('canvas-confetti OK'\\)\")",
+      "Bash(npx tsc *)",
+      "Bash(npm run *)",
+      "Bash(/Users/santiagocampuzano/.nvm/versions/node/v20.20.2/bin/npm run *)",
+      "Bash(ls /Users/santiagocampuzano/.nvm/versions/node/)",
+      "Read(//Users/santiagocampuzano/.nvm/versions/node/**)",
+      "Bash(PATH=/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin:__TRACKED_VAR__ node -e 'const {execSync}=require\\('\\\\''child_process'\\\\''\\);console.log\\(execSync\\('\\\\''node --version'\\\\''\\).toString\\(\\)\\)')",
+      "Bash(PATH=/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin:__TRACKED_VAR__ npx next build)",
+      "Bash(PATH=/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin:__TRACKED_VAR__ /Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin/node /Users/santiagocampuzano/Downloads/predique/node_modules/.bin/next build)",
+      "Bash(PATH=/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin:__TRACKED_VAR__ npx --prefix /Users/santiagocampuzano/Downloads/predique @tailwindcss/postcss /tmp/test.css -o /tmp/test-out.css)",
+      "Bash(PATH=/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin:__TRACKED_VAR__ node -e ' *)",
+      "Bash(/Users/santiagocampuzano/.nvm/versions/node/v20.19.4/bin/node node_modules/.bin/next build)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\(p.name, p.description\\)\")",
+      "Bash(ls /Users/santiagocampuzano/Downloads/predique/public/ && find /Users/santiagocampuzano/Downloads/ -name \"Adobe_Express*\" -maxdepth 3 2>/dev/null)",
+      "Read(//Users/santiagocampuzano/Downloads//**)",
+      "Read(//Users/santiagocampuzano/**)",
+      "Read(//Users/santiagocampuzano/Desktop/**)",
+      "Bash(node -e \"const s = require\\('/Users/santiagocampuzano/Downloads/predique/lib/strikers'\\); console.log\\('Players:', s.STRIKERS.length, '| Colors:', Object.keys\\(s.PLAYER_COLORS\\).length\\)\")",
+      "Bash(python3 -c \"import json; d=json.load\\(open\\('/Users/santiagocampuzano/Downloads/predique/public/data/squads.json'\\)\\); print\\(f'{len\\(d\\)} jugadores, {len\\(set\\(p[\\\\\"country\\\\\"] for p in d\\)\\)} selecciones'\\)\")",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e \"try{require\\('/Users/santiagocampuzano/Downloads/predique/node_modules/lucide-react'\\).AlertCircle; console.log\\('AlertCircle OK'\\)}catch\\(e\\){console.log\\('AlertCircle MISSING:', e.message\\)}\")",
+      "Bash(python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\('lucide:', d.get\\('dependencies',{}\\).get\\('lucide-react','?'\\)\\); print\\('react-query:', d.get\\('dependencies',{}\\).get\\('@tanstack/react-query','?'\\)\\)\")",
+      "Bash(npx next *)",
+      "Bash(sed -n '475,495p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '555,615p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '225,275p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '295,330p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '85,100p' /Users/santiagocampuzano/Downloads/predique/components/MundialMatchCard.tsx)",
+      "Bash(sed -n '155,215p' /Users/santiagocampuzano/Downloads/predique/components/MundialMatchCard.tsx)",
+      "Bash(sed -n '88,95p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '229,235p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(sed -n '300,306p' /Users/santiagocampuzano/Downloads/predique/components/InicioView.tsx)",
+      "Bash(vercel --version)",
+      "Bash(nvm use *)",
+      "Bash(nvm list *)",
+      "Bash(export PATH=\"/Users/santiagocampuzano/.nvm/versions/node/v20.20.2/bin:$PATH\")",
+      "Bash(/Users/santiagocampuzano/.nvm/versions/node/v20.20.2/bin/node /Users/santiagocampuzano/Downloads/predique/node_modules/.bin/next build)",
+      "Bash(/Users/santiagocampuzano/.nvm/versions/node/v20.20.2/bin/npm install *)",
+      "Bash(/Users/santiagocampuzano/.nvm/versions/node/v20.20.2/bin/vercel deploy *)"
+    ],
+    "additionalDirectories": [
+      "/Users/santiagocampuzano/Downloads/predique/app/auth",
+      "/tmp"
+    ]
+  }
+}
