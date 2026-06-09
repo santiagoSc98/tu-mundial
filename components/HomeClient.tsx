@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo } from 'react'
 import Image from 'next/image'
-import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList } from 'lucide-react'
+import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList, Users } from 'lucide-react'
 import AuthButton from '@/components/AuthButton'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction } from '@/app/actions/predictions'
@@ -17,6 +17,7 @@ import RankingsTab from '@/components/RankingsTab'
 import MisPrediccionesTab from '@/components/MisPrediccionesTab'
 import EspecialesTab from '@/components/EspecialesTab'
 import AdminTab from '@/components/AdminTab'
+import MisGruposView, { type Group } from '@/components/MisGruposView'
 
 function SidebarDecoration() {
   return (
@@ -28,12 +29,13 @@ function SidebarDecoration() {
   )
 }
 
-type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'especiales' | 'calendario' | 'admin' | 'reglas'
+type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'grupos' | 'especiales' | 'calendario' | 'admin' | 'reglas'
 
 const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'inicio',             label: 'Inicio',            icon: <Home          size={18} strokeWidth={1.5} /> },
   { id: 'mis-predicciones',   label: 'Mis Predicciones',  icon: <ClipboardList size={18} strokeWidth={1.5} /> },
   { id: 'posiciones',         label: 'Rankings',          icon: <Trophy        size={18} strokeWidth={1.5} /> },
+  { id: 'grupos',             label: 'Mis Grupos',        icon: <Users         size={18} strokeWidth={1.5} /> },
   { id: 'especiales',         label: 'Mis Especiales',    icon: <Star          size={18} strokeWidth={1.5} /> },
   { id: 'calendario',         label: 'Calendario',        icon: <Calendar      size={18} strokeWidth={1.5} /> },
   { id: 'reglas',             label: 'Reglas',            icon: <BookOpen      size={18} strokeWidth={1.5} /> },
@@ -44,6 +46,7 @@ const MOBILE_LABELS: Record<Tab, string> = {
   'mis-predicciones': 'Mis Pred.',
   predicciones:       'Predic.',
   posiciones:         'Ranking',
+  grupos:             'Grupos',
   especiales:         'Espec.',
   calendario:         'Calend.',
   reglas:             'Reglas',
@@ -71,6 +74,7 @@ interface Props {
   predCounts: Record<string, number>
   globalStats: GlobalStats
   voteDistributions: Record<string, Record<string, number>>
+  initialGroups: Group[]
 }
 
 function ReglasTab() {
@@ -140,7 +144,7 @@ function ReglasTab() {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
@@ -435,6 +439,9 @@ export default function HomeClient({
               predCounts={predCounts}
               globalStats={globalStats}
             />
+          )}
+          {activeTab === 'grupos' && (
+            <MisGruposView userId={userId} initialGroups={initialGroups} />
           )}
           {activeTab === 'especiales'   && (
             <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} />

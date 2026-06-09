@@ -67,7 +67,7 @@ async function HomeData() {
   const t1 = Date.now()
   const [
     specialRes, profileRes, predsRes, answersRes,
-    rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes, allVotesRes,
+    rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes, allVotesRes, groupsRes,
   ] = await withRetry(() =>
     withTimeout(
       Promise.all([
@@ -113,6 +113,12 @@ async function HomeData() {
         supabase
           .from('user_predictions')
           .select('prediction_id, predicted_answer'),
+        // Groups the current user belongs to
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from('group_members')
+          .select('groups(id, name, code, created_by)')
+          .eq('user_id', user.id),
       ]),
       18000,
       'all-data'
@@ -173,6 +179,9 @@ async function HomeData() {
     voteDistributions[r.prediction_id][r.predicted_answer] =
       (voteDistributions[r.prediction_id][r.predicted_answer] ?? 0) + 1
   })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const initialGroups = (groupsRes.data ?? []).map((r: any) => r.groups).filter(Boolean)
+
   const globalStats = {
     totalUsers:       (totalUsersRes as { count: number | null }).count ?? 0,
     totalPredictions: allUserPreds.length,
@@ -215,6 +224,7 @@ async function HomeData() {
       predCounts={predCounts}
       globalStats={globalStats}
       voteDistributions={voteDistributions}
+      initialGroups={initialGroups}
     />
   )
 }
