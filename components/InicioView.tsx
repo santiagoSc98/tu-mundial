@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useRef, useState, useCallback, useEffect } from 'react'
+import { useMemo, useRef, useState, useCallback } from 'react'
 import {
   Calendar, Target, Trophy, CheckCircle, BarChart3, Zap, Clock,
 } from 'lucide-react'
@@ -294,12 +294,11 @@ function StatTile({
 // ─── Featured match panel (card + predict toggle) ────────────────────────────
 
 function FeaturedMatchPanel({
-  prediction, existingAnswer, voteData, loadingVotes, localScore, onPredict,
+  prediction, existingAnswer, voteData, localScore, onPredict,
 }: {
   prediction: Prediction | null
   existingAnswer: string | null
   voteData: Record<string, number>
-  loadingVotes: boolean
   localScore?: { home: number; away: number }
   onPredict: (answer: string, homeScore: number, awayScore: number) => void
 }) {
@@ -542,12 +541,13 @@ interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores?: Record<string, { home: number; away: number }>
+  voteDistributions: Record<string, Record<string, number>>
   onGoToPredicciones: () => void
   onCalendarioClick: () => void
 }
 
 export default function InicioView({
-  userId, points, rank, predictions, existingAnswers, existingScores,
+  userId, points, rank, predictions, existingAnswers, existingScores, voteDistributions,
   onGoToPredicciones, onCalendarioClick,
 }: Props) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -556,8 +556,7 @@ export default function InicioView({
   const [expandedId,   setExpandedId]   = useState<string | null>(null)
   const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
   const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => existingScores ?? {})
-  const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>({})
-  const [loadingVotes, setLoadingVotes] = useState<string | null>(null)
+  const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => voteDistributions ?? {})
 
   const mergedAnswers = useMemo(
     () => ({ ...existingAnswers, ...localAnswers }),
@@ -589,29 +588,9 @@ export default function InicioView({
   const totalAnswered = Object.keys(mergedAnswers).length
   const pendingCount  = openPredictions.filter(p => !mergedAnswers[p.id]).length
 
-  // ── Expand / collapse with lazy vote fetch ───────────────────────────────────
-  const handleExpand = async (id: string) => {
-    if (expandedId === id) {
-      setExpandedId(null)
-      return
-    }
-    setExpandedId(id)
-    if (localVotes[id] !== undefined) return
-
-    setLoadingVotes(id)
-    try {
-      const { data } = await supabase
-        .from('user_predictions')
-        .select('predicted_answer')
-        .eq('prediction_id', id)
-
-      const dist: Record<string, number> = {}
-      data?.forEach((v: { predicted_answer: string }) => {
-        dist[v.predicted_answer] = (dist[v.predicted_answer] ?? 0) + 1
-      })
-      setLocalVotes(prev => ({ ...prev, [id]: dist }))
-    } catch { /* ignore */ }
-    setLoadingVotes(null)
+  // ── Expand / collapse ────────────────────────────────────────────────────────
+  const handleExpand = (id: string) => {
+    setExpandedId(prev => prev === id ? null : id)
   }
 
   // ── Save prediction (optimistic) ────────────────────────────────────────────
@@ -657,28 +636,6 @@ export default function InicioView({
     }
   }, [mergedAnswers, userId, supabase])
 
-  // ── Auto-load votes for featured match ──────────────────────────────────────
-  useEffect(() => {
-    if (!featured || localVotes[featured.id] !== undefined) return
-    const id = featured.id
-    setLoadingVotes(id)
-    ;(async () => {
-      try {
-        const { data } = await supabase
-          .from('user_predictions')
-          .select('predicted_answer')
-          .eq('prediction_id', id)
-        const dist: Record<string, number> = {}
-        data?.forEach((v: { predicted_answer: string }) => {
-          dist[v.predicted_answer] = (dist[v.predicted_answer] ?? 0) + 1
-        })
-        setLocalVotes(prev => ({ ...prev, [id]: dist }))
-      } catch { /* ignore */ }
-      setLoadingVotes(null)
-    })()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [featured?.id])
-
   return (
     <div>
       {/* ── Header ─────────────────────────────────────────────────────── */}
@@ -712,7 +669,6 @@ export default function InicioView({
             prediction={featured}
             existingAnswer={featured ? (mergedAnswers[featured.id] ?? null) : null}
             voteData={featured ? (localVotes[featured.id] ?? {}) : {}}
-            loadingVotes={featured ? loadingVotes === featured.id : false}
             localScore={featured ? localScores[featured.id] : undefined}
             onPredict={(answer, hs, as) => featured && handlePredict(featured.id, answer, hs, as)}
           />
@@ -742,7 +698,7 @@ export default function InicioView({
                               prediction={p}
                               existingAnswer={mergedAnswers[p.id] ?? null}
                               voteData={localVotes[p.id] ?? {}}
-                              loading={loadingVotes === p.id}
+                              loading={false}
                               submitting={false}
                               localScore={localScores[p.id]}
                               onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}

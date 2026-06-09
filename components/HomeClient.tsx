@@ -345,6 +345,7 @@ export default function HomeClient({
                 predictions={predictions}
                 existingAnswers={existingAnswers}
                 existingScores={existingScores}
+                voteDistributions={voteDistributions}
                 onGoToPredicciones={() => setActiveTab('predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
