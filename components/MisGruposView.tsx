@@ -47,6 +47,12 @@ function formatMiles(val: string | number): string {
   return n.toLocaleString('es-PY')
 }
 
+function cleanNumber(val: string): number | null {
+  if (!val) return null
+  const clean = val.replace(/\./g, '').replace(/,/g, '').replace(/[^0-9]/g, '')
+  return clean ? Number(clean) : null
+}
+
 function WhatsAppIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -154,8 +160,8 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     try {
       const result = await createGroup(
         createName.trim(),
-        createPrize ? Number(createPrize) : null,
-        createEntry ? Number(createEntry) : null,
+        cleanNumber(createPrize),
+        cleanNumber(createEntry),
         createCurrency,
       )
       if (result.error || !result.data) throw new Error(result.error ?? 'Error al crear grupo')
@@ -196,8 +202,8 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const prizeAmount = editPrize ? Number(editPrize) : null
-      const entryFee   = editEntry ? Number(editEntry) : null
+      const prizeAmount = cleanNumber(editPrize)
+      const entryFee   = cleanNumber(editEntry)
       const result = await updateGroup({
         groupId:     viewingGroup.id,
         name:        editName.trim(),
