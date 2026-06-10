@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation'
 
-export default function JoinPage({ params }: { params: { code: string } }) {
-  redirect(`/home?join=${params.code}`)
+export default async function JoinPage({ params }: { params: Promise<{ code: string }> }) {
+  const { code } = await params
+  redirect(`/home?join=${code}`)
 }
