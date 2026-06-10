@@ -115,8 +115,8 @@ export async function updateGroup({
 
   console.log('[updateGroup] data:', data, 'error:', error)
 
-  if (error) return { error: error.message as string, success: false }
-  return { error: null, success: true }
+  if (error) return { data: null, error: error.message as string }
+  return { data: data[0] as { id: string; name: string; code: string; created_by: string; prize_amount: number | null; entry_fee: number | null; currency: string }, error: null }
 }
 
 export async function getGroupMembers(groupId: string) {

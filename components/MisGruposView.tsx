@@ -199,6 +199,9 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
   }, [joinCode])
 
   const handleUpdateGroup = useCallback(async () => {
+    console.log('[handleUpdateGroup] llamado')
+    console.log('[handleUpdateGroup] viewingGroup:', viewingGroup?.id)
+    console.log('[handleUpdateGroup] editName:', editName)
     if (!viewingGroup || !editName.trim()) return
     setLoading(true)
     setError(null)
@@ -209,9 +212,10 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
       const name       = editName.trim()
       const currency   = editCurrency
       const result = await updateGroup({ groupId, name, prizeAmount, entryFee, currency })
-      if (!result.success) throw new Error(result.error ?? 'Error al guardar')
-      setViewingGroup(prev => prev ? { ...prev, name, prize_amount: prizeAmount, entry_fee: entryFee, currency } : null)
-      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, name, prize_amount: prizeAmount, entry_fee: entryFee, currency } : g))
+      if (result.error || !result.data) throw new Error(result.error ?? 'Error al guardar')
+      const updated = result.data
+      setGroups(prev => prev.map(g => g.id === updated.id ? updated : g))
+      setViewingGroup(updated)
       setModal(null)
       setToast('¡Grupo actualizado!')
       setTimeout(() => setToast(null), 3000)
@@ -437,7 +441,13 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
                 Cancelar
               </button>
               <button
-                onClick={handleUpdateGroup}
+                onClick={async () => {
+                  console.log('[EditGroup] Guardando...')
+                  console.log('[EditGroup] editName:', editName)
+                  console.log('[EditGroup] editPrize:', editPrize)
+                  console.log('[EditGroup] viewingGroup:', viewingGroup?.id)
+                  await handleUpdateGroup()
+                }}
                 disabled={!editName.trim() || loading}
                 style={{ flex: 1, padding: '13px', borderRadius: 12, background: editName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
               >
