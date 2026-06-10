@@ -145,6 +145,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
+  const [toast, setToast] = useState<string | null>(null)
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
 
   const copyCode = useCallback((code: string) => {
@@ -204,24 +205,16 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     try {
       const prizeAmount = cleanNumber(editPrize)
       const entryFee   = cleanNumber(editEntry)
-      const result = await updateGroup({
-        groupId:     viewingGroup.id,
-        name:        editName.trim(),
-        prizeAmount,
-        entryFee,
-        currency:    editCurrency,
-      })
-      if (result.error) throw new Error(result.error)
-      const updated: Group = {
-        ...viewingGroup,
-        name:         editName.trim(),
-        prize_amount: prizeAmount,
-        entry_fee:    entryFee,
-        currency:     editCurrency,
-      }
-      setViewingGroup(updated)
-      setGroups(prev => prev.map(g => g.id === updated.id ? updated : g))
+      const groupId    = viewingGroup.id
+      const name       = editName.trim()
+      const currency   = editCurrency
+      const result = await updateGroup({ groupId, name, prizeAmount, entryFee, currency })
+      if (!result.success) throw new Error(result.error ?? 'Error al guardar')
+      setViewingGroup(prev => prev ? { ...prev, name, prize_amount: prizeAmount, entry_fee: entryFee, currency } : null)
+      setGroups(prev => prev.map(g => g.id === groupId ? { ...g, name, prize_amount: prizeAmount, entry_fee: entryFee, currency } : g))
       setModal(null)
+      setToast('¡Grupo actualizado!')
+      setTimeout(() => setToast(null), 3000)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al guardar')
     } finally {
@@ -385,6 +378,13 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
             })
           )}
         </div>
+
+        {/* Toast */}
+        {toast && (
+          <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+            ✓ {toast}
+          </div>
+        )}
 
         {/* Edit modal (accessible from detail view) */}
         {modal === 'edit' && (
