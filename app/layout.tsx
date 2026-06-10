@@ -13,9 +13,11 @@ export const metadata: Metadata = {
   title: 'TU MUNDIAL - Tus Predicciones',
   description: 'Predecí los partidos del Mundial 2026 y competí con amigos.',
   icons: {
-    icon: '/logo-mundial.png',
+    icon: [
+      { url: '/favicon.ico' },
+      { url: '/logo-mundial.png', type: 'image/png' },
+    ],
     apple: '/logo-mundial.png',
-    shortcut: '/logo-mundial.png',
   },
 }
 
@@ -31,6 +33,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       {/* eslint-disable-next-line @next/next/no-head-element */}
       <head>
+        <link rel="icon" href="/favicon.ico" />
+        <link rel="icon" type="image/png" href="/logo-mundial.png" />
+        <link rel="apple-touch-icon" href="/logo-mundial.png" />
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="min-h-full flex flex-col">
