@@ -87,6 +87,11 @@ export async function updateGroup({
 }) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
+
+  console.log('[updateGroup] userId:', user?.id)
+  console.log('[updateGroup] groupId:', groupId)
+  console.log('[updateGroup] data:', { name, prizeAmount, entryFee, currency })
+
   if (!user) return { error: 'No autenticado' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -96,13 +101,19 @@ export async function updateGroup({
     .eq('id', groupId)
     .single()
 
+  console.log('[updateGroup] group.created_by:', group?.created_by)
+  console.log('[updateGroup] match:', group?.created_by === user.id)
+
   if (group?.created_by !== user.id) return { error: 'Solo el creador puede editar el grupo' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error } = await (supabase as any)
+  const { data, error } = await (supabase as any)
     .from('groups')
     .update({ name, prize_amount: prizeAmount, entry_fee: entryFee, currency })
     .eq('id', groupId)
+    .select()
+
+  console.log('[updateGroup] result:', { data, error })
 
   if (error) return { error: error.message as string }
   return { error: null }
