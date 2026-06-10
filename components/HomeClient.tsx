@@ -287,6 +287,17 @@ export default function HomeClient({
               </button>
             )
           })()}
+          <a
+            href="/privacidad"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm"
+            style={{ color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}
+            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.50)')}
+            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
+          >
+            Privacidad
+          </a>
         </nav>
 
         {/* User + sign-out */}

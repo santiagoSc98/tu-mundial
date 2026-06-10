@@ -83,6 +83,12 @@ export default function LoginScreen() {
           <p className="text-xs" style={{ color: 'rgba(255,255,255,0.20)' }}>
             Gratis · Sin descargas
           </p>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.25)' }}>
+            Al continuar aceptás nuestra{' '}
+            <a href="/privacidad" className="underline" style={{ color: '#006A33' }}>
+              Política de Privacidad
+            </a>
+          </p>
         </div>
       </motion.div>
     </div>

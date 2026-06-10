@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { createClient } from '@/lib/supabase/client'
+import { saveSpecialPredictions } from '@/app/actions/predictions'
 import { Check, AlertCircle, Loader2, Edit2, Trophy, Target, X } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { MUNDIAL_TEAMS } from '@/lib/mundialTeams'
@@ -40,7 +40,6 @@ export default function EspecialesTab({ userId, championTeam, topScorer }: Props
     type: 'success', message: '', visible: false,
   })
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const supabase   = useRef(createClient()).current
 
   const showToast = (type: 'success' | 'error', message: string) => {
     clearTimeout(toastTimer.current)
@@ -51,11 +50,11 @@ export default function EspecialesTab({ userId, championTeam, topScorer }: Props
   const handleSave = async () => {
     setSaving(true)
     try {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from('special_predictions')
-        .upsert({ user_id: userId, champion_team: championName ?? null, top_scorer: scorer.trim() || null }, { onConflict: 'user_id' })
-      if (error) throw error
+      const result = await saveSpecialPredictions({
+        championTeam: championName ?? null,
+        topScorer: scorer.trim() || null,
+      })
+      if (result.error) throw new Error(result.error)
       showToast('success', '¡Predicciones actualizadas!')
       setEditing(false)
     } catch (err) {

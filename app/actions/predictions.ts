@@ -41,3 +41,31 @@ export async function savePrediction({
 
   return { data, error: null }
 }
+
+export async function saveSpecialPredictions({
+  championTeam,
+  topScorer,
+}: {
+  championTeam: string | null
+  topScorer: string | null
+}) {
+  const supabase = await createClient()
+
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('special_predictions')
+    .upsert(
+      { user_id: user.id, champion_team: championTeam, top_scorer: topScorer },
+      { onConflict: 'user_id' }
+    )
+
+  if (error) {
+    console.error('[saveSpecialPredictions] error:', error)
+    return { error: error.message as string }
+  }
+
+  return { error: null }
+}
