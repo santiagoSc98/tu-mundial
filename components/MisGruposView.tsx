@@ -63,7 +63,7 @@ function WhatsAppIcon() {
   )
 }
 
-const APP_URL = 'https://predique.vercel.app'
+const APP_URL = 'https://tu-mundial.vercel.app'
 
 function shareText(code: string, groupName: string) {
   return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL! 🏆⚽\nEntrá directo: ${APP_URL}/join/${code}`
