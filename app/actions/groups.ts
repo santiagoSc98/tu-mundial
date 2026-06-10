@@ -2,7 +2,12 @@
 
 import { createClient } from '@/lib/supabase/server'
 
-export async function createGroup(name: string) {
+export async function createGroup(
+  name: string,
+  prizeAmount?: number | null,
+  entryFee?: number | null,
+  currency: string = 'Gs',
+) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { data: null, error: 'No autenticado' }
@@ -16,7 +21,12 @@ export async function createGroup(name: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data: group, error } = await (supabase as any)
     .from('groups')
-    .insert({ name, code, created_by: user.id })
+    .insert({
+      name, code, created_by: user.id,
+      prize_amount: prizeAmount ?? null,
+      entry_fee:    entryFee    ?? null,
+      currency,
+    })
     .select()
     .single()
 
@@ -27,7 +37,7 @@ export async function createGroup(name: string) {
     .from('group_members')
     .insert({ group_id: group.id, user_id: user.id })
 
-  return { data: group as { id: string; name: string; code: string; created_by: string }, error: null }
+  return { data: group as { id: string; name: string; code: string; created_by: string; prize_amount: number | null; entry_fee: number | null; currency: string }, error: null }
 }
 
 export async function joinGroup(code: string) {

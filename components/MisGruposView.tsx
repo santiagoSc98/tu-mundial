@@ -61,6 +61,46 @@ function shareText(code: string, groupName: string) {
   return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL!\nUsá el código: *${code}*\n${APP_URL}`
 }
 
+function CurrencySelector({ value, onChange }: { value: string; onChange: (c: string) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 6 }}>
+      {['Gs', 'USD', 'ARS', 'BRL', 'COP'].map(curr => (
+        <button
+          key={curr}
+          type="button"
+          onClick={() => onChange(curr)}
+          style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'background 0.15s', background: value === curr ? '#006A33' : 'rgba(255,255,255,0.07)', color: value === curr ? '#fff' : 'rgba(255,255,255,0.45)' }}
+        >
+          {curr}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+function ModalWrap({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div
+      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
+      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      onClick={e => { if (e.target === e.currentTarget) onClose() }}
+    >
+      <div
+        className="w-full relative overflow-y-auto"
+        style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, maxWidth: 400, maxHeight: '90vh' }}
+      >
+        <button
+          onClick={onClose}
+          style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', display: 'flex', alignItems: 'center' }}
+        >
+          <X size={16} />
+        </button>
+        {children}
+      </div>
+    </div>
+  )
+}
+
 export default function MisGruposView({ userId, initialGroups }: Props) {
   const [groups, setGroups] = useState<Group[]>(initialGroups)
   const [modal, setModal] = useState<null | 'create' | 'share' | 'join' | 'edit'>(null)
@@ -69,8 +109,13 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
   const [members, setMembers] = useState<GroupMember[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
 
-  // Create / join state
+  // Create state
   const [createName, setCreateName] = useState('')
+  const [createPrize, setCreatePrize] = useState('')
+  const [createEntry, setCreateEntry] = useState('')
+  const [createCurrency, setCreateCurrency] = useState('Gs')
+
+  // Join state
   const [joinCode, setJoinCode] = useState('')
   const [createdCode, setCreatedCode] = useState('')
 
@@ -96,19 +141,27 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const result = await createGroup(createName.trim())
+      const result = await createGroup(
+        createName.trim(),
+        createPrize ? Number(createPrize) : null,
+        createEntry ? Number(createEntry) : null,
+        createCurrency,
+      )
       if (result.error || !result.data) throw new Error(result.error ?? 'Error al crear grupo')
       setGroups(prev => [...prev, result.data!])
       setCreatedCode(result.data!.code)
       setSelectedGroup(result.data!)
       setCreateName('')
+      setCreatePrize('')
+      setCreateEntry('')
+      setCreateCurrency('Gs')
       setModal('share')
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al crear grupo')
     } finally {
       setLoading(false)
     }
-  }, [createName])
+  }, [createName, createPrize, createEntry, createCurrency])
 
   const handleJoin = useCallback(async () => {
     if (!joinCode.trim()) return
@@ -186,23 +239,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     setModal('edit')
   }, [])
 
-  // ── Shared modal backdrop ────────────────────────────────────────────────────
-  const ModalWrap = ({ children }: { children: React.ReactNode }) => (
-    <div
-      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-      onClick={e => { if (e.target === e.currentTarget) setModal(null) }}
-    >
-      <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
-        <button
-          onClick={() => setModal(null)}
-          style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', display: 'flex', alignItems: 'center' }}
-        >
-          <X size={16} />
-        </button>
-        {children}
-      </div>
-    </div>
-  )
+  const closeModal = () => setModal(null)
 
   // ── Group detail ─────────────────────────────────────────────────────────────
   if (viewingGroup) {
@@ -334,7 +371,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
 
         {/* Edit modal (accessible from detail view) */}
         {modal === 'edit' && (
-          <ModalWrap>
+          <ModalWrap onClose={closeModal}>
             <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Editar grupo</h2>
             <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Actualizá el nombre y el premio</p>
 
@@ -354,20 +391,12 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
               inputMode="numeric"
               value={editPrize ? formatMiles(editPrize) : ''}
               onChange={e => setEditPrize(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
               placeholder="100.000"
               style={{ ...INPUT_STYLE, marginBottom: 10 }}
             />
-            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-              {['Gs', 'USD', 'ARS', 'BRL', 'COP'].map(curr => (
-                <button
-                  key={curr}
-                  type="button"
-                  onClick={() => setEditCurrency(curr)}
-                  style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'background 0.15s', background: editCurrency === curr ? '#006A33' : 'rgba(255,255,255,0.07)', color: editCurrency === curr ? '#fff' : 'rgba(255,255,255,0.45)' }}
-                >
-                  {curr}
-                </button>
-              ))}
+            <div style={{ marginBottom: 16 }}>
+              <CurrencySelector value={editCurrency} onChange={setEditCurrency} />
             </div>
 
             <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
@@ -376,6 +405,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
               inputMode="numeric"
               value={editEntry ? formatMiles(editEntry) : ''}
               onChange={e => setEditEntry(e.target.value.replace(/\D/g, ''))}
+              onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
               placeholder="10.000"
               style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 24 }}
             />
@@ -485,21 +515,49 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
 
       {/* ── Create / share / join modals ────────────────────────────────────── */}
       {(modal === 'create' || modal === 'share' || modal === 'join') && (
-        <ModalWrap>
+        <ModalWrap onClose={closeModal}>
           {modal === 'create' && (
             <>
               <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Crear grupo</h2>
-              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre a tu grupo privado</p>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre y configurá el premio (opcional)</p>
+
+              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
               <input
                 type="text"
                 placeholder="Ej: Los Cracks de la Ofi"
                 value={createName}
                 onChange={e => setCreateName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
                 maxLength={40}
                 autoFocus
+                style={{ ...INPUT_STYLE, marginBottom: 16 }}
+              />
+
+              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={createPrize ? formatMiles(createPrize) : ''}
+                onChange={e => setCreatePrize(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
+                placeholder="100.000"
+                style={{ ...INPUT_STYLE, marginBottom: 10 }}
+              />
+              <div style={{ marginBottom: 16 }}>
+                <CurrencySelector value={createCurrency} onChange={setCreateCurrency} />
+              </div>
+
+              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={createEntry ? formatMiles(createEntry) : ''}
+                onChange={e => setCreateEntry(e.target.value.replace(/\D/g, ''))}
+                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
+                placeholder="10.000"
                 style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 20 }}
               />
+
               {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
               <button
                 onClick={handleCreate}
