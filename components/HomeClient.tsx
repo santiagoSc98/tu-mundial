@@ -406,11 +406,12 @@ export default function HomeClient({
           key={activeTab}
           className="animate-slide-up"
           style={{
-            maxWidth: activeTab === 'inicio' ? 1200 : activeTab === 'calendario' ? 1100 : 1100,
+            maxWidth: activeTab === 'inicio' ? 1200 : activeTab === 'calendario' ? 1200 : 1200,
             margin: '0 auto',
             padding: '32px 16px',
           }}
         >
+          
           {activeTab === 'inicio' && (
             <ErrorBoundary>
               <InicioView
