@@ -1,6 +1,6 @@
-# 🎯 Prediqué - App de Predicciones Diarias
+Tu mundial
 
-## ✅ INSTALACIÓN RÁPIDA (3 pasos)
+##  INSTALACIÓN RÁPIDA (3 pasos)
 
 ### Paso 1: Instalar dependencias
 ```bash
@@ -30,7 +30,7 @@ Abrí [http://localhost:3000](http://localhost:3000) en tu navegador 🚀
 
 ---
 
-## 📊 CONFIGURACIÓN DE SUPABASE
+##  CONFIGURACIÓN DE SUPABASE
 
 ### 1. Crear proyecto en Supabase
 - Andá a https://supabase.com
@@ -137,7 +137,7 @@ create trigger on_auth_user_created
 
 ---
 
-## 🎨 ESTRUCTURA DEL PROYECTO
+##  ESTRUCTURA DEL PROYECTO
 
 ```
 predique/
@@ -161,7 +161,7 @@ predique/
 
 ---
 
-## 🚀 PRÓXIMOS PASOS
+##  PRÓXIMOS PASOS
 
 ### Semana 1 (Fundamentos)
 - [x] Setup inicial del proyecto
@@ -204,7 +204,7 @@ npm run lint
 
 ---
 
-## 🆘 TROUBLESHOOTING
+##  TROUBLESHOOTING
 
 ### Error: "Supabase URL is not defined"
 - Verificá que el archivo `.env.local` existe
@@ -221,7 +221,7 @@ npm run lint
 
 ---
 
-## 📞 CONTACTO
+##  CONTACTO
 
 Si tenés problemas, revisá:
 1. El documento Word con el plan completo
@@ -229,6 +229,4 @@ Si tenés problemas, revisá:
 3. La documentación de Supabase: https://supabase.com/docs
 
 ---
-
-**¡Éxitos con Prediqué! 🎯**
 # tu-mundial
