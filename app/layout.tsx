@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import { Geist, Geist_Mono, Montserrat, Inter } from 'next/font/google'
 import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
@@ -58,6 +59,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <QueryProvider>
           <ThemeProvider>{children}</ThemeProvider>
         </QueryProvider>
+        <Script
+          async
+          src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2739632046843917"
+          crossOrigin="anonymous"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   )
