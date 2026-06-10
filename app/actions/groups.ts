@@ -113,7 +113,7 @@ export async function updateGroup({
     .eq('id', groupId)
     .select()
 
-  console.log('[updateGroup] result:', { data, error })
+  console.log('[updateGroup] data:', data, 'error:', error)
 
   if (error) return { error: error.message as string, success: false }
   return { error: null, success: true }
