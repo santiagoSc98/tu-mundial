@@ -81,13 +81,24 @@ function CurrencySelector({ value, onChange }: { value: string; onChange: (c: st
 function ModalWrap({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
     <div
-      className="fixed inset-0 z-[1000] flex items-center justify-center p-4"
-      style={{ background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)' }}
+      style={{
+        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+        zIndex: 9999,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        padding: 16,
+        background: 'rgba(0,0,0,0.75)',
+        backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div
-        className="w-full relative overflow-y-auto"
-        style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, maxWidth: 400, maxHeight: '90vh' }}
+        style={{
+          background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)',
+          borderRadius: 20, padding: 28,
+          width: '100%', maxWidth: 400,
+          maxHeight: '90vh', overflowY: 'auto',
+          position: 'relative',
+        }}
       >
         <button
           onClick={onClose}
