@@ -62,6 +62,42 @@ export async function joinGroup(code: string) {
   return { data: group as { id: string; name: string; code: string; created_by: string }, error: null }
 }
 
+export async function updateGroup({
+  groupId,
+  name,
+  prizeAmount,
+  entryFee,
+  currency,
+}: {
+  groupId: string
+  name: string
+  prizeAmount: number | null
+  entryFee: number | null
+  currency: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups')
+    .select('created_by')
+    .eq('id', groupId)
+    .single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede editar el grupo' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('groups')
+    .update({ name, prize_amount: prizeAmount, entry_fee: entryFee, currency })
+    .eq('id', groupId)
+
+  if (error) return { error: error.message as string }
+  return { error: null }
+}
+
 export async function getGroupMembers(groupId: string) {
   const supabase = await createClient()
 

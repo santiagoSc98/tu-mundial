@@ -46,7 +46,13 @@ async function fetchMatchResult(fixtureId: string): Promise<{
   }
 }
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  const isVercelCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
+  if (!isVercelCron) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  }
+
   const supabase = getSupabase()
 
   const now = new Date().toISOString()

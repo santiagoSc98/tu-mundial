@@ -1,14 +1,17 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle } from 'lucide-react'
-import { createGroup, joinGroup, getGroupMembers } from '@/app/actions/groups'
+import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2 } from 'lucide-react'
+import { createGroup, joinGroup, getGroupMembers, updateGroup } from '@/app/actions/groups'
 
 export interface Group {
   id: string
   name: string
   code: string
   created_by: string
+  prize_amount?: number | null
+  entry_fee?: number | null
+  currency?: string | null
 }
 
 interface GroupMember {
@@ -29,6 +32,14 @@ const CARD: React.CSSProperties = {
   borderRadius: 20,
 }
 
+const INPUT_STYLE: React.CSSProperties = {
+  width: '100%', padding: '12px 14px', borderRadius: 12,
+  background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)',
+  color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box',
+}
+
+const GOLD = '#F6B73C'
+
 function WhatsAppIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -45,14 +56,23 @@ function shareText(code: string, groupName: string) {
 
 export default function MisGruposView({ userId, initialGroups }: Props) {
   const [groups, setGroups] = useState<Group[]>(initialGroups)
-  const [modal, setModal] = useState<null | 'create' | 'share' | 'join'>(null)
+  const [modal, setModal] = useState<null | 'create' | 'share' | 'join' | 'edit'>(null)
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
   const [viewingGroup, setViewingGroup] = useState<Group | null>(null)
   const [members, setMembers] = useState<GroupMember[]>([])
   const [membersLoading, setMembersLoading] = useState(false)
+
+  // Create / join state
   const [createName, setCreateName] = useState('')
   const [joinCode, setJoinCode] = useState('')
   const [createdCode, setCreatedCode] = useState('')
+
+  // Edit state
+  const [editName, setEditName] = useState('')
+  const [editPrize, setEditPrize] = useState('')
+  const [editEntry, setEditEntry] = useState('')
+  const [editCurrency, setEditCurrency] = useState('Gs')
+
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [copied, setCopied] = useState(false)
@@ -100,15 +120,47 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     }
   }, [joinCode])
 
+  const handleUpdateGroup = useCallback(async () => {
+    if (!viewingGroup || !editName.trim()) return
+    setLoading(true)
+    setError(null)
+    try {
+      const prizeAmount = editPrize ? Number(editPrize) : null
+      const entryFee   = editEntry ? Number(editEntry) : null
+      const result = await updateGroup({
+        groupId:     viewingGroup.id,
+        name:        editName.trim(),
+        prizeAmount,
+        entryFee,
+        currency:    editCurrency,
+      })
+      if (result.error) throw new Error(result.error)
+      const updated: Group = {
+        ...viewingGroup,
+        name:         editName.trim(),
+        prize_amount: prizeAmount,
+        entry_fee:    entryFee,
+        currency:     editCurrency,
+      }
+      setViewingGroup(updated)
+      setGroups(prev => prev.map(g => g.id === updated.id ? updated : g))
+      setModal(null)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Error al guardar')
+    } finally {
+      setLoading(false)
+    }
+  }, [viewingGroup, editName, editPrize, editEntry, editCurrency])
+
   const openDetail = useCallback(async (group: Group) => {
     setViewingGroup(group)
     setMembersLoading(true)
     try {
       const result = await getGroupMembers(group.id)
       const rows: GroupMember[] = (result.data ?? []).map(r => ({
-        user_id: r.user_id,
-        username: r.profiles?.username ?? null,
-        avatar_url: r.profiles?.avatar_url ?? null,
+        user_id:      r.user_id,
+        username:     r.profiles?.username ?? null,
+        avatar_url:   r.profiles?.avatar_url ?? null,
         total_points: r.profiles?.total_points ?? 0,
       })).sort((a, b) => b.total_points - a.total_points)
       setMembers(rows)
@@ -118,19 +170,50 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
     }
   }, [])
 
-  // ── Group detail ────────────────────────────────────────────────────────────
+  const openEdit = useCallback((group: Group) => {
+    setEditName(group.name)
+    setEditPrize(group.prize_amount ? String(group.prize_amount) : '')
+    setEditEntry(group.entry_fee ? String(group.entry_fee) : '')
+    setEditCurrency(group.currency ?? 'Gs')
+    setError(null)
+    setModal('edit')
+  }, [])
+
+  // ── Shared modal backdrop ────────────────────────────────────────────────────
+  const ModalWrap = ({ children }: { children: React.ReactNode }) => (
+    <div
+      style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
+      onClick={e => { if (e.target === e.currentTarget) setModal(null) }}
+    >
+      <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, position: 'relative' }}>
+        <button
+          onClick={() => setModal(null)}
+          style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', display: 'flex', alignItems: 'center' }}
+        >
+          <X size={16} />
+        </button>
+        {children}
+      </div>
+    </div>
+  )
+
+  // ── Group detail ─────────────────────────────────────────────────────────────
   if (viewingGroup) {
+    const currency = viewingGroup.currency ?? 'Gs'
+    const isCreator = viewingGroup.created_by === userId
+
     return (
       <div>
-        <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        {/* Header row */}
+        <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
             onClick={() => setViewingGroup(null)}
             style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 10, padding: '6px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 13, fontWeight: 600 }}
           >
             ← Mis Grupos
           </button>
-          <div>
-            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, fontFamily: 'var(--font-montserrat, system-ui)' }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <h1 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: 0, fontFamily: 'var(--font-montserrat, system-ui)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {viewingGroup.name}
             </h1>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
@@ -138,9 +221,45 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
               {' · '}Código: <strong style={{ color: '#60a5fa', letterSpacing: '0.06em' }}>{viewingGroup.code}</strong>
             </p>
           </div>
+          {isCreator && (
+            <button
+              onClick={() => openEdit(viewingGroup)}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '7px 12px', borderRadius: 10, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600, flexShrink: 0 }}
+            >
+              <Edit2 size={13} />
+              Editar
+            </button>
+          )}
         </div>
 
-        <div style={{ display: 'flex', gap: 8, marginBottom: 24 }}>
+        {/* Prize banner */}
+        {viewingGroup.prize_amount && (
+          <div style={{ background: `rgba(246,183,60,0.08)`, border: `1px solid rgba(246,183,60,0.20)`, borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Premio del ganador</p>
+                <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: 0, letterSpacing: '-0.01em' }}>
+                  {currency} {Number(viewingGroup.prize_amount).toLocaleString()}
+                </p>
+              </div>
+              {viewingGroup.entry_fee && (
+                <div style={{ textAlign: 'right' }}>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Aporte</p>
+                  <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 2px' }}>
+                    {currency} {Number(viewingGroup.entry_fee).toLocaleString()}
+                  </p>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>por persona</p>
+                </div>
+              )}
+            </div>
+            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '10px 0 0' }}>
+              * El pago se coordina entre los participantes
+            </p>
+          </div>
+        )}
+
+        {/* Invite row */}
+        <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
           <button
             onClick={() => copyCode(viewingGroup.code)}
             style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 14px', borderRadius: 10, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: copied ? '#4ade80' : 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 600 }}
@@ -157,6 +276,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
           </button>
         </div>
 
+        {/* Ranking */}
         <div style={{ ...CARD, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Users size={14} style={{ color: 'rgba(255,255,255,0.40)' }} />
@@ -165,13 +285,9 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
             </span>
           </div>
           {membersLoading ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>
-              Cargando...
-            </div>
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>Cargando...</div>
           ) : members.length === 0 ? (
-            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>
-              Sin miembros aún
-            </div>
+            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>Sin miembros aún</div>
           ) : (
             members.map((m, i) => {
               const isMe = m.user_id === userId
@@ -179,11 +295,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
               return (
                 <div
                   key={m.user_id}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px',
-                    borderBottom: i < members.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                    background: isMe ? 'rgba(0,106,51,0.10)' : 'transparent',
-                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', borderBottom: i < members.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', background: isMe ? 'rgba(0,106,51,0.10)' : 'transparent' }}
                 >
                   <div style={{ width: 28, textAlign: 'center', flexShrink: 0 }}>
                     {medal
@@ -212,11 +324,76 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
             })
           )}
         </div>
+
+        {/* Edit modal (accessible from detail view) */}
+        {modal === 'edit' && (
+          <ModalWrap>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Editar grupo</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Actualizá el nombre y el premio</p>
+
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
+            <input
+              type="text"
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              maxLength={30}
+              autoFocus
+              style={{ ...INPUT_STYLE, marginBottom: 16 }}
+            />
+
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+              <input
+                type="number"
+                value={editPrize}
+                onChange={e => setEditPrize(e.target.value)}
+                placeholder="100.000"
+                min={0}
+                style={{ ...INPUT_STYLE, flex: 1, width: 'auto' }}
+              />
+              <select
+                value={editCurrency}
+                onChange={e => setEditCurrency(e.target.value)}
+                style={{ padding: '12px 10px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, outline: 'none', cursor: 'pointer' }}
+              >
+                {['Gs', 'USD', 'ARS', 'BRL', 'COP'].map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+            </div>
+
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
+            <input
+              type="number"
+              value={editEntry}
+              onChange={e => setEditEntry(e.target.value)}
+              placeholder="10.000"
+              min={0}
+              style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 24 }}
+            />
+
+            {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button
+                onClick={() => setModal(null)}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleUpdateGroup}
+                disabled={!editName.trim() || loading}
+                style={{ flex: 1, padding: '13px', borderRadius: 12, background: editName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+              >
+                {loading ? 'Guardando...' : 'Guardar'}
+              </button>
+            </div>
+          </ModalWrap>
+        )}
       </div>
     )
   }
 
-  // ── Groups list ─────────────────────────────────────────────────────────────
+  // ── Groups list ──────────────────────────────────────────────────────────────
   return (
     <div>
       <div style={{ marginBottom: 28 }}>
@@ -267,14 +444,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
             <button
               key={g.id}
               onClick={() => openDetail(g)}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px',
-                width: '100%', cursor: 'pointer', textAlign: 'left',
-                background: 'transparent',
-                border: 'none',
-                borderBottom: i < groups.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none',
-                transition: 'background 0.15s',
-              }}
+              style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 20px', width: '100%', cursor: 'pointer', textAlign: 'left', background: 'transparent', border: 'none', borderBottom: i < groups.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', transition: 'background 0.15s' }}
               onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
               onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
             >
@@ -287,9 +457,8 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
                 </p>
                 <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.35)' }}>
                   Código: <strong style={{ color: '#60a5fa', letterSpacing: '0.06em' }}>{g.code}</strong>
-                  {memberCounts[g.id] != null && (
-                    <span> · {memberCounts[g.id]} miembro{memberCounts[g.id] !== 1 ? 's' : ''}</span>
-                  )}
+                  {memberCounts[g.id] != null && <span> · {memberCounts[g.id]} miembro{memberCounts[g.id] !== 1 ? 's' : ''}</span>}
+                  {g.prize_amount && <span style={{ color: GOLD }}> · {g.currency ?? 'Gs'} {Number(g.prize_amount).toLocaleString()}</span>}
                 </p>
               </div>
               <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
@@ -304,98 +473,86 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
         </div>
       )}
 
-      {/* ── Modals ─────────────────────────────────────────────────────────── */}
-      {modal && (
-        <div
-          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
-          onClick={e => { if (e.target === e.currentTarget) setModal(null) }}
-        >
-          <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, position: 'relative' }}>
-            <button
-              onClick={() => setModal(null)}
-              style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', display: 'flex', alignItems: 'center' }}
-            >
-              <X size={16} />
-            </button>
+      {/* ── Create / share / join modals ────────────────────────────────────── */}
+      {(modal === 'create' || modal === 'share' || modal === 'join') && (
+        <ModalWrap>
+          {modal === 'create' && (
+            <>
+              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Crear grupo</h2>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre a tu grupo privado</p>
+              <input
+                type="text"
+                placeholder="Ej: Los Cracks de la Ofi"
+                value={createName}
+                onChange={e => setCreateName(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
+                maxLength={40}
+                autoFocus
+                style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 20 }}
+              />
+              {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+              <button
+                onClick={handleCreate}
+                disabled={!createName.trim() || loading}
+                style={{ width: '100%', padding: '13px', borderRadius: 12, background: createName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: createName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+              >
+                {loading ? 'Creando...' : 'Crear grupo'}
+              </button>
+            </>
+          )}
 
-            {modal === 'create' && (
-              <>
-                <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Crear grupo</h2>
-                <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre a tu grupo privado</p>
-                <input
-                  type="text"
-                  placeholder="Ej: Los Cracks de la Ofi"
-                  value={createName}
-                  onChange={e => setCreateName(e.target.value)}
-                  onKeyDown={e => { if (e.key === 'Enter') handleCreate() }}
-                  maxLength={40}
-                  autoFocus
-                  style={{ width: '100%', padding: '12px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box', marginBottom: error ? 8 : 20 }}
-                />
-                {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+          {modal === 'share' && (
+            <>
+              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>¡Grupo creado!</h2>
+              <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Compartí este código con tus amigos</p>
+              <div style={{ background: 'rgba(0,106,51,0.12)', border: '1px solid rgba(0,106,51,0.30)', borderRadius: 16, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
+                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>Código de grupo</p>
+                <p style={{ margin: 0, fontSize: 38, fontWeight: 900, color: '#4ade80', letterSpacing: '0.14em', fontFamily: 'monospace' }}>{createdCode}</p>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
                 <button
-                  onClick={handleCreate}
-                  disabled={!createName.trim() || loading}
-                  style={{ width: '100%', padding: '13px', borderRadius: 12, background: createName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: createName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+                  onClick={() => copyCode(createdCode)}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: copied ? '#4ade80' : '#fff', fontSize: 14, fontWeight: 600, transition: 'all 0.15s' }}
                 >
-                  {loading ? 'Creando...' : 'Crear grupo'}
+                  {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                  {copied ? '¡Copiado!' : 'Copiar'}
                 </button>
-              </>
-            )}
-
-            {modal === 'share' && (
-              <>
-                <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>¡Grupo creado!</h2>
-                <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Compartí este código con tus amigos</p>
-                <div style={{ background: 'rgba(0,106,51,0.12)', border: '1px solid rgba(0,106,51,0.30)', borderRadius: 16, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
-                  <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>Código de grupo</p>
-                  <p style={{ margin: 0, fontSize: 38, fontWeight: 900, color: '#4ade80', letterSpacing: '0.14em', fontFamily: 'monospace' }}>{createdCode}</p>
-                </div>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => copyCode(createdCode)}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: copied ? '#4ade80' : '#fff', fontSize: 14, fontWeight: 600, transition: 'all 0.15s' }}
-                  >
-                    {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
-                    {copied ? '¡Copiado!' : 'Copiar'}
-                  </button>
-                  <button
-                    onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(createdCode, selectedGroup?.name ?? ''))}`, '_blank')}
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 600 }}
-                  >
-                    <WhatsAppIcon />
-                    WhatsApp
-                  </button>
-                </div>
-              </>
-            )}
-
-            {modal === 'join' && (
-              <>
-                <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Unirse a un grupo</h2>
-                <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Ingresá el código que te compartieron</p>
-                <input
-                  type="text"
-                  placeholder="Ej: AMIG7KX"
-                  value={joinCode}
-                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                  onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
-                  maxLength={10}
-                  autoFocus
-                  style={{ width: '100%', padding: '13px 14px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: 20, fontWeight: 700, letterSpacing: '0.16em', outline: 'none', boxSizing: 'border-box', marginBottom: error ? 8 : 20, fontFamily: 'monospace', textTransform: 'uppercase', textAlign: 'center' }}
-                />
-                {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
                 <button
-                  onClick={handleJoin}
-                  disabled={!joinCode.trim() || loading}
-                  style={{ width: '100%', padding: '13px', borderRadius: 12, background: joinCode.trim() && !loading ? '#0052A5' : 'rgba(255,255,255,0.06)', border: 'none', cursor: joinCode.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+                  onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(createdCode, selectedGroup?.name ?? ''))}`, '_blank')}
+                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 600 }}
                 >
-                  {loading ? 'Uniéndose...' : 'Unirse al grupo'}
+                  <WhatsAppIcon />
+                  WhatsApp
                 </button>
-              </>
-            )}
-          </div>
-        </div>
+              </div>
+            </>
+          )}
+
+          {modal === 'join' && (
+            <>
+              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Unirse a un grupo</h2>
+              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Ingresá el código que te compartieron</p>
+              <input
+                type="text"
+                placeholder="Ej: AMIG7KX"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
+                maxLength={10}
+                autoFocus
+                style={{ ...INPUT_STYLE, fontSize: 20, fontWeight: 700, letterSpacing: '0.16em', fontFamily: 'monospace', textTransform: 'uppercase', textAlign: 'center', marginBottom: error ? 8 : 20, padding: '13px 14px' }}
+              />
+              {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+              <button
+                onClick={handleJoin}
+                disabled={!joinCode.trim() || loading}
+                style={{ width: '100%', padding: '13px', borderRadius: 12, background: joinCode.trim() && !loading ? '#0052A5' : 'rgba(255,255,255,0.06)', border: 'none', cursor: joinCode.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+              >
+                {loading ? 'Uniéndose...' : 'Unirse al grupo'}
+              </button>
+            </>
+          )}
+        </ModalWrap>
       )}
     </div>
   )
