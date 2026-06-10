@@ -291,23 +291,37 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
         </div>
 
         {/* Prize banner */}
-        {viewingGroup.prize_amount && (
+        {(viewingGroup.prize_amount || viewingGroup.entry_fee) && (
           <div style={{ background: `rgba(246,183,60,0.08)`, border: `1px solid rgba(246,183,60,0.20)`, borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Premio del ganador</p>
-                <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: 0, letterSpacing: '-0.01em' }}>
-                  {currency} {Number(viewingGroup.prize_amount).toLocaleString()}
-                </p>
-              </div>
-              {viewingGroup.entry_fee && (
-                <div style={{ textAlign: 'right' }}>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Aporte</p>
-                  <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 2px' }}>
-                    {currency} {Number(viewingGroup.entry_fee).toLocaleString()}
+              {viewingGroup.entry_fee && !viewingGroup.prize_amount ? (
+                <div>
+                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Pozo estimado</p>
+                  <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: '0 0 2px', letterSpacing: '-0.01em' }}>
+                    {currency} {(Number(viewingGroup.entry_fee) * members.length).toLocaleString('es-PY')}
                   </p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>por persona</p>
+                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                    {members.length} participante{members.length !== 1 ? 's' : ''} × {currency} {Number(viewingGroup.entry_fee).toLocaleString('es-PY')}
+                  </p>
                 </div>
+              ) : (
+                <>
+                  <div>
+                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Premio del ganador</p>
+                    <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: 0, letterSpacing: '-0.01em' }}>
+                      {currency} {Number(viewingGroup.prize_amount).toLocaleString('es-PY')}
+                    </p>
+                  </div>
+                  {viewingGroup.entry_fee && (
+                    <div style={{ textAlign: 'right' }}>
+                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Aporte</p>
+                      <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 2px' }}>
+                        {currency} {Number(viewingGroup.entry_fee).toLocaleString('es-PY')}
+                      </p>
+                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>por persona</p>
+                    </div>
+                  )}
+                </>
               )}
             </div>
             <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '10px 0 0' }}>
