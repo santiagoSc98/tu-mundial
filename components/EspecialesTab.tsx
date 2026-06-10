@@ -40,6 +40,8 @@ export default function EspecialesTab({ userId, championTeam, topScorer }: Props
     type: 'success', message: '', visible: false,
   })
   const toastTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const DEADLINE = new Date('2026-06-26T23:59:00-03:00')
+  const isClosed = new Date() > DEADLINE
 
   const showToast = (type: 'success' | 'error', message: string) => {
     clearTimeout(toastTimer.current)
@@ -194,25 +196,33 @@ export default function EspecialesTab({ userId, championTeam, topScorer }: Props
           </div>
 
           {/* ── ESTADO + EDITAR en una fila ──────────────────────────────── */}
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(246,183,60,0.06)', border: '1px solid rgba(246,183,60,0.18)', borderRadius: 16, padding: '14px 20px' }}>
-            <div>
-              <p style={{ fontSize: 13, fontWeight: 700, color: GOLD, margin: 0, marginBottom: 2 }}>
-                Pendiente de resultado
-              </p>
-              <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                11 jun – 19 jul 2026
+          {isClosed ? (
+            <div style={{ textAlign: 'center', padding: '14px 20px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16 }}>
+              <p style={{ fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                Predicciones cerradas · Fase de grupos finalizada
               </p>
             </div>
-            <button
-              onClick={() => setEditing(true)}
-              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s' }}
-              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
-              onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
-            >
-              <Edit2 style={{ width: 13, height: 13 }} />
-              Editar
-            </button>
-          </div>
+          ) : (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, background: 'rgba(246,183,60,0.06)', border: '1px solid rgba(246,183,60,0.18)', borderRadius: 16, padding: '14px 20px' }}>
+              <div>
+                <p style={{ fontSize: 13, fontWeight: 700, color: GOLD, margin: 0, marginBottom: 2 }}>
+                  Podés cambiar tu predicción
+                </p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                  Cierra el 26 de junio
+                </p>
+              </div>
+              <button
+                onClick={() => setEditing(true)}
+                style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '9px 18px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 600, cursor: 'pointer', flexShrink: 0, transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.10)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.06)')}
+              >
+                <Edit2 style={{ width: 13, height: 13 }} />
+                Editar
+              </button>
+            </div>
+          )}
         </div>
 
       ) : (
