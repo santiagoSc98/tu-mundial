@@ -4,7 +4,7 @@ export default function PrivacidadPage() {
       <div className="max-w-3xl mx-auto">
 
         <div className="flex items-center gap-3 mb-8">
-          <img src="/logo-mundial.png" alt="TU MUNDIAL" className="w-10 h-10" />
+          <img src="/logo-mundial.png" alt="TU MUNDIAL" className="w-10" />
           <div>
             <h1 className="text-2xl font-bold text-white">TU MUNDIAL</h1>
             <p className="text-sm text-gray-400">Tus Predicciones</p>
