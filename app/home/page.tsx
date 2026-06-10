@@ -117,7 +117,7 @@ async function HomeData() {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from('group_members')
-          .select('groups(id, name, code, created_by)')
+          .select('groups(id, name, code, created_by, prize_amount, entry_fee, currency)')
           .eq('user_id', user.id),
       ]),
       18000,
