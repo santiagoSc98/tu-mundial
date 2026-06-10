@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2 } from 'lucide-react'
 import { createGroup, joinGroup, getGroupMembers, updateGroup } from '@/app/actions/groups'
 
@@ -24,6 +24,8 @@ interface GroupMember {
 interface Props {
   userId: string
   initialGroups: Group[]
+  autoJoinCode?: string | null
+  onAutoJoinConsumed?: () => void
 }
 
 const CARD: React.CSSProperties = {
@@ -64,7 +66,7 @@ function WhatsAppIcon() {
 const APP_URL = 'https://predique.vercel.app'
 
 function shareText(code: string, groupName: string) {
-  return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL!\nUsá el código: *${code}*\n${APP_URL}`
+  return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL! 🏆⚽\nEntrá directo: ${APP_URL}/join/${code}`
 }
 
 function CurrencySelector({ value, onChange }: { value: string; onChange: (c: string) => void }) {
@@ -118,7 +120,7 @@ function ModalWrap({ onClose, children }: { onClose: () => void; children: React
   )
 }
 
-export default function MisGruposView({ userId, initialGroups }: Props) {
+export default function MisGruposView({ userId, initialGroups, autoJoinCode, onAutoJoinConsumed }: Props) {
   const [groups, setGroups] = useState<Group[]>(initialGroups)
   const [modal, setModal] = useState<null | 'create' | 'share' | 'join' | 'edit'>(null)
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
@@ -147,6 +149,15 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
   const [copied, setCopied] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
+
+  useEffect(() => {
+    if (autoJoinCode) {
+      setJoinCode(autoJoinCode)
+      setModal('join')
+      setError(null)
+      onAutoJoinConsumed?.()
+    }
+  }, [autoJoinCode, onAutoJoinConsumed])
 
   const copyCode = useCallback((code: string) => {
     navigator.clipboard.writeText(code)

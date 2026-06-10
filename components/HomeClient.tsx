@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo } from 'react'
+import { useState, useCallback, useMemo, useEffect } from 'react'
 import Image from 'next/image'
 import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList, Users } from 'lucide-react'
 import AuthButton from '@/components/AuthButton'
@@ -148,7 +148,18 @@ export default function HomeClient({
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
+  const [autoJoinCode, setAutoJoinCode] = useState<string | null>(null)
   const [imgError,     setImgError]     = useState(false)
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('join')
+    if (code) {
+      setActiveTab('grupos')
+      setAutoJoinCode(code.toUpperCase())
+      window.history.replaceState({}, '', '/home')
+    }
+  }, [])
   const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
   const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => ({ ...existingScores }))
   const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => ({ ...voteDistributions }))
@@ -453,7 +464,7 @@ export default function HomeClient({
             />
           )}
           {activeTab === 'grupos' && (
-            <MisGruposView userId={userId} initialGroups={initialGroups} />
+            <MisGruposView userId={userId} initialGroups={initialGroups} autoJoinCode={autoJoinCode} onAutoJoinConsumed={() => setAutoJoinCode(null)} />
           )}
           {activeTab === 'especiales'   && (
             <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} />
