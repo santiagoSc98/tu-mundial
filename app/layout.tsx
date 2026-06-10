@@ -14,8 +14,6 @@ export const metadata: Metadata = {
   description: 'Predecí los partidos del Mundial 2026 y competí con amigos.',
   icons: {
     icon: '/logo-mundial.png',
-    shortcut: '/logo-mundial.png',
-    apple: '/logo-mundial.png',
   },
 }
 
