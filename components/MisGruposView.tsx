@@ -40,6 +40,13 @@ const INPUT_STYLE: React.CSSProperties = {
 
 const GOLD = '#F6B73C'
 
+function formatMiles(val: string | number): string {
+  if (!val && val !== 0) return ''
+  const n = typeof val === 'string' ? Number(val) : val
+  if (isNaN(n)) return ''
+  return n.toLocaleString('es-PY')
+}
+
 function WhatsAppIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
@@ -185,7 +192,7 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
       style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}
       onClick={e => { if (e.target === e.currentTarget) setModal(null) }}
     >
-      <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, position: 'relative' }}>
+      <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 400, maxHeight: '90vh', overflowY: 'auto', position: 'relative' }}>
         <button
           onClick={() => setModal(null)}
           style={{ position: 'absolute', top: 16, right: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, padding: '6px 8px', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', display: 'flex', alignItems: 'center' }}
@@ -342,31 +349,34 @@ export default function MisGruposView({ userId, initialGroups }: Props) {
             />
 
             <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-              <input
-                type="number"
-                value={editPrize}
-                onChange={e => setEditPrize(e.target.value)}
-                placeholder="100.000"
-                min={0}
-                style={{ ...INPUT_STYLE, flex: 1, width: 'auto' }}
-              />
-              <select
-                value={editCurrency}
-                onChange={e => setEditCurrency(e.target.value)}
-                style={{ padding: '12px 10px', borderRadius: 12, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.12)', color: '#fff', fontSize: 14, outline: 'none', cursor: 'pointer' }}
-              >
-                {['Gs', 'USD', 'ARS', 'BRL', 'COP'].map(c => <option key={c} value={c}>{c}</option>)}
-              </select>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={editPrize ? formatMiles(editPrize) : ''}
+              onChange={e => setEditPrize(e.target.value.replace(/\D/g, ''))}
+              placeholder="100.000"
+              style={{ ...INPUT_STYLE, marginBottom: 10 }}
+            />
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
+              {['Gs', 'USD', 'ARS', 'BRL', 'COP'].map(curr => (
+                <button
+                  key={curr}
+                  type="button"
+                  onClick={() => setEditCurrency(curr)}
+                  style={{ flex: 1, padding: '8px 4px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 12, fontWeight: 700, transition: 'background 0.15s', background: editCurrency === curr ? '#006A33' : 'rgba(255,255,255,0.07)', color: editCurrency === curr ? '#fff' : 'rgba(255,255,255,0.45)' }}
+                >
+                  {curr}
+                </button>
+              ))}
             </div>
 
             <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
             <input
-              type="number"
-              value={editEntry}
-              onChange={e => setEditEntry(e.target.value)}
+              type="text"
+              inputMode="numeric"
+              value={editEntry ? formatMiles(editEntry) : ''}
+              onChange={e => setEditEntry(e.target.value.replace(/\D/g, ''))}
               placeholder="10.000"
-              min={0}
               style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 24 }}
             />
 
