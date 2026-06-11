@@ -205,21 +205,34 @@ export function GroupPhasesView({
 
   if (phases.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '48px 0' }}>
-        <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(246,183,60,0.08)', border: '1px solid rgba(246,183,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8">
-            <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
-          </svg>
+      <div>
+        <div style={{ textAlign: 'center', padding: '48px 0' }}>
+          <div style={{ width: 52, height: 52, borderRadius: 14, background: 'rgba(246,183,60,0.08)', border: '1px solid rgba(246,183,60,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={GOLD} strokeWidth="1.8">
+              <circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>
+            </svg>
+          </div>
+          <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.50)' }}>Sin apuestas por fase</p>
+          <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>Configurá los aportes para cada fase del torneo</p>
+          {isCreator && (
+            <button
+              onClick={() => setShowSetup(true)}
+              style={{ padding: '11px 22px', borderRadius: 12, background: GREEN, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 14, fontWeight: 700 }}
+            >
+              Configurar fases
+            </button>
+          )}
         </div>
-        <p style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 600, color: 'rgba(255,255,255,0.50)' }}>Sin apuestas por fase</p>
-        <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>Configurá los aportes para cada fase del torneo</p>
-        {isCreator && (
-          <button
-            onClick={() => setShowSetup(true)}
-            style={{ padding: '11px 22px', borderRadius: 12, background: GREEN, border: 'none', cursor: 'pointer', color: '#fff', fontSize: 14, fontWeight: 700 }}
-          >
-            Configurar fases
-          </button>
+        {showSetup && (
+          <SetupPhasesModal
+            group={group}
+            existingPhases={phases}
+            onSave={async newPhases => {
+              const result = await setupGroupPhases({ groupId: group.id, phases: newPhases })
+              if (!result.error) { await loadPhases(); setShowSetup(false) }
+            }}
+            onClose={() => setShowSetup(false)}
+          />
         )}
       </div>
     )
