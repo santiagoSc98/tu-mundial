@@ -429,6 +429,8 @@ export default function HomeClient({
               existingAnswers={mergedAnswers}
               existingScores={mergedScores}
               onTabChange={(tab: string) => setActiveTab(tab as Tab)}
+              rank={rank}
+              points={points}
             />
           )}
           {activeTab === 'predicciones' && (
