@@ -74,6 +74,7 @@ interface Props {
   voteDistributions: Record<string, Record<string, number>>
   initialGroups: Group[]
   currentStreak: number
+  pendingJoinCode: string | null
   profileData: { id: string; username: string; avatarUrl: string | null; total_points: number; current_streak: number; country: string }
 }
 
@@ -154,11 +155,11 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, profileData,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
-  const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
-  const [autoJoinCode, setAutoJoinCode] = useState<string | null>(null)
+  const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
+  const [autoJoinCode, setAutoJoinCode] = useState<string | null>(pendingJoinCode ?? null)
   const [imgError,     setImgError]     = useState(false)
 
   useEffect(() => {

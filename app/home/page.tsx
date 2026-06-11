@@ -1,5 +1,6 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
+import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import HomeClient from '@/components/HomeClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
@@ -62,6 +63,11 @@ async function HomeData() {
   )
   console.log(`[home] auth: ${Date.now() - t0}ms`)
   if (!user) redirect('/')
+
+  // Read + clear pending join code cookie
+  const cookieStore = await cookies()
+  const pendingJoinCode = cookieStore.get('pending_join_code')?.value ?? null
+  if (pendingJoinCode) cookieStore.delete('pending_join_code')
 
   // 2. All data in one parallel batch
   const t1 = Date.now()
@@ -232,6 +238,7 @@ async function HomeData() {
       voteDistributions={voteDistributions}
       initialGroups={initialGroups}
       currentStreak={currentStreak}
+      pendingJoinCode={pendingJoinCode}
       profileData={{ id: user.id, username, avatarUrl, total_points: profile.total_points, current_streak: currentStreak, country: profile.country ?? 'Paraguay' }}
     />
   )
