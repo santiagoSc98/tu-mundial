@@ -646,36 +646,6 @@ export default function InicioView({
         {/* ── LEFT ────────────────────────────────────────────────────── */}
         <div className="space-y-4">
 
-         
-
-          {/* ── PRÓXIMO PARTIDO ──────────────────────────────────────── */}
-          {!liveMatch && nextMatch && (() => {
-            const [homeRaw,, awayRaw] = getOptions(nextMatch.options)
-            const home = getTeamNameES(homeRaw)
-            const away = getTeamNameES(awayRaw)
-            const homeFlag = getFlagUrl(nextMatch.home_team_code)
-            const awayFlag = getFlagUrl(nextMatch.away_team_code)
-            return (
-              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                  Próximo partido
-                </p>
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    {homeFlag && <img src={homeFlag} alt={home} className="w-7 h-5 rounded object-cover" />}
-                    <span className="text-sm font-bold text-white">{home}</span>
-                  </div>
-                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.30)' }}>vs</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{away}</span>
-                    {awayFlag && <img src={awayFlag} alt={away} className="w-7 h-5 rounded object-cover" />}
-                  </div>
-                </div>
-                <CountdownTimer deadline={nextMatch.deadline ?? ''} />
-              </div>
-            )
-          })()}
-
           {/* Featured match */}
           <FeaturedMatchPanel
             key={featured?.id ?? 'none'}
@@ -802,7 +772,7 @@ export default function InicioView({
               />
             </div>
           </div>
-           {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
+          {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
           {liveMatch && (() => {
             const [homeRaw,, awayRaw] = getOptions(liveMatch.options)
             const home = getTeamNameES(homeRaw)
@@ -836,6 +806,34 @@ export default function InicioView({
                     </span>
                   </p>
                 )}
+              </div>
+            )
+          })()}
+
+          {/* ── PRÓXIMO PARTIDO ──────────────────────────────────────── */}
+          {!liveMatch && nextMatch && (() => {
+            const [homeRaw,, awayRaw] = getOptions(nextMatch.options)
+            const home = getTeamNameES(homeRaw)
+            const away = getTeamNameES(awayRaw)
+            const homeFlag = getFlagUrl(nextMatch.home_team_code)
+            const awayFlag = getFlagUrl(nextMatch.away_team_code)
+            return (
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  Próximo partido
+                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {homeFlag && <img src={homeFlag} alt={home} className="w-7 h-5 rounded object-cover" />}
+                    <span className="text-sm font-bold text-white">{home}</span>
+                  </div>
+                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.30)' }}>vs</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{away}</span>
+                    {awayFlag && <img src={awayFlag} alt={away} className="w-7 h-5 rounded object-cover" />}
+                  </div>
+                </div>
+                <CountdownTimer deadline={nextMatch.deadline ?? ''} />
               </div>
             )
           })()}
