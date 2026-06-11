@@ -1,45 +1,44 @@
-// Paraguay is UTC-3 during the WC (June–July, southern-hemisphere winter, no DST)
-const PY_OFFSET_MS = -3 * 60 * 60 * 1000
+const PY_TZ = 'America/Asuncion'
 
-/** Returns a Date whose getUTC* methods read as Paraguay local time */
-function toPY(d: Date): Date {
-  return new Date(d.getTime() + PY_OFFSET_MS)
+const MONTHS_ES = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
+const MONTHS_SH = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+
+function pyParts(d: Date, opts: Intl.DateTimeFormatOptions): Record<string, string> {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: PY_TZ, ...opts }).formatToParts(d).map(p => [p.type, p.value])
+  )
 }
 
-const DAYS_ES    = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado']
-const MONTHS_ES  = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']
-const MONTHS_SH  = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
-
-// ─── Date/time formatters — pure UTC math, same output on server + client ─────
+// ─── Date/time formatters — America/Asuncion IANA tz, correct on server + client ─
 
 /** "YYYY-MM-DD" in Paraguay timezone */
 export function pyISODate(d: Date): string {
-  const py = toPY(d)
-  const y  = py.getUTCFullYear()
-  const mo = String(py.getUTCMonth() + 1).padStart(2, '0')
-  const da = String(py.getUTCDate()).padStart(2, '0')
-  return `${y}-${mo}-${da}`
+  const { year, month, day } = pyParts(d, { year: 'numeric', month: '2-digit', day: '2-digit' })
+  return `${year}-${month}-${day}`
 }
 
 /** "HH:mm" in Paraguay timezone */
 export function pyTime(d: Date): string {
-  const py = toPY(d)
-  return `${String(py.getUTCHours()).padStart(2, '0')}:${String(py.getUTCMinutes()).padStart(2, '0')}`
+  const { hour, minute } = pyParts(d, { hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+  return `${hour}:${minute}`
 }
 
-/** "11 jun · 22:00" in Paraguay timezone */
+/** "11 jun · 16:00" in Paraguay timezone */
 export function pyDateTimeMed(d: Date): string {
-  const py = toPY(d)
-  return `${py.getUTCDate()} ${MONTHS_SH[py.getUTCMonth()]} · ${pyTime(d)}`
+  const { day, month } = pyParts(d, { day: 'numeric', month: 'numeric' })
+  return `${day} ${MONTHS_SH[Number(month) - 1]} · ${pyTime(d)}`
 }
 
 /**
  * "Jueves, 11 de junio" from an ISO date key "2026-06-11".
- * Parses at T12:00:00Z so the PY-offset never shifts the calendar date.
+ * Parses at T12:00:00Z so the offset never shifts the calendar date.
  */
 export function pyDateLabel(isoDate: string): string {
-  const py = toPY(new Date(isoDate + 'T12:00:00Z'))
-  return `${DAYS_ES[py.getUTCDay()]}, ${py.getUTCDate()} de ${MONTHS_ES[py.getUTCMonth()]}`
+  const d = new Date(isoDate + 'T12:00:00Z')
+  const { day, month } = pyParts(d, { day: 'numeric', month: 'numeric' })
+  const weekday = new Intl.DateTimeFormat('es', { timeZone: PY_TZ, weekday: 'long' }).format(d)
+  const cap = weekday.charAt(0).toUpperCase() + weekday.slice(1)
+  return `${cap}, ${day} de ${MONTHS_ES[Number(month) - 1]}`
 }
 
 // ─── Team name translations (English API → Spanish display) ──────────────────
