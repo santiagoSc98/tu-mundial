@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { saveSpecialPredictions } from '@/app/actions/predictions'
-import { Check, AlertCircle, Loader2, Edit2, Trophy, Target, X } from 'lucide-react'
+import { Check, AlertCircle, Loader2, Edit2, Trophy, Target, X, ArrowLeft } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { MUNDIAL_TEAMS } from '@/lib/mundialTeams'
 import { STRIKERS } from '@/lib/strikers'
@@ -14,6 +14,7 @@ interface Props {
   userId: string
   championTeam: string | null
   topScorer: string | null
+  onTabChange?: (tab: string) => void
 }
 
 function getTla(teamName: string | null): string | null {
@@ -30,7 +31,7 @@ function EmptyCard({ color, label }: { color: string; label: string }) {
   )
 }
 
-export default function EspecialesTab({ userId, championTeam, topScorer }: Props) {
+export default function EspecialesTab({ userId, championTeam, topScorer, onTabChange }: Props) {
   const [editing,      setEditing]      = useState(false)
   const [championTla,  setChampionTla]  = useState<string | null>(getTla(championTeam))
   const [championName, setChampionName] = useState<string | null>(championTeam)
@@ -108,6 +109,16 @@ export default function EspecialesTab({ userId, championTeam, topScorer }: Props
 
   return (
     <div>
+      {onTabChange && (
+        <button
+          onClick={() => onTabChange('perfil')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 20px', transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+        >
+          <ArrowLeft size={15} /> Mi Perfil
+        </button>
+      )}
       <div style={{ marginBottom: 24 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
           Mis Especiales

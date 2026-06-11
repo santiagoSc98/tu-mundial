@@ -77,7 +77,7 @@ interface Props {
   profileData: { id: string; username: string; avatarUrl: string | null; total_points: number; current_streak: number; country: string }
 }
 
-function ReglasTab() {
+function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
   const RULE_CARD: React.CSSProperties = {
     background: 'var(--mundial-card-bg)',
     border: '1px solid var(--mundial-card-border)',
@@ -86,6 +86,16 @@ function ReglasTab() {
   }
   return (
     <div className="space-y-4">
+      {onTabChange && (
+        <button
+          onClick={() => onTabChange('perfil')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 4px', transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+        >
+          ← Mi Perfil
+        </button>
+      )}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
           Reglas
@@ -418,6 +428,7 @@ export default function HomeClient({
               predictions={predictions}
               existingAnswers={mergedAnswers}
               existingScores={mergedScores}
+              onTabChange={(tab: string) => setActiveTab(tab as Tab)}
             />
           )}
           {activeTab === 'predicciones' && (
@@ -441,7 +452,7 @@ export default function HomeClient({
             <MisGruposView userId={userId} initialGroups={initialGroups} autoJoinCode={autoJoinCode} onAutoJoinConsumed={() => setAutoJoinCode(null)} />
           )}
           {activeTab === 'especiales'   && (
-            <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} />
+            <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} onTabChange={(tab: string) => setActiveTab(tab as Tab)} />
           )}
           {activeTab === 'calendario' && (
             <ErrorBoundary>
@@ -455,10 +466,11 @@ export default function HomeClient({
               currentStreak={currentStreak}
               isAdmin={isAdmin}
               onTabChange={(tab: string) => setActiveTab(tab as Tab)}
+              onSignOut={signOut}
             />
           )}
           {activeTab === 'admin'  && isAdmin && <AdminTab />}
-          {activeTab === 'reglas' && <ReglasTab />}
+          {activeTab === 'reglas' && <ReglasTab onTabChange={(tab: string) => setActiveTab(tab as Tab)} />}
         </div>
       </main>
     </div>

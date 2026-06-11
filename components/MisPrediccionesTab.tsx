@@ -1,7 +1,7 @@
 'use client'
 
 import { useMemo, useState } from 'react'
-import { CheckCircle, XCircle, Clock } from 'lucide-react'
+import { CheckCircle, XCircle, Clock, ArrowLeft } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyTime, getTeamNameES } from '@/lib/worldcup'
 import { format } from 'date-fns'
@@ -39,9 +39,10 @@ interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores: Record<string, { home: number; away: number }>
+  onTabChange?: (tab: string) => void
 }
 
-export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores }: Props) {
+export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, onTabChange }: Props) {
   const [filter, setFilter] = useState<Filter>('todas')
 
   const myPredictions = useMemo(
@@ -92,6 +93,16 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
 
   return (
     <div>
+      {onTabChange && (
+        <button
+          onClick={() => onTabChange('perfil')}
+          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 20px', transition: 'color 0.15s' }}
+          onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
+          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
+        >
+          <ArrowLeft size={15} /> Mi Perfil
+        </button>
+      )}
       {/* ── Header ─────────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>

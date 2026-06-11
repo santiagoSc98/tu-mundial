@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight } from 'lucide-react'
+import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight, LogOut, Edit2 } from 'lucide-react'
 import { updateProfile } from '@/app/actions/profile'
 
 interface Profile {
@@ -19,6 +19,7 @@ interface Props {
   currentStreak: number
   isAdmin: boolean
   onTabChange: (tab: string) => void
+  onSignOut: () => void
 }
 
 const COUNTRIES = [
@@ -42,14 +43,47 @@ function countryFlag(country: string | null) {
   return COUNTRIES.find(c => c.name === country)?.flag ?? '🌍'
 }
 
-function StatBox({ num, label, color }: { num: number | string; label: string; color?: 'green' | 'gold' | 'blue' }) {
+function StatMini({ num, label, color }: { num: number | string; label: string; color?: 'green' | 'gold' | 'blue' }) {
   const textColor = color === 'green' ? '#4ade80' : color === 'gold' ? '#F6B73C' : color === 'blue' ? '#60a5fa' : '#fff'
   return (
-    <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '16px 12px', textAlign: 'center' }}>
-      <p style={{ fontSize: 24, fontWeight: 900, color: textColor, margin: 0, letterSpacing: '-0.02em' }}>{num}</p>
-      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', margin: '4px 0 0', fontWeight: 600, letterSpacing: '0.04em' }}>{label}</p>
+    <div style={{ textAlign: 'center' }}>
+      <p style={{ fontSize: 20, fontWeight: 900, color: textColor, margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>{num}</p>
+      <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.40)', margin: '3px 0 0', fontWeight: 600, letterSpacing: '0.04em' }}>{label}</p>
     </div>
   )
+}
+
+function MenuItem({
+  icon, iconBg, label, onClick, href, border = true,
+}: {
+  icon: React.ReactNode
+  iconBg?: 'blue' | 'gold' | 'green' | 'red'
+  label: string
+  onClick?: () => void
+  href?: string
+  border?: boolean
+}) {
+  const bgMap = { blue: 'rgba(96,165,250,0.15)', gold: 'rgba(246,183,60,0.15)', green: 'rgba(0,106,51,0.20)', red: 'rgba(206,17,38,0.15)' }
+  const colorMap = { blue: '#60a5fa', gold: '#F6B73C', green: '#4ade80', red: '#f87171' }
+  const iconStyle: React.CSSProperties = {
+    width: 32, height: 32, borderRadius: 9, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+    background: iconBg ? bgMap[iconBg] : 'rgba(255,255,255,0.08)',
+    color: iconBg ? colorMap[iconBg] : 'rgba(255,255,255,0.55)',
+  }
+  const rowStyle: React.CSSProperties = {
+    display: 'flex', alignItems: 'center', gap: 12, padding: '13px 16px', cursor: 'pointer', width: '100%',
+    borderBottom: border ? '1px solid rgba(255,255,255,0.05)' : 'none',
+    background: 'transparent', textDecoration: 'none',
+  }
+  const inner = (
+    <>
+      <div style={iconStyle}>{icon}</div>
+      <span style={{ flex: 1, fontSize: 14, color: '#fff', fontWeight: 500, textAlign: 'left' }}>{label}</span>
+      <ChevronRight size={15} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+    </>
+  )
+  if (href) return <a href={href} target="_blank" rel="noopener noreferrer" style={rowStyle}>{inner}</a>
+  return <button type="button" onClick={onClick} style={{ ...rowStyle, border: 'none' }}>{inner}</button>
 }
 
 const INPUT_STYLE: React.CSSProperties = {
@@ -58,7 +92,7 @@ const INPUT_STYLE: React.CSSProperties = {
   color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
 
-export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, onTabChange }: Props) {
+export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, onTabChange, onSignOut }: Props) {
   const [profile,     setProfile]     = useState(initialProfile)
   const [isEditing,   setIsEditing]   = useState(false)
   const [editName,    setEditName]    = useState(profile.username ?? '')
@@ -92,23 +126,17 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
     try {
       let avatarBase64: string | undefined
       let avatarType: string | undefined
-
       if (avatarFile) {
         avatarType = avatarFile.type
         avatarBase64 = await new Promise<string>((resolve, reject) => {
           const reader = new FileReader()
-          reader.onload = () => {
-            const result = reader.result as string
-            resolve(result.split(',')[1])
-          }
+          reader.onload = () => resolve((reader.result as string).split(',')[1])
           reader.onerror = reject
           reader.readAsDataURL(avatarFile)
         })
       }
-
       const result = await updateProfile({ username: editName.trim(), country: editCountry, avatarBase64, avatarType })
       if (result.error) throw new Error(result.error)
-
       setProfile(prev => ({
         ...prev,
         username: editName.trim(),
@@ -125,7 +153,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
     }
   }
 
-  const avatarSrc  = previewUrl ?? profile.avatar_url ?? '/logo-mundial.png'
+  const avatarSrc   = previewUrl ?? profile.avatar_url ?? '/logo-mundial.png'
   const displayName = profile.username ?? 'Jugador'
   const handle      = '@' + (profile.username ?? 'jugador').toLowerCase().replace(/\s/g, '')
 
@@ -133,8 +161,6 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
   if (isEditing) {
     return (
       <div style={{ maxWidth: 480, margin: '0 auto' }}>
-
-        {/* Header with back */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
           <button
             onClick={() => setIsEditing(false)}
@@ -145,58 +171,30 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
           <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0 }}>Editar perfil</h2>
         </div>
 
-        {/* Avatar with camera */}
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 24, padding: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20 }}>
           <div style={{ position: 'relative' }}>
-            <img
-              src={avatarSrc}
-              alt={displayName}
-              style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(0,106,51,0.60)', display: 'block' }}
-            />
-            <label
-              htmlFor="avatar-upload"
-              style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, background: '#006A33', borderRadius: '50%', border: '2px solid #0B132B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}
-            >
+            <img src={avatarSrc} alt={displayName} style={{ width: 80, height: 80, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(0,106,51,0.60)', display: 'block' }} />
+            <label htmlFor="avatar-upload" style={{ position: 'absolute', bottom: 0, right: 0, width: 28, height: 28, background: '#006A33', borderRadius: '50%', border: '2px solid #0B132B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Camera size={12} color="#fff" />
             </label>
-            <input
-              id="avatar-upload"
-              type="file"
-              accept="image/*"
-              style={{ display: 'none' }}
-              onChange={handleAvatarChange}
-            />
+            <input id="avatar-upload" type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatarChange} />
           </div>
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-            Tocá la cámara para cambiar tu foto
-          </p>
+          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>Tocá la cámara para cambiar tu foto</p>
         </div>
 
-        {/* Nombre */}
         <div style={{ marginBottom: 16 }}>
           <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 6, fontWeight: 600 }}>Nombre de usuario</label>
-          <input
-            value={editName}
-            onChange={e => setEditName(e.target.value)}
-            maxLength={30}
-            autoFocus
-            style={INPUT_STYLE}
-          />
+          <input value={editName} onChange={e => setEditName(e.target.value)} maxLength={30} autoFocus style={INPUT_STYLE} />
         </div>
 
-        {/* País - scroll horizontal */}
         <div style={{ marginBottom: 24 }}>
           <label style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 8, fontWeight: 600 }}>País</label>
           <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
             {COUNTRIES.map(c => {
               const selected = editCountry === c.name
               return (
-                <button
-                  key={c.name}
-                  type="button"
-                  onClick={() => setEditCountry(c.name)}
-                  style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s', fontWeight: selected ? 700 : 400, background: selected ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.04)', border: selected ? '1px solid rgba(0,106,51,0.60)' : '1px solid rgba(255,255,255,0.08)', color: selected ? '#4ade80' : 'rgba(255,255,255,0.70)' }}
-                >
+                <button key={c.name} type="button" onClick={() => setEditCountry(c.name)}
+                  style={{ flexShrink: 0, padding: '8px 14px', borderRadius: 20, fontSize: 13, cursor: 'pointer', whiteSpace: 'nowrap', transition: 'all 0.15s', fontWeight: selected ? 700 : 400, background: selected ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.04)', border: selected ? '1px solid rgba(0,106,51,0.60)' : '1px solid rgba(255,255,255,0.08)', color: selected ? '#4ade80' : 'rgba(255,255,255,0.70)' }}>
                   {c.flag} {c.name}
                 </button>
               )
@@ -206,28 +204,14 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
 
         {error && <p style={{ fontSize: 13, color: '#f87171', margin: '0 0 16px' }}>{error}</p>}
 
-        {/* Botones */}
         <div style={{ display: 'flex', gap: 10 }}>
-          <button
-            onClick={() => setIsEditing(false)}
-            style={{ flex: 1, padding: '13px', borderRadius: 16, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
-          >
-            Cancelar
-          </button>
-          <button
-            onClick={handleSave}
-            disabled={!editName.trim() || isSaving}
-            style={{ flex: 1, padding: '13px', borderRadius: 16, background: editName.trim() && !isSaving ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !isSaving ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
-          >
+          <button onClick={() => setIsEditing(false)} style={{ flex: 1, padding: '13px', borderRadius: 16, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+          <button onClick={handleSave} disabled={!editName.trim() || isSaving} style={{ flex: 1, padding: '13px', borderRadius: 16, background: editName.trim() && !isSaving ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !isSaving ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}>
             {isSaving ? 'Guardando...' : 'Guardar'}
           </button>
         </div>
 
-        {toast && (
-          <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
-            ✓ {toast}
-          </div>
-        )}
+        {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>✓ {toast}</div>}
       </div>
     )
   }
@@ -236,107 +220,67 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
   return (
     <div style={{ maxWidth: 480, margin: '0 auto' }}>
 
-      {/* Header */}
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4, fontFamily: 'var(--font-montserrat, system-ui)', letterSpacing: '-0.01em' }}>
-          Mi Perfil
-        </h1>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
-          Tus estadísticas y configuración
-        </p>
-      </div>
+      {/* Hero card */}
+      <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 12 }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+          <button onClick={openEdit} style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.55)' }}>
+            <Edit2 size={14} />
+          </button>
+        </div>
 
-      {/* Avatar + info */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: '20px' }}>
-        <img
-          src={profile.avatar_url ?? '/logo-mundial.png'}
-          alt={displayName}
-          style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid rgba(0,106,51,0.60)', flexShrink: 0 }}
-        />
-        <div style={{ minWidth: 0 }}>
-          <h2 style={{ fontSize: 20, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {displayName}
-          </h2>
-          <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '2px 0 4px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-            {handle}
-          </p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.70)', margin: 0 }}>
-            {countryFlag(profile.country)} {profile.country ?? 'Paraguay'}
-          </p>
-          {currentStreak > 0 && (
-            <p style={{ fontSize: 12, color: '#F6B73C', margin: '4px 0 0', fontWeight: 600 }}>
-              🔥 {currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos
-            </p>
-          )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+          <img src={profile.avatar_url ?? '/logo-mundial.png'} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)', flexShrink: 0 }} />
+          <div style={{ minWidth: 0 }}>
+            <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '1px 0 3px' }}>{handle}</p>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: 0 }}>{countryFlag(profile.country)} {profile.country ?? 'Paraguay'}</p>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+          <StatMini num={myStats.totalPredictions}  label="Pred." />
+          <StatMini num={myStats.correctPredictions} label="Aciertos" color="green" />
+          <StatMini num={(profile.total_points ?? 0).toLocaleString('es-PY')} label="Puntos" color="gold" />
+          <StatMini num={`#${myStats.rank}`}         label="Posición" color="blue" />
         </div>
       </div>
 
-      {/* Stats 2×2 */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 24 }}>
-        <StatBox num={myStats.totalPredictions} label="Predicciones" />
-        <StatBox num={myStats.correctPredictions} label="Aciertos" color="green" />
-        <StatBox num={(profile.total_points ?? 0).toLocaleString('es-PY')} label="Puntos" color="gold" />
-        <StatBox num={`#${myStats.rank}`} label="Posición" color="blue" />
-      </div>
-
-      {/* Quick links */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-        {[
-          { icon: <ClipboardList size={17} />, label: 'Mis Predicciones', tab: 'mis-predicciones' },
-          { icon: <Star size={17} />,          label: 'Mis Especiales',   tab: 'especiales' },
-          { icon: <BookOpen size={17} />,      label: 'Reglas',           tab: 'reglas' },
-        ].map(({ icon, label, tab }) => (
-          <button
-            key={tab}
-            onClick={() => onTabChange(tab)}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, cursor: 'pointer', width: '100%' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
-              {icon}
-              <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{label}</span>
-            </div>
-            <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
-          </button>
-        ))}
-        {isAdmin && (
-          <button
-            onClick={() => onTabChange('admin')}
-            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, cursor: 'pointer', width: '100%' }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
-              <Settings2 size={17} />
-              <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>Admin</span>
-            </div>
-            <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
-          </button>
-        )}
-        <a
-          href="/privacidad"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, textDecoration: 'none' }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
-            <Shield size={17} />
-            <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>Privacidad</span>
-          </div>
-          <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
-        </a>
-      </div>
-
-      {/* Edit button */}
-      <button
-        onClick={openEdit}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '13px', borderRadius: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: '#fff', fontSize: 14, fontWeight: 600 }}
-      >
-        ✏️ Editar perfil
-      </button>
-
-      {toast && (
-        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
-          ✓ {toast}
+      {/* Streak */}
+      {currentStreak > 0 && (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(246,183,60,0.10)', border: '1px solid rgba(246,183,60,0.20)', borderRadius: 14, padding: '10px 16px', marginBottom: 12 }}>
+          <span>🔥</span>
+          <span style={{ fontSize: 13, color: '#F6B73C', fontWeight: 600 }}>{currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos</span>
         </div>
       )}
+
+      {/* MI CUENTA */}
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>MI CUENTA</p>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 12 }}>
+        <MenuItem icon={<ClipboardList size={16} />} iconBg="blue" label="Mis Predicciones" onClick={() => onTabChange('mis-predicciones')} />
+        <MenuItem icon={<Star size={16} />}          iconBg="gold" label="Mis Especiales"   onClick={() => onTabChange('especiales')} border={false} />
+      </div>
+
+      {/* APP */}
+      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>APP</p>
+      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
+        <MenuItem icon={<BookOpen size={16} />} label="Reglas"     onClick={() => onTabChange('reglas')} />
+        <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" />
+        {isAdmin && <MenuItem icon={<Settings2 size={16} />} label="Admin" onClick={() => onTabChange('admin')} border={false} />}
+        {!isAdmin && <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" border={false} />}
+      </div>
+
+      {/* Sign out */}
+      <button
+        onClick={onSignOut}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(206,17,38,0.08)', border: '1px solid rgba(206,17,38,0.15)', borderRadius: 16, cursor: 'pointer' }}
+      >
+        <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(206,17,38,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <LogOut size={15} style={{ color: '#f87171' }} />
+        </div>
+        <span style={{ fontSize: 14, color: '#f87171', fontWeight: 500 }}>Cerrar sesión</span>
+      </button>
+
+      {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>✓ {toast}</div>}
     </div>
   )
 }
