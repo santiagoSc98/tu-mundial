@@ -166,10 +166,10 @@ export default function HomeClient({
     const params    = new URLSearchParams(window.location.search)
     const fromUrl   = params.get('join')
     const fromStore = sessionStorage.getItem('pending_join')
-    const code      = fromUrl || fromStore
+    const code      = (fromUrl && fromUrl !== 'undefined') ? fromUrl : fromStore
 
-    if (code && code !== 'undefined') {
-      if (fromStore) sessionStorage.removeItem('pending_join')
+    if (code) {
+      sessionStorage.removeItem('pending_join')
       setActiveTab('grupos')
       setAutoJoinCode(code.toUpperCase())
       window.history.replaceState({}, '', '/home')
