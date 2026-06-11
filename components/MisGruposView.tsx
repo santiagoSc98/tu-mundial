@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useEffect } from 'react'
 import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2 } from 'lucide-react'
-import { createGroup, joinGroup, getGroupMembers, updateGroup } from '@/app/actions/groups'
+import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember } from '@/app/actions/groups'
 
 export interface Group {
   id: string
@@ -264,6 +264,21 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
     setModal('edit')
   }, [])
 
+  const handleRemoveMember = useCallback(async (memberId: string, memberName: string) => {
+    if (!viewingGroup) return
+    if (!window.confirm(`¿Eliminar a ${memberName} del grupo?`)) return
+    const result = await removeMember({ groupId: viewingGroup.id, memberId })
+    if (result.success) {
+      setMembers(prev => prev.filter(m => m.user_id !== memberId))
+      setMemberCounts(prev => ({ ...prev, [viewingGroup.id]: (prev[viewingGroup.id] ?? 1) - 1 }))
+      setToast(`${memberName} fue eliminado del grupo`)
+      setTimeout(() => setToast(null), 3000)
+    } else {
+      setToast(result.error ?? 'Error al eliminar')
+      setTimeout(() => setToast(null), 3000)
+    }
+  }, [viewingGroup])
+
   const closeModal = () => setModal(null)
 
   // ── Group detail ─────────────────────────────────────────────────────────────
@@ -374,6 +389,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
           ) : (
             members.map((m, i) => {
               const isMe = m.user_id === userId
+              const isAdmin = m.user_id === viewingGroup.created_by
               const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : null
               return (
                 <div
@@ -399,9 +415,28 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
                       {isMe && <span style={{ marginLeft: 6, fontSize: 10, color: '#4ade80', fontWeight: 700 }}>TÚ</span>}
                     </p>
                   </div>
-                  <span style={{ fontSize: 14, fontWeight: 700, color: isMe ? '#4ade80' : 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
-                    {m.total_points} pts
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: isMe ? '#4ade80' : 'rgba(255,255,255,0.55)' }}>
+                      {m.total_points} pts
+                    </span>
+                    {isAdmin && (
+                      <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, border: '1px solid rgba(246,183,60,0.30)', padding: '2px 7px', borderRadius: 8 }}>
+                        Admin
+                      </span>
+                    )}
+                    {isCreator && !isMe && (
+                      <button
+                        onClick={() => handleRemoveMember(m.user_id, m.username ?? 'Jugador')}
+                        style={{ width: 28, height: 28, borderRadius: 8, background: 'rgba(206,17,38,0.10)', border: '1px solid rgba(206,17,38,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(206,17,38,0.22)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'rgba(206,17,38,0.10)')}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="2.5">
+                          <path d="M18 6L6 18M6 6l12 12"/>
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })

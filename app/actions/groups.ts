@@ -119,6 +119,38 @@ export async function updateGroup({
   return { data: data[0] as { id: string; name: string; code: string; created_by: string; prize_amount: number | null; entry_fee: number | null; currency: string }, error: null }
 }
 
+export async function removeMember({
+  groupId,
+  memberId,
+}: {
+  groupId: string
+  memberId: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups')
+    .select('created_by')
+    .eq('id', groupId)
+    .single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede eliminar miembros' }
+  if (memberId === user.id) return { error: 'No podés eliminarte a vos mismo' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('group_members')
+    .delete()
+    .eq('group_id', groupId)
+    .eq('user_id', memberId)
+
+  if (error) return { error: error.message as string }
+  return { success: true }
+}
+
 export async function getGroupMembers(groupId: string) {
   const supabase = await createClient()
 
