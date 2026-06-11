@@ -13,6 +13,9 @@ const inter = Inter({ variable: '--font-inter', subsets: ['latin'], weight: ['40
 export const metadata: Metadata = {
   title: 'TU MUNDIAL - Tus Predicciones',
   description: 'Pronosticá los partidos del Mundial 2026 y competí con amigos.',
+  other: {
+    'google-adsense-account': 'ca-pub-2739632046843917',
+  },
   icons: {
     icon: '/favicon.ico',
   },
