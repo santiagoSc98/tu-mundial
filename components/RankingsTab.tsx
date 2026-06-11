@@ -199,22 +199,6 @@ export default function RankingsTab({
             )}
           </div>
 
-          {/* ── COMPARTIR MI POSICIÓN ──────────────────────────────────────── */}
-          {myRank > 0 && (
-            <div style={{ marginTop: 12, display: 'flex', justifyContent: 'center' }}>
-              <button
-                onClick={() => {
-                  const myPoints = rankings.find(r => r.id === currentUserId)?.total_points ?? 0
-                  const text = `Estoy #${myRank} en TU MUNDIAL con ${myPoints} pts. 🏆⚽\n¿Podés superarme? tu-mundial.vercel.app`
-                  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-                }}
-                style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 18px', borderRadius: 12, background: '#25D366', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
-              >
-                <WhatsAppIcon /> Compartir mi posición
-              </button>
-            </div>
-          )}
-
           {/* ── INVITAR AMIGOS ──────────────────────────────────────────────── */}
           <div style={{ ...CARD, marginTop: 16, padding: 20, textAlign: 'center' }}>
             <p style={{ fontSize: 15, fontWeight: 600, color: '#fff', margin: '0 0 4px' }}>
@@ -347,13 +331,25 @@ export default function RankingsTab({
             </p>
 
             {myRank > 0 && (
-              <div style={{ padding: '8px 16px', background: 'rgba(0,106,51,0.15)', borderRadius: 10, border: '1px solid rgba(0,106,51,0.30)', display: 'inline-block' }}>
-                <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
-                  Tu posición: #{myRank}
-                </span>
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                <div style={{ padding: '8px 16px', background: 'rgba(0,106,51,0.15)', borderRadius: 10, border: '1px solid rgba(0,106,51,0.30)', display: 'inline-block' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#22c55e' }}>
+                    Tu posición: #{myRank}
+                  </span>
+                </div>
+                <button
+                  onClick={() => {
+                    const myPoints = rankings.find(r => r.id === currentUserId)?.total_points ?? 0
+                    const text = `Estoy #${myRank} en TU MUNDIAL con ${myPoints} pts. 🏆⚽\n¿Podés superarme? tu-mundial.vercel.app`
+                    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+                  }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 12, background: '#25D366', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
+                >
+                  <WhatsAppIcon /> Compartir mi posición
+                </button>
               </div>
             )}
-            
+
           </div>
 
           {/* ESTADÍSTICAS GENERALES */}
