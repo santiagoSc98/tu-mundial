@@ -235,7 +235,7 @@ function PredictPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 14, marginBottom: 14 }}>
           <CheckCircle style={{ width: 16, height: 16, color: '#22c55e', flexShrink: 0 }} />
           <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0, flex: 1 }}>
-            Predicaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
+            Pronosticaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
             {localScore != null && <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}> · {localScore.home}–{localScore.away}</span>}
           </p>
           {canEdit && (
@@ -467,7 +467,7 @@ function FeaturedMatchPanel({
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 14 }}>
           <CheckCircle style={{ width: 16, height: 16, color: '#22c55e', flexShrink: 0 }} />
           <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0, flex: 1 }}>
-            Predicaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
+            Pronosticaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
             {localScore != null && <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}> · {localScore.home}–{localScore.away}</span>}
           </p>
           {canEdit && (
