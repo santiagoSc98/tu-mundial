@@ -21,16 +21,27 @@ export async function savePrediction({
     return { data: null, error: 'No autenticado' }
   }
 
+  const { data: pred } = await supabase
+    .from('predictions')
+    .select('deadline')
+    .eq('id', predictionId)
+    .single()
+
+  if (!pred) return { data: null, error: 'Partido no encontrado' }
+  if (new Date() > new Date(pred.deadline ?? 0)) {
+    return { data: null, error: 'El tiempo para predecir ya cerró' }
+  }
+
   const { data, error } = await supabase
     .from('user_predictions')
-    .insert({
+    .upsert({
       user_id:               user.id,
       prediction_id:         predictionId,
       predicted_answer:      answer,
       home_score_prediction: homeScore,
       away_score_prediction: awayScore,
       confidence_level:      50,
-    })
+    }, { onConflict: 'user_id,prediction_id' })
     .select()
     .single()
 

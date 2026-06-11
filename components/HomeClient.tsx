@@ -195,12 +195,16 @@ export default function HomeClient({
   }, [])
 
   const handlePredict = useCallback(async (predictionId: string, answer: string, homeScore: number, awayScore: number) => {
-    if (mergedAnswers[predictionId]) return
+    const oldAnswer = mergedAnswers[predictionId]
     setLocalAnswers(prev => ({ ...prev, [predictionId]: answer }))
     setLocalScores(prev  => ({ ...prev, [predictionId]: { home: homeScore, away: awayScore } }))
     setLocalVotes(prev => {
       const dist = { ...(prev[predictionId] ?? {}) }
-      dist[answer] = (dist[answer] ?? 0) + 1
+      if (oldAnswer && oldAnswer !== answer) {
+        if ((dist[oldAnswer] ?? 0) > 1) dist[oldAnswer]--
+        else delete dist[oldAnswer]
+      }
+      if (!oldAnswer || oldAnswer !== answer) dist[answer] = (dist[answer] ?? 0) + 1
       return { ...prev, [predictionId]: dist }
     })
     try {

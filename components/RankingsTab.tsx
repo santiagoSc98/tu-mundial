@@ -221,7 +221,7 @@ export default function RankingsTab({
               </button>
               <button
                 onClick={() => {
-                  const text = encodeURIComponent(`¡Unite a TU MUNDIAL y competí conmigo pronosticando el Mundial 2026! 🏆⚽\n${WA_APP_URL}`)
+                  const text = encodeURIComponent(`¡Unite a TU MUNDIAL y competí conmigo pronosticando el Mundial 2026!\n${WA_APP_URL}`)
                   window.open(`https://wa.me/?text=${text}`, '_blank')
                 }}
                 style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 16px', borderRadius: 12, background: '#25D366', color: '#fff', border: 'none', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}

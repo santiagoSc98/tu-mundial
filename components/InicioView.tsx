@@ -167,12 +167,19 @@ function PredictPanel({
   const awayFlag = getFlagUrl(prediction.away_team_code)
   const open     = isMatchOpen(prediction)
   const answered = !!existingAnswer
+  const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
 
   // Start directly in picker mode for unanswered open football matches
   const [showPredict, setShowPredict] = useState(() => !answered && open && isFootball)
-  const [homeScore,   setHomeScore]   = useState(0)
-  const [awayScore,   setAwayScore]   = useState(0)
+  const [homeScore,   setHomeScore]   = useState(localScore?.home ?? 0)
+  const [awayScore,   setAwayScore]   = useState(localScore?.away ?? 0)
+
+  const openEditPicker = () => {
+    setHomeScore(localScore?.home ?? 0)
+    setAwayScore(localScore?.away ?? 0)
+    setShowPredict(true)
+  }
 
   const total = Object.values(voteData).reduce((a, b) => a + b, 0)
   const pct   = (key: string) => total > 0 ? Math.round((voteData[key] ?? 0) / total * 100) : 0
@@ -183,7 +190,7 @@ function PredictPanel({
   }
 
   // ── State 2: score picker ──────────────────────────────────────────────────
-  if (showPredict && open && !answered && isFootball) {
+  if (showPredict && open && isFootball) {
     const deduced = deduceResult(homeScore, awayScore, home, away, draw)
     return (
       <div className="animate-fade-in" style={outer}>
@@ -196,7 +203,7 @@ function PredictPanel({
           ← Volver
         </button>
         <p style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
-          ¿CUÁL SERÁ EL MARCADOR?
+          {canEdit ? 'CAMBIAR PREDICCIÓN' : '¿CUÁL SERÁ EL MARCADOR?'}
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
@@ -215,7 +222,7 @@ function PredictPanel({
           onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
-          Confirmar predicción
+          {canEdit ? 'Guardar cambio' : 'Confirmar predicción'}
         </button>
       </div>
     )
@@ -227,10 +234,18 @@ function PredictPanel({
       {answered && (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 14, marginBottom: 14 }}>
           <CheckCircle style={{ width: 16, height: 16, color: '#22c55e', flexShrink: 0 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0, flex: 1 }}>
             Predicaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
             {localScore != null && <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}> · {localScore.home}–{localScore.away}</span>}
           </p>
+          {canEdit && (
+            <button
+              onClick={openEditPicker}
+              style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#F6B73C', background: 'none', border: '1px solid rgba(246,183,60,0.30)', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}
+            >
+              Editar
+            </button>
+          )}
         </div>
       )}
       {!open && !answered && (
@@ -326,6 +341,7 @@ function FeaturedMatchPanel({
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
   const answered = !!existingAnswer
+  const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
 
   const total = Object.values(voteData).reduce((a, b) => a + b, 0)
@@ -366,7 +382,7 @@ function FeaturedMatchPanel({
   }
 
   // ── State 2: score picker ──────────────────────────────────────────────────
-  if (showPredict && open && !answered && isFootball) {
+  if (showPredict && open && isFootball) {
     const deduced = deduceResult(homeScore, awayScore, home, away, draw)
     return (
       <div className="animate-fade-in" style={{ ...GLASS, padding: 28 }}>
@@ -379,7 +395,7 @@ function FeaturedMatchPanel({
           ← Volver
         </button>
         <p style={{ textAlign: 'center', fontSize: 10, color: 'rgba(255,255,255,0.35)', marginBottom: 8, letterSpacing: '0.1em', fontWeight: 700 }}>
-          ¿CUÁL SERÁ EL MARCADOR?
+          {canEdit ? 'CAMBIAR PREDICCIÓN' : '¿CUÁL SERÁ EL MARCADOR?'}
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
@@ -407,7 +423,7 @@ function FeaturedMatchPanel({
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
-          Confirmar predicción
+          {canEdit ? 'Guardar cambio' : 'Confirmar predicción'}
         </button>
       </div>
     )
@@ -450,10 +466,18 @@ function FeaturedMatchPanel({
       {answered ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 14 }}>
           <CheckCircle style={{ width: 16, height: 16, color: '#22c55e', flexShrink: 0 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0, flex: 1 }}>
             Predicaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
             {localScore != null && <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}> · {localScore.home}–{localScore.away}</span>}
           </p>
+          {canEdit && (
+            <button
+              onClick={() => { setHomeScore(localScore?.home ?? 0); setAwayScore(localScore?.away ?? 0); setShowPredict(true) }}
+              style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#F6B73C', background: 'none', border: '1px solid rgba(246,183,60,0.30)', borderRadius: 8, padding: '4px 12px', cursor: 'pointer' }}
+            >
+              Editar
+            </button>
+          )}
         </div>
       ) : open && isFootball ? (
         <button
@@ -515,7 +539,11 @@ function MatchRow({
       </div>
 
       <div className="shrink-0">
-        {answered ? (
+        {answered && open ? (
+          <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: '#F6B73C', border: '1px solid rgba(246,183,60,0.30)' }}>
+            Editar
+          </span>
+        ) : answered ? (
           <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ color: '#22c55e', border: '1px solid rgba(34,197,94,0.30)' }}>
             Ver votos
           </span>
