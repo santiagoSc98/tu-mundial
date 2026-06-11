@@ -149,6 +149,8 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   const [copied, setCopied] = useState(false)
   const [toast, setToast] = useState<string | null>(null)
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
+  const [confirmRemove, setConfirmRemove] = useState<{ memberId: string; memberName: string } | null>(null)
+  const [removeLoading, setRemoveLoading] = useState(false)
 
   useEffect(() => {
     if (autoJoinCode) {
@@ -264,20 +266,26 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
     setModal('edit')
   }, [])
 
-  const handleRemoveMember = useCallback(async (memberId: string, memberName: string) => {
-    if (!viewingGroup) return
-    if (!window.confirm(`¿Eliminar a ${memberName} del grupo?`)) return
-    const result = await removeMember({ groupId: viewingGroup.id, memberId })
+  const handleRemoveMember = useCallback((memberId: string, memberName: string) => {
+    setConfirmRemove({ memberId, memberName })
+  }, [])
+
+  const doRemoveMember = useCallback(async () => {
+    if (!viewingGroup || !confirmRemove) return
+    setRemoveLoading(true)
+    const result = await removeMember({ groupId: viewingGroup.id, memberId: confirmRemove.memberId })
+    setRemoveLoading(false)
+    setConfirmRemove(null)
     if (result.success) {
-      setMembers(prev => prev.filter(m => m.user_id !== memberId))
+      setMembers(prev => prev.filter(m => m.user_id !== confirmRemove.memberId))
       setMemberCounts(prev => ({ ...prev, [viewingGroup.id]: (prev[viewingGroup.id] ?? 1) - 1 }))
-      setToast(`${memberName} fue eliminado del grupo`)
+      setToast(`${confirmRemove.memberName} fue eliminado del grupo`)
       setTimeout(() => setToast(null), 3000)
     } else {
       setToast(result.error ?? 'Error al eliminar')
       setTimeout(() => setToast(null), 3000)
     }
-  }, [viewingGroup])
+  }, [viewingGroup, confirmRemove])
 
   const closeModal = () => setModal(null)
 
@@ -448,6 +456,43 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
           <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
             ✓ {toast}
           </div>
+        )}
+
+        {/* Confirm remove modal */}
+        {confirmRemove && (
+          <ModalWrap onClose={() => setConfirmRemove(null)}>
+            <div style={{ textAlign: 'center', paddingTop: 8 }}>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(206,17,38,0.12)', border: '1px solid rgba(206,17,38,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="2">
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <line x1="18" y1="8" x2="23" y2="13"/>
+                  <line x1="23" y1="8" x2="18" y2="13"/>
+                </svg>
+              </div>
+              <h2 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+                ¿Eliminar a {confirmRemove.memberName}?
+              </h2>
+              <p style={{ margin: '0 0 28px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+                Esta persona ya no podrá ver ni participar en el grupo.
+              </p>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setConfirmRemove(null)}
+                  style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={doRemoveMember}
+                  disabled={removeLoading}
+                  style={{ flex: 1, padding: '13px', borderRadius: 12, background: removeLoading ? 'rgba(206,17,38,0.30)' : '#CE1126', border: 'none', cursor: removeLoading ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+                >
+                  {removeLoading ? 'Eliminando...' : 'Sí, eliminar'}
+                </button>
+              </div>
+            </div>
+          </ModalWrap>
         )}
 
         {/* Edit modal (accessible from detail view) */}
