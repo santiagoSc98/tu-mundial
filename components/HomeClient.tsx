@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import Image from 'next/image'
-import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList, Users } from 'lucide-react'
+import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList, Users, User } from 'lucide-react'
 import AuthButton from '@/components/AuthButton'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction } from '@/app/actions/predictions'
@@ -18,6 +18,7 @@ import MisPrediccionesTab from '@/components/MisPrediccionesTab'
 import EspecialesTab from '@/components/EspecialesTab'
 import AdminTab from '@/components/AdminTab'
 import MisGruposView, { type Group } from '@/components/MisGruposView'
+import PerfilView from '@/components/PerfilView'
 
 function SidebarDecoration() {
   return (
@@ -29,7 +30,7 @@ function SidebarDecoration() {
   )
 }
 
-type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'grupos' | 'especiales' | 'calendario' | 'admin' | 'reglas'
+type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'grupos' | 'especiales' | 'calendario' | 'perfil' | 'admin' | 'reglas'
 
 const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'inicio',             label: 'Inicio',            icon: <Home          size={18} strokeWidth={1.5} /> },
@@ -38,6 +39,7 @@ const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
   { id: 'grupos',             label: 'Mis Grupos',        icon: <Users         size={18} strokeWidth={1.5} /> },
   { id: 'especiales',         label: 'Mis Especiales',    icon: <Star          size={18} strokeWidth={1.5} /> },
   { id: 'calendario',         label: 'Calendario',        icon: <Calendar      size={18} strokeWidth={1.5} /> },
+  { id: 'perfil',             label: 'Mi Perfil',         icon: <User          size={18} strokeWidth={1.5} /> },
   { id: 'reglas',             label: 'Reglas',            icon: <BookOpen      size={18} strokeWidth={1.5} /> },
 ]
 
@@ -49,6 +51,7 @@ const MOBILE_LABELS: Record<Tab, string> = {
   grupos:             'Grupos',
   especiales:         'Espec.',
   calendario:         'Calend.',
+  perfil:             'Perfil',
   reglas:             'Reglas',
   admin:              'Admin',
 }
@@ -76,6 +79,7 @@ interface Props {
   voteDistributions: Record<string, Record<string, number>>
   initialGroups: Group[]
   currentStreak: number
+  profileData: { id: string; username: string; avatarUrl: string | null; total_points: number; current_streak: number; country: string }
 }
 
 function ReglasTab() {
@@ -145,7 +149,7 @@ function ReglasTab() {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
@@ -482,6 +486,13 @@ export default function HomeClient({
             <ErrorBoundary>
               <CalendarioView predictions={predictions} />
             </ErrorBoundary>
+          )}
+          {activeTab === 'perfil' && (
+            <PerfilView
+              profile={{ id: profileData.id, username: profileData.username, avatar_url: profileData.avatarUrl, total_points: profileData.total_points, current_streak: profileData.current_streak, country: profileData.country }}
+              myStats={{ totalPredictions: myStats.total, correctPredictions: myStats.correct, rank }}
+              currentStreak={currentStreak}
+            />
           )}
           {activeTab === 'admin'  && isAdmin && <AdminTab />}
           {activeTab === 'reglas' && <ReglasTab />}

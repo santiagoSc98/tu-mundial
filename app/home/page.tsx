@@ -79,7 +79,7 @@ async function HomeData() {
           .maybeSingle(),
         supabase
           .from('profiles')
-          .select('total_points, avatar_url, username')
+          .select('id, total_points, avatar_url, username, current_streak, country')
           .eq('id', user.id)
           .single(),
         supabase
@@ -145,7 +145,7 @@ async function HomeData() {
 
   if (!special?.champion_team && !special?.top_scorer) redirect('/')
 
-  const profile = profileData ?? { total_points: 0, avatar_url: null, username: null }
+  const profile = profileData ?? { id: user.id, total_points: 0, avatar_url: null, username: null, current_streak: 0, country: 'Paraguay' }
 
   // Build rank
   const rankings = (rankingsRes.data ?? []) as { id: string; username: string | null; avatar_url: string | null; total_points: number; current_streak: number }[]
@@ -232,6 +232,7 @@ async function HomeData() {
       voteDistributions={voteDistributions}
       initialGroups={initialGroups}
       currentStreak={currentStreak}
+      profileData={{ id: user.id, username, avatarUrl, total_points: profile.total_points, current_streak: currentStreak, country: profile.country ?? 'Paraguay' }}
     />
   )
 }
