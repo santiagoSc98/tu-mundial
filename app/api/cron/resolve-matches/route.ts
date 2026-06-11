@@ -17,8 +17,8 @@ function sleep(ms: number) {
 
 async function fetchMatchResult(fixtureId: string): Promise<{
   finished: boolean
-  homeScore: number
-  awayScore: number
+  homeScore: number | null
+  awayScore: number | null
 } | null> {
   try {
     const res = await fetch(
@@ -34,11 +34,11 @@ async function fetchMatchResult(fixtureId: string): Promise<{
     }
     const data = await res.json()
     const match = data.match ?? data
-    if (match.status !== 'FINISHED') return { finished: false, homeScore: 0, awayScore: 0 }
+    if (match.status !== 'FINISHED') return { finished: false, homeScore: null, awayScore: null }
     return {
       finished: true,
-      homeScore: match.score?.fullTime?.home ?? 0,
-      awayScore: match.score?.fullTime?.away ?? 0,
+      homeScore: match.score?.fullTime?.home ?? null,
+      awayScore: match.score?.fullTime?.away ?? null,
     }
   } catch (err) {
     console.error(`[resolve-matches] fetch error for fixture ${fixtureId}:`, err)
@@ -93,10 +93,24 @@ export async function GET(request: Request) {
       continue
     }
 
+    const homeGoals = result.homeScore
+    const awayGoals = result.awayScore
+
+    // FINISHED but score not yet populated — retry until 3h after deadline
+    if (homeGoals === null || awayGoals === null) {
+      const threeHoursAfterDeadline = new Date(pred.deadline).getTime() + 3 * 60 * 60 * 1000
+      if (Date.now() >= threeHoursAfterDeadline) {
+        console.error(`[resolve-matches] fixture ${pred.fixture_id} FINISHED but score still null after 3h — manual resolution needed`)
+      } else {
+        console.log(`[resolve-matches] fixture ${pred.fixture_id} FINISHED but score not yet available, will retry next run`)
+      }
+      continue
+    }
+
     // Use stored option names to guarantee answer matches user votes
     let correctAnswer: string
-    if (result.homeScore > result.awayScore) correctAnswer = homeOpt
-    else if (result.awayScore > result.homeScore) correctAnswer = awayOpt
+    if (homeGoals > awayGoals) correctAnswer = homeOpt
+    else if (awayGoals > homeGoals) correctAnswer = awayOpt
     else correctAnswer = drawOpt
 
     // Mark prediction resolved
@@ -128,8 +142,8 @@ export async function GET(request: Request) {
         if (
           upAny.home_score_prediction !== null && upAny.home_score_prediction !== undefined &&
           upAny.away_score_prediction !== null && upAny.away_score_prediction !== undefined &&
-          upAny.home_score_prediction === result.homeScore &&
-          upAny.away_score_prediction === result.awayScore
+          upAny.home_score_prediction === homeGoals &&
+          upAny.away_score_prediction === awayGoals
         ) {
           pointsEarned += 5
         }
@@ -160,7 +174,7 @@ export async function GET(request: Request) {
     usersAwarded += matchUsersAwarded
     details.push({
       fixtureId: pred.fixture_id!,
-      result: `${homeOpt} ${result.homeScore}–${result.awayScore} ${awayOpt} → ${correctAnswer}`,
+      result: `${homeOpt} ${homeGoals}–${awayGoals} ${awayOpt} → ${correctAnswer}`,
       users: matchUsersAwarded,
     })
 

@@ -340,7 +340,7 @@ export default function RankingsTab({
                 <button
                   onClick={() => {
                     const myPoints = rankings.find(r => r.id === currentUserId)?.total_points ?? 0
-                    const text = `Estoy #${myRank} en TU MUNDIAL con ${myPoints} pts. 🏆⚽\n¿Podés superarme? tu-mundial.vercel.app`
+                    const text = `Estoy #${myRank} en TU MUNDIAL con ${myPoints} pts. \n¿Podés superarme? tu-mundial.vercel.app`
                     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
                   }}
                   style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '9px 16px', borderRadius: 12, background: '#25D366', color: '#fff', border: 'none', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}
