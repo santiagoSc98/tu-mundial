@@ -349,7 +349,7 @@ export function GroupPhasesView({
                 <select
                   value={winnerSelect[phase.id] ?? ''}
                   onChange={e => setWinnerSelect(prev => ({ ...prev, [phase.id]: e.target.value }))}
-                  style={{ flex: 1, padding: '7px 10px', borderRadius: 10, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: winnerSelect[phase.id] ? '#fff' : 'rgba(255,255,255,0.35)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
+                  style={{ flex: 1, padding: '7px 10px', borderRadius: 10, background: 'rgba(11,19,43)', border: '1px solid rgba(255,255,255,0.10)', color: winnerSelect[phase.id] ? '#fff' : 'rgba(255,255,255,0.35)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
                 >
                   <option value="" disabled>Elegir ganador...</option>
                   {members.map(m => (
