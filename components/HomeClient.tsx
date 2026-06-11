@@ -297,19 +297,40 @@ export default function HomeClient({
         </nav>
 
         {/* User footer — clickeable → abre perfil */}
-        <div className="shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+        <div className="shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 10px 4px' }}>
           <button
             onClick={() => setActiveTab('perfil')}
-            className="flex items-center gap-3 px-4 py-3 w-full text-left"
-            style={{ background: activeTab === 'perfil' ? 'rgba(0,106,51,0.15)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
-            onMouseEnter={e => { if (activeTab !== 'perfil') e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
-            onMouseLeave={e => { if (activeTab !== 'perfil') e.currentTarget.style.background = 'transparent' }}
+            className="relative flex items-center gap-3 w-full text-left group"
+            style={{
+              padding: '10px 12px', borderRadius: 14,
+              background: activeTab === 'perfil' ? 'rgba(0,106,51,0.18)' : 'transparent',
+              border: `1px solid ${activeTab === 'perfil' ? 'rgba(0,106,51,0.40)' : 'transparent'}`,
+              cursor: 'pointer', transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { if (activeTab !== 'perfil') { e.currentTarget.style.background = 'rgba(255,255,255,0.05)'; e.currentTarget.style.border = '1px solid rgba(255,255,255,0.09)' } }}
+            onMouseLeave={e => { if (activeTab !== 'perfil') { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.border = '1px solid transparent' } }}
           >
+            {/* Pulsing green dot */}
+            <span style={{ position: 'absolute', top: 9, right: 9, width: 7, height: 7, borderRadius: '50%', background: '#22c55e', boxShadow: '0 0 0 0 rgba(34,197,94,0.4)', animation: 'pulse 2s infinite' }} />
+
+            {/* Tooltip */}
+            <span
+              className="opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              style={{
+                position: 'absolute', bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)',
+                background: '#1a2a4a', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 8,
+                padding: '4px 10px', fontSize: 11, color: 'rgba(255,255,255,0.70)', whiteSpace: 'nowrap',
+              }}
+            >
+              Ver mi perfil
+            </span>
+
+            {/* Avatar */}
             {avatarUrl && !imgError ? (
               <Image
                 src={avatarUrl} alt={firstName} width={36} height={36} unoptimized
                 className="rounded-full object-cover shrink-0"
-                style={{ border: '2px solid rgba(0,106,51,0.50)' }}
+                style={{ border: '2px solid #006A33' }}
                 onError={() => setImgError(true)}
               />
             ) : (
@@ -317,6 +338,7 @@ export default function HomeClient({
                 {firstName[0]?.toUpperCase()}
               </div>
             )}
+
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold truncate" style={{ color: '#fff' }}>{username}</p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
@@ -324,6 +346,11 @@ export default function HomeClient({
                 {currentStreak > 0 && <span style={{ color: '#F6B73C' }}> &nbsp;·&nbsp; 🔥{currentStreak}</span>}
               </p>
             </div>
+
+            {/* Chevron */}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.30)" strokeWidth="2" className="shrink-0" style={{ transition: 'stroke 0.15s' }}>
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
           </button>
 
           <button
