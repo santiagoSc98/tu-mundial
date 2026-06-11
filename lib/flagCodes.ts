@@ -21,22 +21,191 @@ export const TLA_TO_ISO: Record<string, string> = {
   CHN: 'cn', IDN: 'id', THA: 'th', VIE: 'vn', PHI: 'ph', MAS: 'my',
   NZL: 'nz', FIJ: 'fj', IND: 'in', PAK: 'pk',
   CUW: 'cw', UZB: 'uz',
-  // Alternative codes used by football-data.org / FIFA in some contexts
-  KSA: 'sa',  // Saudi Arabia (FIFA alternate)
-  TTO: 'tt',  // Trinidad & Tobago (ISO-3)
-  CUR: 'cw',  // Curaçao (alternate)
-  HOL: 'nl',  // Netherlands (colloquial)
-  RSC: 'cg',  // Congo
-  SKN: 'kn',  // Saint Kitts and Nevis
+  // Alternative codes (football-data.org / FIFA alternates / ISO-3)
+  KSA: 'sa', TTO: 'tt', CUR: 'cw', HOL: 'nl', URY: 'uy',
+  RSC: 'cg', SKN: 'kn',
+}
+
+// Fallback: team name (Spanish or English, lowercased) → ISO alpha-2.
+// Used when home_team_code stores the full team name instead of a TLA.
+const NAME_TO_ISO: Record<string, string> = {
+  // Spanish names
+  'uruguay': 'uy',
+  'argentina': 'ar',
+  'brasil': 'br',
+  'colombia': 'co',
+  'ecuador': 'ec',
+  'venezuela': 've',
+  'paraguay': 'py',
+  'chile': 'cl',
+  'perú': 'pe',
+  'peru': 'pe',
+  'bolivia': 'bo',
+  'méxico': 'mx',
+  'mexico': 'mx',
+  'estados unidos': 'us',
+  'canadá': 'ca',
+  'canada': 'ca',
+  'costa rica': 'cr',
+  'panamá': 'pa',
+  'panama': 'pa',
+  'honduras': 'hn',
+  'jamaica': 'jm',
+  'haití': 'ht',
+  'haiti': 'ht',
+  'trinidad y tobago': 'tt',
+  'curazao': 'cw',
+  'cuba': 'cu',
+  'guatemala': 'gt',
+  'el salvador': 'sv',
+  'francia': 'fr',
+  'españa': 'es',
+  'espana': 'es',
+  'alemania': 'de',
+  'portugal': 'pt',
+  'italia': 'it',
+  'países bajos': 'nl',
+  'paises bajos': 'nl',
+  'holanda': 'nl',
+  'bélgica': 'be',
+  'belgica': 'be',
+  'suiza': 'ch',
+  'austria': 'at',
+  'polonia': 'pl',
+  'república checa': 'cz',
+  'republica checa': 'cz',
+  'hungría': 'hu',
+  'hungria': 'hu',
+  'rumania': 'ro',
+  'rumanía': 'ro',
+  'serbia': 'rs',
+  'croacia': 'hr',
+  'eslovaquia': 'sk',
+  'eslovenia': 'si',
+  'dinamarca': 'dk',
+  'suecia': 'se',
+  'noruega': 'no',
+  'finlandia': 'fi',
+  'islandia': 'is',
+  'escocia': 'gb-sct',
+  'gales': 'gb-wls',
+  'inglaterra': 'gb-eng',
+  'irlanda del norte': 'gb-nir',
+  'irlanda': 'ie',
+  'turquía': 'tr',
+  'turquia': 'tr',
+  'grecia': 'gr',
+  'ucrania': 'ua',
+  'bulgaria': 'bg',
+  'albania': 'al',
+  'montenegro': 'me',
+  'macedonia del norte': 'mk',
+  'bosnia y herzegovina': 'ba',
+  'georgia': 'ge',
+  'armenia': 'am',
+  'azerbaiyán': 'az',
+  'azerbaiyan': 'az',
+  'kosovo': 'xk',
+  'lituania': 'lt',
+  'letonia': 'lv',
+  'estonia': 'ee',
+  'marruecos': 'ma',
+  'egipto': 'eg',
+  'túnez': 'tn',
+  'tunez': 'tn',
+  'argelia': 'dz',
+  'senegal': 'sn',
+  'nigeria': 'ng',
+  'ghana': 'gh',
+  'camerún': 'cm',
+  'camerun': 'cm',
+  'costa de marfil': 'ci',
+  'mali': 'ml',
+  'malí': 'ml',
+  'burkina faso': 'bf',
+  'guinea': 'gn',
+  'sudáfrica': 'za',
+  'sudafrica': 'za',
+  'japón': 'jp',
+  'japon': 'jp',
+  'corea del sur': 'kr',
+  'australia': 'au',
+  'irán': 'ir',
+  'iran': 'ir',
+  'arabia saudita': 'sa',
+  'catar': 'qa',
+  'emiratos árabes unidos': 'ae',
+  'irak': 'iq',
+  'jordania': 'jo',
+  'uzbekistán': 'uz',
+  'uzbekistan': 'uz',
+  'nueva zelanda': 'nz',
+  'vietnam': 'vn',
+  'cabo verde': 'cv',
+  // English names (football-data.org returns these)
+  'uruguay': 'uy',
+  'brazil': 'br',
+  'argentina': 'ar',
+  'colombia': 'co',
+  'venezuela': 've',
+  'mexico': 'mx',
+  'united states': 'us',
+  'usa': 'us',
+  'canada': 'ca',
+  'panama': 'pa',
+  'trinidad and tobago': 'tt',
+  'curacao': 'cw',
+  'france': 'fr',
+  'spain': 'es',
+  'germany': 'de',
+  'netherlands': 'nl',
+  'belgium': 'be',
+  'switzerland': 'ch',
+  'croatia': 'hr',
+  'czech republic': 'cz',
+  'czechia': 'cz',
+  'denmark': 'dk',
+  'sweden': 'se',
+  'norway': 'no',
+  'scotland': 'gb-sct',
+  'wales': 'gb-wls',
+  'england': 'gb-eng',
+  'turkey': 'tr',
+  'ukraine': 'ua',
+  'morocco': 'ma',
+  'senegal': 'sn',
+  "cote d'ivoire": 'ci',
+  'ivory coast': 'ci',
+  'cameroon': 'cm',
+  'south africa': 'za',
+  'japan': 'jp',
+  'south korea': 'kr',
+  'iran': 'ir',
+  'saudi arabia': 'sa',
+  'qatar': 'qa',
+  'new zealand': 'nz',
+  'cape verde': 'cv',
 }
 
 export function getFlagUrl(tla: string | null | undefined): string | null {
   if (!tla) return null
   const upper = tla.toUpperCase()
-  const iso = TLA_TO_ISO[upper]
-  if (iso) return `https://flagcdn.com/w160/${iso}.png`
-  // If the stored code is already a 2-letter ISO alpha-2 (e.g. 'uy', 'sa', 'cw'),
-  // pass it through directly so flags render even without a TLA entry
+
+  // 1. TLA / alternate-code lookup (e.g. "URU", "KSA", "TTO")
+  const isoFromTla = TLA_TO_ISO[upper]
+  if (isoFromTla) return `https://flagcdn.com/w160/${isoFromTla}.png`
+
+  // 2. Direct 2-letter ISO passthrough (e.g. "uy", "sa", "cw" stored directly in DB)
   if (upper.length === 2) return `https://flagcdn.com/w160/${upper.toLowerCase()}.png`
+
+  // 3. Full team name fallback (Spanish or English), case-insensitive + accent-stripped
+  const normalized = tla
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+  const isoFromName = NAME_TO_ISO[normalized] ?? NAME_TO_ISO[tla.toLowerCase().trim()]
+  if (isoFromName) return `https://flagcdn.com/w160/${isoFromName}.png`
+
   return null
 }
