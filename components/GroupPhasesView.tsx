@@ -296,19 +296,35 @@ export function GroupPhasesView({
             {/* Member chips */}
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               {members.map(member => {
-                const paid = phase.payments?.some(p => p.user_id === member.user_id) ?? false
-                const busy = actionLoading === `${phase.id}:${member.user_id}` || actionLoading === `${phase.id}:${member.user_id}:unpaid`
+                const paid     = phase.payments?.some(p => p.user_id === member.user_id) ?? false
+                const isMe     = member.user_id === userId
+                const canAct   = (isCreator || isMe) && phase.status !== 'closed'
+                const busy     = actionLoading === `${phase.id}:${member.user_id}` || actionLoading === `${phase.id}:${member.user_id}:unpaid`
+                const myUnpaid = isMe && !paid && !isCreator
+
                 return (
                   <button
                     key={member.user_id}
-                    disabled={!isCreator || phase.status === 'closed' || busy}
-                    onClick={() => paid ? handleMarkUnpaid(phase.id, member.user_id) : handleMarkPaid(phase.id, member.user_id)}
+                    disabled={!canAct || busy}
+                    onClick={() => canAct && (paid ? handleMarkUnpaid(phase.id, member.user_id) : handleMarkPaid(phase.id, member.user_id))}
                     style={{
-                      display: 'flex', alignItems: 'center', gap: 5, padding: '5px 9px',
-                      borderRadius: 10, fontSize: 12, fontWeight: 600, cursor: isCreator && phase.status !== 'closed' ? 'pointer' : 'default', border: 'none',
-                      background: paid ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.05)',
-                      color: paid ? '#4ade80' : 'rgba(255,255,255,0.40)',
-                      outline: paid ? '1px solid rgba(0,106,51,0.35)' : '1px solid rgba(255,255,255,0.08)',
+                      display: 'flex', alignItems: 'center', gap: 5,
+                      padding: myUnpaid ? '7px 12px' : '5px 9px',
+                      borderRadius: 10, fontSize: myUnpaid ? 13 : 12,
+                      fontWeight: myUnpaid ? 700 : 600,
+                      cursor: canAct ? 'pointer' : 'default',
+                      border: 'none',
+                      background: paid
+                        ? 'rgba(0,106,51,0.20)'
+                        : myUnpaid
+                          ? 'rgba(0,106,51,0.15)'
+                          : 'rgba(255,255,255,0.05)',
+                      color: paid ? '#4ade80' : myUnpaid ? '#4ade80' : 'rgba(255,255,255,0.40)',
+                      outline: paid
+                        ? '1px solid rgba(0,106,51,0.35)'
+                        : myUnpaid
+                          ? '1.5px solid rgba(0,106,51,0.55)'
+                          : '1px solid rgba(255,255,255,0.08)',
                       opacity: busy ? 0.5 : 1,
                       transition: 'all 0.15s',
                     }}
@@ -317,8 +333,10 @@ export function GroupPhasesView({
                       ? <img src={member.avatar_url} alt="" style={{ width: 16, height: 16, borderRadius: '50%', objectFit: 'cover' }} />
                       : <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'rgba(255,255,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff' }}>{(member.username ?? '?')[0]?.toUpperCase()}</div>
                     }
-                    {(member.username ?? 'Jugador').split(' ')[0]}
-                    {paid && <span style={{ fontSize: 10 }}>✓</span>}
+                    {myUnpaid
+                      ? <>Apostar {busy ? '...' : '→'}</>
+                      : <>{(member.username ?? 'Jugador').split(' ')[0]}{paid && <span style={{ fontSize: 10 }}>✓</span>}</>
+                    }
                   </button>
                 )
               })}

@@ -206,7 +206,9 @@ export async function markPhasePaid({
   const { data: group } = await (supabase as any)
     .from('groups').select('created_by').eq('id', phase?.group_id).single()
 
-  if (group?.created_by !== user.id) return { error: 'Solo el creador puede marcar pagos' }
+  const isCreator = group?.created_by === user.id
+  const isSelf    = user.id === targetUserId
+  if (!isCreator && !isSelf) return { error: 'No tenés permiso para marcar este pago' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
@@ -237,7 +239,9 @@ export async function markPhaseUnpaid({
   const { data: group } = await (supabase as any)
     .from('groups').select('created_by').eq('id', phase?.group_id).single()
 
-  if (group?.created_by !== user.id) return { error: 'Solo el creador puede modificar pagos' }
+  const isCreator = group?.created_by === user.id
+  const isSelf    = user.id === targetUserId
+  if (!isCreator && !isSelf) return { error: 'No tenés permiso para modificar este pago' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error } = await (supabase as any)
