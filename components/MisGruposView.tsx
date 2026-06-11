@@ -3,6 +3,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2 } from 'lucide-react'
 import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember } from '@/app/actions/groups'
+import { GroupPhasesView } from './GroupPhasesView'
 
 export interface Group {
   id: string
@@ -14,7 +15,7 @@ export interface Group {
   currency?: string | null
 }
 
-interface GroupMember {
+export interface GroupMember {
   user_id: string
   username: string | null
   avatar_url: string | null
@@ -151,6 +152,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   const [memberCounts, setMemberCounts] = useState<Record<string, number>>({})
   const [confirmRemove, setConfirmRemove] = useState<{ memberId: string; memberName: string } | null>(null)
   const [removeLoading, setRemoveLoading] = useState(false)
+  const [groupTab, setGroupTab] = useState<'ranking' | 'apuestas'>('ranking')
 
   useEffect(() => {
     if (autoJoinCode) {
@@ -241,6 +243,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
 
   const openDetail = useCallback(async (group: Group) => {
     setViewingGroup(group)
+    setGroupTab('ranking')
     setMembersLoading(true)
     try {
       const result = await getGroupMembers(group.id)
@@ -382,8 +385,21 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
           </button>
         </div>
 
+        {/* Tabs */}
+        <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 14 }}>
+          {(['ranking', 'apuestas'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setGroupTab(tab)}
+              style={{ flex: 1, padding: '8px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'background 0.15s', background: groupTab === tab ? '#006A33' : 'transparent', color: groupTab === tab ? '#fff' : 'rgba(255,255,255,0.40)' }}
+            >
+              {tab === 'ranking' ? 'Ranking' : 'Apuestas'}
+            </button>
+          ))}
+        </div>
+
         {/* Ranking */}
-        <div style={{ ...CARD, overflow: 'hidden' }}>
+        {groupTab === 'ranking' && <div style={{ ...CARD, overflow: 'hidden' }}>
           <div style={{ padding: '14px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
             <Users size={14} style={{ color: 'rgba(255,255,255,0.40)' }} />
             <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>
@@ -449,7 +465,17 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
               )
             })
           )}
-        </div>
+        </div>}
+
+        {/* Apuestas */}
+        {groupTab === 'apuestas' && (
+          <GroupPhasesView
+            group={viewingGroup}
+            members={members}
+            userId={userId}
+            isCreator={isCreator}
+          />
+        )}
 
         {/* Toast */}
         {toast && (

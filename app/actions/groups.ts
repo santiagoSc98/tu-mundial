@@ -151,6 +151,164 @@ export async function removeMember({
   return { success: true }
 }
 
+export async function setupGroupPhases({
+  groupId,
+  phases,
+}: {
+  groupId: string
+  phases: { phase: string; entry_fee: number; currency: string }[]
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups').select('created_by').eq('id', groupId).single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede configurar fases' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (supabase as any).from('group_phases').delete().eq('group_id', groupId)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('group_phases')
+    .insert(phases.map(p => ({
+      group_id: groupId,
+      phase: p.phase,
+      entry_fee: p.entry_fee,
+      currency: p.currency,
+      status: p.phase === 'grupos' ? 'active' : 'upcoming',
+    })))
+    .select()
+
+  if (error) return { data: null, error: error.message as string }
+  return { data, error: null }
+}
+
+export async function markPhasePaid({
+  phaseId,
+  userId: targetUserId,
+}: {
+  phaseId: string
+  userId: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: phase } = await (supabase as any)
+    .from('group_phases').select('group_id').eq('id', phaseId).single()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups').select('created_by').eq('id', phase?.group_id).single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede marcar pagos' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('group_phase_payments')
+    .upsert({ phase_id: phaseId, user_id: targetUserId }, { onConflict: 'phase_id,user_id' })
+    .select()
+
+  if (error) return { data: null, error: error.message as string }
+  return { data, error: null }
+}
+
+export async function markPhaseUnpaid({
+  phaseId,
+  userId: targetUserId,
+}: {
+  phaseId: string
+  userId: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: phase } = await (supabase as any)
+    .from('group_phases').select('group_id').eq('id', phaseId).single()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups').select('created_by').eq('id', phase?.group_id).single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede modificar pagos' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (supabase as any)
+    .from('group_phase_payments')
+    .delete()
+    .eq('phase_id', phaseId)
+    .eq('user_id', targetUserId)
+
+  if (error) return { error: error.message as string }
+  return { success: true }
+}
+
+export async function setPhaseWinner({
+  phaseId,
+  winnerId,
+}: {
+  phaseId: string
+  winnerId: string
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'No autenticado' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: phase } = await (supabase as any)
+    .from('group_phases').select('group_id').eq('id', phaseId).single()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: group } = await (supabase as any)
+    .from('groups').select('created_by').eq('id', phase?.group_id).single()
+
+  if (group?.created_by !== user.id) return { error: 'Solo el creador puede declarar ganador' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('group_phases')
+    .update({ winner_id: winnerId, status: 'closed' })
+    .eq('id', phaseId)
+    .select()
+    .single()
+
+  if (error) return { data: null, error: error.message as string }
+  return { data, error: null }
+}
+
+export type GroupPhase = {
+  id: string
+  group_id: string
+  phase: string
+  entry_fee: number
+  currency: string
+  status: 'active' | 'upcoming' | 'closed'
+  winner_id: string | null
+  created_at: string
+  payments: { user_id: string }[]
+}
+
+export async function getGroupPhases(groupId: string) {
+  const supabase = await createClient()
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data, error } = await (supabase as any)
+    .from('group_phases')
+    .select('*, payments:group_phase_payments(user_id)')
+    .eq('group_id', groupId)
+    .order('created_at')
+
+  if (error) return { data: null, error: error.message as string }
+  return { data: data as GroupPhase[], error: null }
+}
+
 export async function getGroupMembers(groupId: string) {
   const supabase = await createClient()
 
