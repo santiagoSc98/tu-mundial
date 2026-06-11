@@ -454,7 +454,7 @@ export default function HomeClient({
               myStats={{ totalPredictions: myStats.total, correctPredictions: myStats.correct, rank }}
               currentStreak={currentStreak}
               isAdmin={isAdmin}
-              onTabChange={setActiveTab}
+              onTabChange={(tab: string) => setActiveTab(tab as Tab)}
             />
           )}
           {activeTab === 'admin'  && isAdmin && <AdminTab />}
