@@ -66,7 +66,7 @@ function WhatsAppIcon() {
 const APP_URL = 'https://tu-mundial.vercel.app'
 
 function shareText(code: string, groupName: string) {
-  return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL! 🏆⚽\nEntrá directo: ${APP_URL}/join/${code}`
+  return `¡Unite a mi grupo "${groupName}" en TU MUNDIAL! \nEntrá directo: ${APP_URL}/join/${code}`
 }
 
 function CurrencySelector({ value, onChange }: { value: string; onChange: (c: string) => void }) {
