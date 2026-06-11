@@ -11,6 +11,10 @@ function getSupabase() {
 
 const DELAY_MS = 6200 // football-data.org free tier: 10 req/min
 
+// Strip accents for comparison — "México" === "Mexico" after normalize
+const normalize = (str: string) =>
+  str?.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim() ?? ''
+
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
@@ -107,16 +111,22 @@ export async function GET(request: Request) {
       continue
     }
 
-    // Use stored option names to guarantee answer matches user votes
+    // Derive correct answer from opts[] (accented names) — never use raw API team name
     let correctAnswer: string
     if (homeGoals > awayGoals) correctAnswer = homeOpt
     else if (awayGoals > homeGoals) correctAnswer = awayOpt
     else correctAnswer = drawOpt
 
-    // Mark prediction resolved
-    const { error: updatePredError } = await supabase
-      .from('predictions')
-      .update({ correct_answer: correctAnswer, status: 'resolved', auto_resolved: true })
+    // Mark prediction resolved and store exact scores
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error: updatePredError } = await (supabase.from('predictions') as any)
+      .update({
+        correct_answer: correctAnswer,
+        status: 'resolved',
+        auto_resolved: true,
+        exact_score_home: homeGoals,
+        exact_score_away: awayGoals,
+      })
       .eq('id', pred.id)
 
     if (updatePredError) {
@@ -134,7 +144,8 @@ export async function GET(request: Request) {
 
     if (userPreds?.length) {
       await Promise.all(userPreds.map(async (up) => {
-        const isCorrect = up.predicted_answer === correctAnswer
+        // Normalize both sides so accent differences don't cause mismatches
+        const isCorrect = normalize(up.predicted_answer) === normalize(correctAnswer)
         let pointsEarned = 0
         if (isCorrect) pointsEarned += 3
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
