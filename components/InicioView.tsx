@@ -583,7 +583,11 @@ export default function InicioView({
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
-  const now = useMemo(() => new Date(), [])
+  const [now, setNow] = useState(() => new Date())
+  useEffect(() => {
+    const t = setInterval(() => setNow(new Date()), 60_000)
+    return () => clearInterval(t)
+  }, [])
 
   const liveMatch = useMemo(() => predictions.find(p => {
     if (!p.home_team_code || !p.away_team_code) return false
@@ -592,12 +596,12 @@ export default function InicioView({
     return diff >= 0 && diff <= 120
   }), [predictions, now])
 
-  const nextMatch = useMemo(() => predictions.find(p => {
-    if (!p.home_team_code || !p.away_team_code) return false
-    const start = new Date(p.deadline ?? 0)
-    const diff = (start.getTime() - now.getTime()) / 60000
-    return diff > 0 && diff <= 1440
-  }), [predictions, now])
+  const nextMatch = useMemo(() => {
+    const sorted = predictions
+      .filter(p => p.home_team_code && p.away_team_code && new Date(p.deadline ?? 0) > now)
+      .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+    return sorted[0] ?? null
+  }, [predictions, now])
 
   const openPredictions = useMemo(
     () => predictions.filter(p => p.status === 'open' && new Date(p.deadline ?? 0) > now),
