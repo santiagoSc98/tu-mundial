@@ -222,7 +222,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
 
       {/* Hero card */}
       <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+        <div style={{ display: 'flex', gap: 12, marginBottom: 18 }}>
           <img src={profile.avatar_url ?? '/logo-mundial.png'} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)', flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
