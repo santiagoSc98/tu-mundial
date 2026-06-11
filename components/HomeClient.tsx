@@ -175,8 +175,11 @@ export default function HomeClient({
       setActiveTab('grupos')
       setAutoJoinCode(code.toUpperCase())
       window.history.replaceState({}, '', '/home')
+    } else if (pendingJoinCode) {
+      // El código vino del prop del servidor (cookie) — limpiar la cookie ahora
+      clearJoinCode()
     }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   const [localAnswers, setLocalAnswers] = useState<Record<string, string>>({})
   const [localScores,  setLocalScores]  = useState<Record<string, { home: number; away: number }>>(() => ({ ...existingScores }))
   const [localVotes,   setLocalVotes]   = useState<Record<string, Record<string, number>>>(() => ({ ...voteDistributions }))
