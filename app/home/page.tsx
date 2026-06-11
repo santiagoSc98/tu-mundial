@@ -64,10 +64,9 @@ async function HomeData() {
   console.log(`[home] auth: ${Date.now() - t0}ms`)
   if (!user) redirect('/')
 
-  // Read + clear pending join code cookie
+  // Read pending join code cookie (deletion happens via server action after client consumes it)
   const cookieStore = await cookies()
   const pendingJoinCode = cookieStore.get('pending_join_code')?.value ?? null
-  if (pendingJoinCode) cookieStore.delete('pending_join_code')
 
   // 2. All data in one parallel batch
   const t1 = Date.now()

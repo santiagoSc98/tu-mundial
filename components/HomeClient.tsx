@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { Trophy, Star, BookOpen, Home, LogOut, Zap, Clock, Calendar, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction } from '@/app/actions/predictions'
+import { clearJoinCode } from '@/app/actions/join'
 import InicioView from '@/components/InicioView'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PrediccionesTab from '@/components/PrediccionesTab'
@@ -170,6 +171,7 @@ export default function HomeClient({
 
     if (code) {
       sessionStorage.removeItem('pending_join')
+      clearJoinCode()
       setActiveTab('grupos')
       setAutoJoinCode(code.toUpperCase())
       window.history.replaceState({}, '', '/home')
