@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { ArrowLeft, Camera } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
 import { updateProfile } from '@/app/actions/profile'
 
 interface Profile {
@@ -89,25 +88,31 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
     setIsSaving(true)
     setError(null)
     try {
-      let newAvatarUrl = profile.avatar_url ?? undefined
+      let avatarBase64: string | undefined
+      let avatarType: string | undefined
 
       if (avatarFile) {
-        const supabase = createClient()
-        const path = `${profile.id}/${Date.now()}`
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from('avatars')
-          .upload(path, avatarFile, { upsert: true, contentType: avatarFile.type })
-
-        if (uploadError) throw new Error(uploadError.message)
-
-        const { data: urlData } = supabase.storage.from('avatars').getPublicUrl(uploadData.path)
-        newAvatarUrl = urlData.publicUrl
+        avatarType = avatarFile.type
+        avatarBase64 = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => {
+            const result = reader.result as string
+            resolve(result.split(',')[1])
+          }
+          reader.onerror = reject
+          reader.readAsDataURL(avatarFile)
+        })
       }
 
-      const result = await updateProfile({ username: editName.trim(), country: editCountry, avatarUrl: newAvatarUrl })
+      const result = await updateProfile({ username: editName.trim(), country: editCountry, avatarBase64, avatarType })
       if (result.error) throw new Error(result.error)
 
-      setProfile(prev => ({ ...prev, username: editName.trim(), country: editCountry, avatar_url: newAvatarUrl ?? prev.avatar_url }))
+      setProfile(prev => ({
+        ...prev,
+        username: editName.trim(),
+        country: editCountry,
+        avatar_url: result.data?.avatar_url ?? prev.avatar_url,
+      }))
       setIsEditing(false)
       setToast('¡Perfil actualizado!')
       setTimeout(() => setToast(null), 3000)
