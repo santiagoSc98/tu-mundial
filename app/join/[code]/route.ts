@@ -1,11 +1,10 @@
 import { cookies } from 'next/headers'
-import { redirect } from 'next/navigation'
+import { NextResponse } from 'next/server'
 
-export default async function JoinPage({
-  params,
-}: {
-  params: Promise<{ code: string }>
-}) {
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ code: string }> }
+) {
   const { code } = await params
   const cookieStore = await cookies()
   cookieStore.set('pending_join_code', code.toUpperCase(), {
@@ -14,5 +13,5 @@ export default async function JoinPage({
     httpOnly: true,
     sameSite: 'lax',
   })
-  redirect('/home')
+  return NextResponse.redirect(new URL('/home', request.url))
 }
