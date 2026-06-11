@@ -470,6 +470,7 @@ export default function HomeClient({
               existingAnswers={mergedAnswers}
               existingScores={mergedScores}
               onTabChange={(tab: string) => setActiveTab(tab as Tab)}
+              onPredict={handlePredict}
               rank={rank}
               points={points}
             />

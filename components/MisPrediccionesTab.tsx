@@ -8,6 +8,19 @@ import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { Database } from '@/lib/database.types'
 
+const SCORE_BTN: React.CSSProperties = {
+  width: 32, height: 32, borderRadius: 8,
+  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
+  color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer',
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+}
+
+function deduceResult(home: number, away: number, homeTeam: string, awayTeam: string, draw: string) {
+  if (home > away) return homeTeam
+  if (away > home) return awayTeam
+  return draw
+}
+
 type Prediction = Database['public']['Tables']['predictions']['Row']
 type Filter = 'todas' | 'acertadas' | 'falladas' | 'pendientes'
 
@@ -48,12 +61,35 @@ interface Props {
   existingAnswers: Record<string, string>
   existingScores: Record<string, { home: number; away: number }>
   onTabChange?: (tab: string) => void
+  onPredict?: (predictionId: string, answer: string, homeScore: number, awayScore: number) => Promise<void>
   rank?: number
   points?: number
 }
 
-export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, onTabChange, rank, points }: Props) {
+export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, onTabChange, onPredict, rank, points }: Props) {
   const [filter, setFilter] = useState<Filter>('todas')
+  const [editingId,  setEditingId]  = useState<string | null>(null)
+  const [editHome,   setEditHome]   = useState(0)
+  const [editAway,   setEditAway]   = useState(0)
+  const [submitting, setSubmitting] = useState(false)
+
+  const openEdit = (p: Prediction) => {
+    const s = existingScores[p.id]
+    setEditHome(s?.home ?? 0)
+    setEditAway(s?.away ?? 0)
+    setEditingId(p.id)
+  }
+
+  const closeEdit = () => setEditingId(null)
+
+  const handleSave = async (p: Prediction, homeTeam: string, awayTeam: string, draw: string) => {
+    if (!onPredict || submitting) return
+    const answer = deduceResult(editHome, editAway, homeTeam, awayTeam, draw)
+    setSubmitting(true)
+    closeEdit()
+    await onPredict(p.id, answer, editHome, editAway)
+    setSubmitting(false)
+  }
 
   const myPredictions = useMemo(
     () => predictions.filter(p => existingAnswers[p.id] !== undefined),
@@ -187,6 +223,8 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
             const isResolved = p.status === 'resolved'
             const isCorrect  = isResolved && answered === p.correct_answer
             const isFailed   = isResolved && !isCorrect
+            const canEdit    = onPredict && !isResolved && new Date() < new Date((p.deadline ?? 0) as string)
+            const isEditing  = editingId === p.id
 
             const STATUS = isCorrect
               ? { icon: <CheckCircle style={{ width: 20, height: 20, color: '#22c55e' }} />,                          color: '#22c55e',               bg: 'rgba(34,197,94,0.07)',    border: 'rgba(34,197,94,0.18)'    }
@@ -238,7 +276,110 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: 'rgba(0,0,0,0.12)', borderRadius: 10, marginBottom: 6 }}>
                   <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)', flexShrink: 0 }}>Tu pronóstico:</span>
                   <span style={{ fontSize: 13, fontWeight: 700, color: STATUS.color }}>{pronóstico}</span>
+                  {canEdit && !isEditing && (
+                    <button
+                      onClick={() => openEdit(p)}
+                      style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(246,183,60,0.12)', border: '1px solid rgba(246,183,60,0.25)', color: '#F6B73C', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                    >
+                      Editar
+                    </button>
+                  )}
                 </div>
+
+                {/* Inline editor */}
+                {isEditing && (
+                  <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px', marginBottom: 8 }}>
+                    <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>
+                      Cambiar predicción
+                    </p>
+
+                    {isFootball ? (
+                      <>
+                        {/* Compact score picker */}
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+                          {/* Home */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              {homeFlag && <img src={homeFlag} alt={home} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{home}</span>
+                            </div>
+                            <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editHome}</span>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.max(0, s - 1))}>−</button>
+                              <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.min(9, s + 1))}>+</button>
+                            </div>
+                          </div>
+
+                          <span style={{ fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat, system-ui)' }}>:</span>
+
+                          {/* Away */}
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{away}</span>
+                              {awayFlag && <img src={awayFlag} alt={away} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
+                            </div>
+                            <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editAway}</span>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.max(0, s - 1))}>−</button>
+                              <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.min(9, s + 1))}>+</button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Result preview */}
+                        {(() => {
+                          const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
+                          const h2 = getTeamNameES(homeRaw2), a2 = getTeamNameES(awayRaw2)
+                          const predicted = deduceResult(editHome, editAway, h2, a2, draw2)
+                          return (
+                            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 12px' }}>
+                              Ganará: <strong style={{ color: '#fff' }}>{predicted}</strong>
+                            </p>
+                          )
+                        })()}
+
+                        <div style={{ display: 'flex', gap: 8 }}>
+                          <button onClick={closeEdit} style={{ flex: 1, padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
+                            Cancelar
+                          </button>
+                          <button
+                            onClick={() => {
+                              const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
+                              handleSave(p, getTeamNameES(homeRaw2), getTeamNameES(awayRaw2), draw2)
+                            }}
+                            style={{ flex: 1, padding: '9px', borderRadius: 10, background: '#006A33', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}
+                          >
+                            Guardar cambio
+                          </button>
+                        </div>
+                      </>
+                    ) : (
+                      /* Non-football: option buttons */
+                      <div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                          {getOptions(p.options).filter(Boolean).map(opt => (
+                            <button
+                              key={opt}
+                              onClick={async () => {
+                                if (!onPredict || submitting) return
+                                setSubmitting(true)
+                                closeEdit()
+                                await onPredict(p.id, opt, 0, 0)
+                                setSubmitting(false)
+                              }}
+                              style={{ padding: '10px 14px', borderRadius: 10, border: `1px solid ${answered === opt ? 'rgba(0,106,51,0.60)' : 'rgba(255,255,255,0.10)'}`, background: answered === opt ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.05)', color: answered === opt ? '#4ade80' : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                            >
+                              {opt}
+                            </button>
+                          ))}
+                        </div>
+                        <button onClick={closeEdit} style={{ width: '100%', padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
+                          Cancelar
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                 {/* Resultado */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
