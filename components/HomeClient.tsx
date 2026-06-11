@@ -75,6 +75,7 @@ interface Props {
   globalStats: GlobalStats
   voteDistributions: Record<string, Record<string, number>>
   initialGroups: Group[]
+  currentStreak: number
 }
 
 function ReglasTab() {
@@ -144,7 +145,7 @@ function ReglasTab() {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>('inicio')
@@ -334,6 +335,14 @@ export default function HomeClient({
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 {points} pts &nbsp;·&nbsp; #{rank}
               </p>
+              {currentStreak > 0 && (
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="text-sm">🔥</span>
+                  <span className="text-xs font-semibold" style={{ color: '#F6B73C' }}>
+                    {currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos
+                  </span>
+                </div>
+              )}
             </div>
           </div>
 

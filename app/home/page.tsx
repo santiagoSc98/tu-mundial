@@ -94,12 +94,12 @@ async function HomeData() {
           .eq('user_id', user.id),
         supabase
           .from('profiles')
-          .select('id, username, avatar_url, total_points')
+          .select('id, username, avatar_url, total_points, current_streak')
           .order('total_points', { ascending: false })
           .limit(50),
         supabase
           .from('user_predictions')
-          .select('is_correct')
+          .select('is_correct, created_at')
           .eq('user_id', user.id)
           .not('is_correct', 'is', null),
         // All users — for predCounts + globalStats (needs user_id + is_correct)
@@ -148,15 +148,21 @@ async function HomeData() {
   const profile = profileData ?? { total_points: 0, avatar_url: null, username: null }
 
   // Build rank
-  const rankings = (rankingsRes.data ?? []) as { id: string; username: string | null; avatar_url: string | null; total_points: number }[]
+  const rankings = (rankingsRes.data ?? []) as { id: string; username: string | null; avatar_url: string | null; total_points: number; current_streak: number }[]
   const rankIdx   = rankings.findIndex(r => r.id === user.id)
   const rank      = rankIdx >= 0 ? rankIdx + 1 : (rankings.filter(r => r.total_points > profile.total_points).length + 1)
 
-  // Build myStats
-  const myStatsRows = (myStatsRes.data ?? []) as { is_correct: boolean | null }[]
+  // Build myStats + currentStreak
+  const myStatsRows = (myStatsRes.data ?? []) as { is_correct: boolean | null; created_at: string }[]
   const myStats = {
     total:   myStatsRows.length,
     correct: myStatsRows.filter(r => r.is_correct === true).length,
+  }
+  const resolvedSorted = [...myStatsRows].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  let currentStreak = 0
+  for (const pred of resolvedSorted) {
+    if (pred.is_correct) currentStreak++
+    else break
   }
 
   // Build predCounts + globalStats from allUserPreds (user_id + is_correct only)
@@ -225,6 +231,7 @@ async function HomeData() {
       globalStats={globalStats}
       voteDistributions={voteDistributions}
       initialGroups={initialGroups}
+      currentStreak={currentStreak}
     />
   )
 }

@@ -13,7 +13,7 @@ function WhatsAppIcon() {
   )
 }
 
-type RankEntry   = { id: string; username: string | null; avatar_url: string | null; total_points: number }
+type RankEntry   = { id: string; username: string | null; avatar_url: string | null; total_points: number; current_streak?: number }
 type MyStats     = { total: number; correct: number }
 type GlobalStats = { totalUsers: number; totalPredictions: number; avgAccuracy: number }
 
@@ -283,9 +283,16 @@ export default function RankingsTab({
                         {name[0]?.toUpperCase()}
                       </div>
                     )}
-                    <span style={{ fontSize: 13, fontWeight: 600, color: isMe ? '#22c55e' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {name}{isMe && ' (tú)'}
-                    </span>
+                    <div style={{ minWidth: 0 }}>
+                      <span style={{ fontSize: 13, fontWeight: 600, color: isMe ? '#22c55e' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                        {name}{isMe && ' (tú)'}
+                      </span>
+                      {(entry.current_streak ?? 0) > 0 && (
+                        <span style={{ fontSize: 10, color: '#F6B73C', fontWeight: 600 }}>
+                          🔥 {entry.current_streak}
+                        </span>
+                      )}
+                    </div>
                   </div>
 
                   {/* Predicciones */}

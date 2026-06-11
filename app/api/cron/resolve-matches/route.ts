@@ -74,6 +74,7 @@ export async function GET(request: Request) {
   let resolved = 0
   let usersAwarded = 0
   const details: { fixtureId: string; result: string; users: number }[] = []
+  const affectedUserIds = new Set<string>()
 
   for (let i = 0; i < (predictions ?? []).length; i++) {
     const pred = predictions![i]
@@ -140,18 +141,16 @@ export async function GET(request: Request) {
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('total_points, current_streak')
+          .select('total_points')
           .eq('id', up.user_id)
           .single()
 
         if (profile) {
           await supabase
             .from('profiles')
-            .update({
-              total_points: profile.total_points + pointsEarned,
-              current_streak: isCorrect ? profile.current_streak + 1 : 0,
-            })
+            .update({ total_points: profile.total_points + pointsEarned })
             .eq('id', up.user_id)
+          affectedUserIds.add(up.user_id)
           if (isCorrect) matchUsersAwarded++
         }
       }))
@@ -166,6 +165,27 @@ export async function GET(request: Request) {
     })
 
     console.log(`[resolve-matches] resolved fixture ${pred.fixture_id}: ${correctAnswer}, ${matchUsersAwarded} users awarded`)
+  }
+
+  // Recalculate streaks for all affected users from scratch
+  for (const uid of affectedUserIds) {
+    const { data: userVotes } = await supabase
+      .from('user_predictions')
+      .select('is_correct, created_at')
+      .eq('user_id', uid)
+      .not('is_correct', 'is', null)
+      .order('created_at', { ascending: false })
+
+    let streak = 0
+    for (const v of (userVotes ?? [])) {
+      if (v.is_correct) streak++
+      else break
+    }
+
+    await supabase
+      .from('profiles')
+      .update({ current_streak: streak })
+      .eq('id', uid)
   }
 
   return NextResponse.json({ checked, resolved, usersAwarded, details })
