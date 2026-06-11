@@ -222,19 +222,16 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
 
       {/* Hero card */}
       <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 12 }}>
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
-          <button onClick={openEdit} style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.55)' }}>
-            <Edit2 size={14} />
-          </button>
-        </div>
-
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
           <img src={profile.avatar_url ?? '/logo-mundial.png'} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)', flexShrink: 0 }} />
-          <div style={{ minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '1px 0 3px' }}>{handle}</p>
             <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: 0 }}>{countryFlag(profile.country)} {profile.country ?? 'Paraguay'}</p>
           </div>
+          <button onClick={openEdit} style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
+            <Edit2 size={14} />
+          </button>
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
