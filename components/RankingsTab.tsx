@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { Copy } from 'lucide-react'
 
-const WA_APP_URL = 'https://predique.vercel.app'
+const WA_APP_URL = 'https://tu-mundial.vercel.app/'
 
 function WhatsAppIcon() {
   return (
