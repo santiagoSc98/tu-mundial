@@ -21,10 +21,22 @@ export const TLA_TO_ISO: Record<string, string> = {
   CHN: 'cn', IDN: 'id', THA: 'th', VIE: 'vn', PHI: 'ph', MAS: 'my',
   NZL: 'nz', FIJ: 'fj', IND: 'in', PAK: 'pk',
   CUW: 'cw', UZB: 'uz',
+  // Alternative codes used by football-data.org / FIFA in some contexts
+  KSA: 'sa',  // Saudi Arabia (FIFA alternate)
+  TTO: 'tt',  // Trinidad & Tobago (ISO-3)
+  CUR: 'cw',  // Curaçao (alternate)
+  HOL: 'nl',  // Netherlands (colloquial)
+  RSC: 'cg',  // Congo
+  SKN: 'kn',  // Saint Kitts and Nevis
 }
 
 export function getFlagUrl(tla: string | null | undefined): string | null {
   if (!tla) return null
-  const iso = TLA_TO_ISO[tla.toUpperCase()]
-  return iso ? `https://flagcdn.com/w160/${iso}.png` : null
+  const upper = tla.toUpperCase()
+  const iso = TLA_TO_ISO[upper]
+  if (iso) return `https://flagcdn.com/w160/${iso}.png`
+  // If the stored code is already a 2-letter ISO alpha-2 (e.g. 'uy', 'sa', 'cw'),
+  // pass it through directly so flags render even without a TLA entry
+  if (upper.length === 2) return `https://flagcdn.com/w160/${upper.toLowerCase()}.png`
+  return null
 }
