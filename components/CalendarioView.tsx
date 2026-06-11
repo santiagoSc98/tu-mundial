@@ -10,8 +10,7 @@ type Prediction = Database['public']['Tables']['predictions']['Row']
 type CalTab = 'resumen' | 'clasificacion' | 'eliminatoria'
 type TableFilter = 'todos' | 'local' | 'visitante'
 
-// WC 2026 starts June 11 2026 19:00 Mexico (CST = GMT-6) = 22:00 Paraguay (GMT-3)
-const WC_START = new Date('2026-06-11T22:00:00-03:00')
+// WC_START is derived from predictions at runtime (see component)
 
 // ─── Static group data ────────────────────────────────────────────────────────
 const WC_GROUPS: Record<string, { name: string; tla: string }[]> = {
@@ -518,7 +517,17 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
   const [calTab,   setCalTab]   = useState<CalTab>('resumen')
   const [dayIdx,   setDayIdx]   = useState(0)
   const [filter,   setFilter]   = useState<TableFilter>('todos')
-  const countdown = useCountdown(WC_START)
+
+  const wcStart = useMemo(() => {
+    const first = predictions
+      .filter(p => p.home_team_code && p.away_team_code && p.deadline)
+      .map(p => new Date(p.deadline!))
+      .filter(d => !isNaN(d.getTime()))
+      .sort((a, b) => a.getTime() - b.getTime())[0]
+    return first ?? new Date('2026-06-11T22:00:00-03:00')
+  }, [predictions])
+
+  const countdown = useCountdown(wcStart)
 
   // Group predictions into matchdays (only match predictions)
   const matchdays = useMemo<Matchday[]>(() => {
