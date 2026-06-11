@@ -150,7 +150,7 @@ function ScorePicker({
 // ─── Predict panel (match list rows) ─────────────────────────────────────────
 
 function PredictPanel({
-  prediction, existingAnswer, voteData, loading, submitting, onPredict, localScore,
+  prediction, existingAnswer, voteData, loading, submitting, onPredict, localScore, initialEditMode,
 }: {
   prediction: Prediction
   existingAnswer: string | null
@@ -159,6 +159,7 @@ function PredictPanel({
   submitting: boolean
   onPredict: (answer: string, homeScore: number, awayScore: number) => void
   localScore?: { home: number; away: number }
+  initialEditMode?: boolean
 }) {
   const [homeRaw, draw, awayRaw] = getOptions(prediction.options)
   const home     = getTeamNameES(homeRaw)
@@ -170,16 +171,10 @@ function PredictPanel({
   const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
 
-  // Start directly in picker mode for unanswered open football matches
-  const [showPredict, setShowPredict] = useState(() => !answered && open && isFootball)
+  const [showPredict, setShowPredict] = useState(() => !!(initialEditMode || (!answered && open && isFootball)))
   const [homeScore,   setHomeScore]   = useState(localScore?.home ?? 0)
   const [awayScore,   setAwayScore]   = useState(localScore?.away ?? 0)
 
-  const openEditPicker = () => {
-    setHomeScore(localScore?.home ?? 0)
-    setAwayScore(localScore?.away ?? 0)
-    setShowPredict(true)
-  }
 
   const total = Object.values(voteData).reduce((a, b) => a + b, 0)
   const pct   = (key: string) => total > 0 ? Math.round((voteData[key] ?? 0) / total * 100) : 0
@@ -231,23 +226,6 @@ function PredictPanel({
   // ── State 1: vote bars + CTA ───────────────────────────────────────────────
   return (
     <div className="animate-fade-in" style={outer}>
-      {answered && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 14px', background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.18)', borderRadius: 14, marginBottom: 14 }}>
-          <CheckCircle style={{ width: 16, height: 16, color: '#22c55e', flexShrink: 0 }} />
-          <p style={{ fontSize: 13, fontWeight: 600, color: '#22c55e', margin: 0, flex: 1 }}>
-            Pronosticaste: <span style={{ fontWeight: 700 }}>{existingAnswer}</span>
-            {localScore != null && <span style={{ color: 'rgba(255,255,255,0.45)', fontWeight: 400 }}> · {localScore.home}–{localScore.away}</span>}
-          </p>
-          {canEdit && (
-            <button
-              onClick={openEditPicker}
-              style={{ flexShrink: 0, fontSize: 12, fontWeight: 700, color: '#F6B73C', background: 'none', border: '1px solid rgba(246,183,60,0.30)', borderRadius: 8, padding: '3px 10px', cursor: 'pointer' }}
-            >
-              Editar
-            </button>
-          )}
-        </div>
-      )}
       {!open && !answered && (
         <p style={{ textAlign: 'center', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 14, letterSpacing: '0.06em' }}>
           Predicciones cerradas
@@ -496,11 +474,13 @@ function FeaturedMatchPanel({
 // ─── Match row ────────────────────────────────────────────────────────────────
 
 function MatchRow({
-  prediction, answered, onExpand,
+  prediction, existingAnswer, localScore, onExpand, onEditClick,
 }: {
   prediction: Prediction
-  answered: boolean
+  existingAnswer: string | null
+  localScore?: { home: number; away: number }
   onExpand: () => void
+  onEditClick: () => void
 }) {
   const [homeRaw, , awayRaw] = getOptions(prediction.options)
   const home     = getTeamNameES(homeRaw)
@@ -510,6 +490,11 @@ function MatchRow({
   const stage    = STAGE_LABELS[parseStage(prediction.description)] ?? ''
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
+  const answered = !!existingAnswer
+
+  const badgeLabel = localScore != null
+    ? `${localScore.home}–${localScore.away}`
+    : existingAnswer ?? ''
 
   return (
     <div
@@ -538,19 +523,35 @@ function MatchRow({
         }
       </div>
 
-      <div className="shrink-0">
-        {answered && open ? (
-          <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ color: '#F6B73C', border: '1px solid rgba(246,183,60,0.30)' }}>
-            Editar
-          </span>
-        ) : answered ? (
-          <span className="text-xs font-semibold px-2 py-1 rounded-lg" style={{ color: '#22c55e', border: '1px solid rgba(34,197,94,0.30)' }}>
-            Ver votos
-          </span>
+      <div className="flex items-center gap-1.5 shrink-0">
+        {answered ? (
+          <>
+            {/* Score / answer badge */}
+            <div className="flex items-center gap-1" style={{ background: 'rgba(0,106,51,0.18)', border: '1px solid rgba(0,106,51,0.35)', borderRadius: 8, padding: '3px 8px' }}>
+              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+              <span className="text-xs font-bold" style={{ color: '#4ade80' }}>{badgeLabel}</span>
+            </div>
+            {/* Edit button — only before deadline */}
+            {open && (
+              <button
+                onClick={e => { e.stopPropagation(); onEditClick() }}
+                className="text-xs font-semibold px-2 py-1 rounded-lg transition-colors"
+                style={{ border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)', background: 'transparent', cursor: 'pointer' }}
+                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
+                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
+              >
+                Editar
+              </button>
+            )}
+          </>
         ) : open ? (
-          <span className="text-xs font-bold px-2 py-1 rounded-lg" style={{ background: '#0052A5', color: '#fff' }}>
+          <button
+            onClick={e => { e.stopPropagation(); onExpand() }}
+            className="text-xs font-bold px-3 py-1.5 rounded-lg"
+            style={{ background: '#0052A5', color: '#fff', border: 'none', cursor: 'pointer' }}
+          >
             Pronostica
-          </span>
+          </button>
         ) : (
           <span className="text-xs px-2 py-1 rounded-lg" style={{ color: 'rgba(255,255,255,0.30)', border: '1px solid rgba(255,255,255,0.10)' }}>
             <Clock className="h-3 w-3 inline mr-0.5" />Ver votos
@@ -638,10 +639,23 @@ export default function InicioView({
   const totalAnswered = Object.keys(existingAnswers).length
   const pendingCount  = openPredictions.filter(p => !existingAnswers[p.id]).length
 
-  const handleExpand = (id: string) => setExpandedId(prev => prev === id ? null : id)
+  const [expandedEditId, setExpandedEditId] = useState<string | null>(null)
+
+  const handleExpand = (id: string) => {
+    setExpandedId(prev => {
+      if (prev === id) { setExpandedEditId(null); return null }
+      return id
+    })
+  }
+
+  const handleEditClick = (id: string) => {
+    setExpandedId(id)
+    setExpandedEditId(id)
+  }
 
   const handlePredict = useCallback((predictionId: string, answer: string, homeScore: number, awayScore: number) => {
     setExpandedId(null)
+    setExpandedEditId(null)
     onPredict(predictionId, answer, homeScore, awayScore)
   }, [onPredict])
 
@@ -724,18 +738,21 @@ export default function InicioView({
                   <div key={p.id}>
                     <MatchRow
                       prediction={p}
-                      answered={!!existingAnswers[p.id]}
+                      existingAnswer={existingAnswers[p.id] ?? null}
+                      localScore={existingScores?.[p.id]}
                       onExpand={() => handleExpand(p.id)}
+                      onEditClick={() => handleEditClick(p.id)}
                     />
                     {expandedId === p.id && (
                       <PredictPanel
-                        key={p.id}
+                        key={`${p.id}-${expandedEditId === p.id ? 'edit' : 'view'}`}
                         prediction={p}
                         existingAnswer={existingAnswers[p.id] ?? null}
                         voteData={voteDistributions[p.id] ?? {}}
                         loading={false}
                         submitting={false}
                         localScore={existingScores?.[p.id]}
+                        initialEditMode={expandedEditId === p.id}
                         onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}
                       />
                     )}
