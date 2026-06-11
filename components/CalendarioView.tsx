@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
-import { pyISODate, pyTime, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
+import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -524,8 +524,21 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
       .map(p => new Date(p.deadline!))
       .filter(d => !isNaN(d.getTime()))
       .sort((a, b) => a.getTime() - b.getTime())[0]
-    return first ?? new Date('2026-06-11T22:00:00-03:00')
+    // fallback deadline = 10 min before expected 20:00 UTC kickoff (16:00 PY)
+    return first ?? new Date('2026-06-11T19:50:00Z')
   }, [predictions])
+
+  // kickoff = deadline + 10 min (predictions close 10 min before the match)
+  const kickoffTime = useMemo(() => new Date(wcStart.getTime() + 10 * 60 * 1000), [wcStart])
+
+  const mxHora = useMemo(() =>
+    kickoffTime.toLocaleTimeString('es', {
+      timeZone: 'America/Mexico_City',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false,
+    })
+  , [kickoffTime])
 
   const countdown = useCountdown(wcStart)
 
@@ -669,10 +682,10 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
                 <p style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>¡El Mundial está en juego!</p>
               )}
               <p className="mt-3" style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', fontWeight: 600 }}>
-                11 jun · 22:00 PY
+                {pyDateTimeMed(kickoffTime)} PY
               </p>
               <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
-                19:00 CST · Ciudad de México
+                {mxHora} CDT · Ciudad de México
               </p>
             </div>
 
