@@ -1,3 +1,4 @@
+import { cookies } from 'next/headers'
 import { redirect } from 'next/navigation'
 
 export default async function JoinPage({
@@ -6,5 +7,12 @@ export default async function JoinPage({
   params: Promise<{ code: string }>
 }) {
   const { code } = await params
-  redirect(`/?join=${code}`)
+  const cookieStore = await cookies()
+  cookieStore.set('pending_join_code', code.toUpperCase(), {
+    maxAge: 60 * 30,
+    path: '/',
+    httpOnly: true,
+    sameSite: 'lax',
+  })
+  redirect('/home')
 }
