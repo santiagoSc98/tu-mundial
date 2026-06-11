@@ -2,8 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import Image from 'next/image'
-import { Trophy, Star, BookOpen, Home, Settings2, LogOut, Zap, Clock, Calendar, ClipboardList, Users, User } from 'lucide-react'
-import AuthButton from '@/components/AuthButton'
+import { Trophy, Star, BookOpen, Home, LogOut, Zap, Clock, Calendar, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction } from '@/app/actions/predictions'
 import InicioView from '@/components/InicioView'
@@ -33,14 +32,10 @@ function SidebarDecoration() {
 type Tab = 'inicio' | 'mis-predicciones' | 'predicciones' | 'posiciones' | 'grupos' | 'especiales' | 'calendario' | 'perfil' | 'admin' | 'reglas'
 
 const NAV: { id: Tab; label: string; icon: React.ReactNode }[] = [
-  { id: 'inicio',             label: 'Inicio',            icon: <Home          size={18} strokeWidth={1.5} /> },
-  { id: 'mis-predicciones',   label: 'Mis Predicciones',  icon: <ClipboardList size={18} strokeWidth={1.5} /> },
-  { id: 'posiciones',         label: 'Rankings',          icon: <Trophy        size={18} strokeWidth={1.5} /> },
-  { id: 'grupos',             label: 'Mis Grupos',        icon: <Users         size={18} strokeWidth={1.5} /> },
-  { id: 'especiales',         label: 'Mis Especiales',    icon: <Star          size={18} strokeWidth={1.5} /> },
-  { id: 'calendario',         label: 'Calendario',        icon: <Calendar      size={18} strokeWidth={1.5} /> },
-  { id: 'perfil',             label: 'Mi Perfil',         icon: <User          size={18} strokeWidth={1.5} /> },
-  { id: 'reglas',             label: 'Reglas',            icon: <BookOpen      size={18} strokeWidth={1.5} /> },
+  { id: 'inicio',     label: 'Inicio',       icon: <Home     size={18} strokeWidth={1.5} /> },
+  { id: 'posiciones', label: 'Rankings',     icon: <Trophy   size={18} strokeWidth={1.5} /> },
+  { id: 'grupos',     label: 'Mis Grupos',   icon: <Users    size={18} strokeWidth={1.5} /> },
+  { id: 'calendario', label: 'Calendario',   icon: <Calendar size={18} strokeWidth={1.5} /> },
 ]
 
 const MOBILE_LABELS: Record<Tab, string> = {
@@ -264,12 +259,7 @@ export default function HomeClient({
                 key={item.id}
                 onClick={() => setActiveTab(item.id)}
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-full"
-                style={{
-                  background: isActive ? '#006A33' : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
+                style={{ background: isActive ? '#006A33' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
               >
                 <span style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.40)', display: 'flex', alignItems: 'center' }}>
                   {item.icon}
@@ -280,57 +270,26 @@ export default function HomeClient({
               </button>
             )
           })}
-
-          {isAdmin && (() => {
-            const isActive = activeTab === 'admin'
-            return (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-left w-full"
-                style={{
-                  background: isActive ? '#006A33' : 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  transition: 'background 0.15s',
-                }}
-              >
-                <span style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.40)', display: 'flex', alignItems: 'center' }}>
-                  <Settings2 size={18} strokeWidth={1.5} />
-                </span>
-                <span className="text-sm font-semibold" style={{ color: isActive ? '#fff' : 'rgba(255,255,255,0.50)' }}>
-                  Admin
-                </span>
-              </button>
-            )
-          })()}
-          <a
-            href="/privacidad"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm"
-            style={{ color: 'rgba(255,255,255,0.25)', textDecoration: 'none' }}
-            onMouseEnter={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.50)')}
-            onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.25)')}
-          >
-            Privacidad
-          </a>
         </nav>
 
-        {/* User + sign-out */}
+        {/* User footer — clickeable → abre perfil */}
         <div className="shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-          <div className="flex items-center gap-3 px-4 py-3">
+          <button
+            onClick={() => setActiveTab('perfil')}
+            className="flex items-center gap-3 px-4 py-3 w-full text-left"
+            style={{ background: activeTab === 'perfil' ? 'rgba(0,106,51,0.15)' : 'transparent', border: 'none', cursor: 'pointer', transition: 'background 0.15s' }}
+            onMouseEnter={e => { if (activeTab !== 'perfil') e.currentTarget.style.background = 'rgba(255,255,255,0.04)' }}
+            onMouseLeave={e => { if (activeTab !== 'perfil') e.currentTarget.style.background = 'transparent' }}
+          >
             {avatarUrl && !imgError ? (
               <Image
-                src={avatarUrl} alt={firstName} width={40} height={40} unoptimized
+                src={avatarUrl} alt={firstName} width={36} height={36} unoptimized
                 className="rounded-full object-cover shrink-0"
                 style={{ border: '2px solid rgba(0,106,51,0.50)' }}
                 onError={() => setImgError(true)}
               />
             ) : (
-              <div
-                className="h-10 w-10 rounded-full flex items-center justify-center text-sm font-black text-white shrink-0"
-                style={{ background: '#006A33' }}
-              >
+              <div className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-black text-white shrink-0" style={{ background: '#006A33' }}>
                 {firstName[0]?.toUpperCase()}
               </div>
             )}
@@ -338,27 +297,15 @@ export default function HomeClient({
               <p className="text-sm font-semibold truncate" style={{ color: '#fff' }}>{username}</p>
               <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
                 {points} pts &nbsp;·&nbsp; #{rank}
+                {currentStreak > 0 && <span style={{ color: '#F6B73C' }}> &nbsp;·&nbsp; 🔥{currentStreak}</span>}
               </p>
-              {currentStreak > 0 && (
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="text-sm">🔥</span>
-                  <span className="text-xs font-semibold" style={{ color: '#F6B73C' }}>
-                    {currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos
-                  </span>
-                </div>
-              )}
             </div>
-          </div>
+          </button>
 
           <button
             onClick={signOut}
             className="flex items-center gap-2.5 px-4 py-3 w-full"
-            style={{
-              background: 'transparent',
-              border: 'none',
-              cursor: 'pointer',
-              borderTop: '1px solid rgba(255,255,255,0.05)',
-            }}
+            style={{ background: 'transparent', border: 'none', cursor: 'pointer', borderTop: '1px solid rgba(255,255,255,0.05)' }}
             onMouseEnter={e => (e.currentTarget.style.background = 'rgba(206,17,38,0.08)')}
             onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
           >
@@ -387,13 +334,27 @@ export default function HomeClient({
               Tus Predicciones
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 text-xs">
-              <span style={{ color: 'rgba(255,255,255,0.60)' }}>{points} pts</span>
-              <span style={{ color: 'rgba(255,255,255,0.60)' }}>#{rank}</span>
+          <button
+            onClick={() => setActiveTab('perfil')}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, display: 'flex', alignItems: 'center', gap: 8 }}
+          >
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ margin: 0, fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.70)' }}>{points} pts · #{rank}</p>
+              {currentStreak > 0 && <p style={{ margin: 0, fontSize: 10, color: '#F6B73C' }}>🔥{currentStreak}</p>}
             </div>
-            <AuthButton />
-          </div>
+            {avatarUrl && !imgError ? (
+              <img
+                src={avatarUrl}
+                alt={firstName}
+                style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)' }}
+                onError={() => setImgError(true)}
+              />
+            ) : (
+              <div style={{ width: 34, height: 34, borderRadius: '50%', background: '#006A33', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff' }}>
+                {firstName[0]?.toUpperCase()}
+              </div>
+            )}
+          </button>
         </div>
 
         {/* Tab strip */}
@@ -492,6 +453,8 @@ export default function HomeClient({
               profile={{ id: profileData.id, username: profileData.username, avatar_url: profileData.avatarUrl, total_points: profileData.total_points, current_streak: profileData.current_streak, country: profileData.country }}
               myStats={{ totalPredictions: myStats.total, correctPredictions: myStats.correct, rank }}
               currentStreak={currentStreak}
+              isAdmin={isAdmin}
+              onTabChange={setActiveTab}
             />
           )}
           {activeTab === 'admin'  && isAdmin && <AdminTab />}

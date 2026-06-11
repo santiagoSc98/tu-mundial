@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Camera } from 'lucide-react'
+import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight } from 'lucide-react'
 import { updateProfile } from '@/app/actions/profile'
 
 interface Profile {
@@ -17,6 +17,8 @@ interface Props {
   profile: Profile
   myStats: { totalPredictions: number; correctPredictions: number; rank: number }
   currentStreak: number
+  isAdmin: boolean
+  onTabChange: (tab: string) => void
 }
 
 const COUNTRIES = [
@@ -56,7 +58,7 @@ const INPUT_STYLE: React.CSSProperties = {
   color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
 
-export default function PerfilView({ profile: initialProfile, myStats, currentStreak }: Props) {
+export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, onTabChange }: Props) {
   const [profile,     setProfile]     = useState(initialProfile)
   const [isEditing,   setIsEditing]   = useState(false)
   const [editName,    setEditName]    = useState(profile.username ?? '')
@@ -275,6 +277,51 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
         <StatBox num={myStats.correctPredictions} label="Aciertos" color="green" />
         <StatBox num={(profile.total_points ?? 0).toLocaleString('es-PY')} label="Puntos" color="gold" />
         <StatBox num={`#${myStats.rank}`} label="Posición" color="blue" />
+      </div>
+
+      {/* Quick links */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+        {[
+          { icon: <ClipboardList size={17} />, label: 'Mis Predicciones', tab: 'mis-predicciones' },
+          { icon: <Star size={17} />,          label: 'Mis Especiales',   tab: 'especiales' },
+          { icon: <BookOpen size={17} />,      label: 'Reglas',           tab: 'reglas' },
+        ].map(({ icon, label, tab }) => (
+          <button
+            key={tab}
+            onClick={() => onTabChange(tab)}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, cursor: 'pointer', width: '100%' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
+              {icon}
+              <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>{label}</span>
+            </div>
+            <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
+          </button>
+        ))}
+        {isAdmin && (
+          <button
+            onClick={() => onTabChange('admin')}
+            style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, cursor: 'pointer', width: '100%' }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
+              <Settings2 size={17} />
+              <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>Admin</span>
+            </div>
+            <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
+          </button>
+        )}
+        <a
+          href="/privacidad"
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, textDecoration: 'none' }}
+        >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: 'rgba(255,255,255,0.55)' }}>
+            <Shield size={17} />
+            <span style={{ fontSize: 14, color: '#fff', fontWeight: 500 }}>Privacidad</span>
+          </div>
+          <ChevronRight size={16} style={{ color: 'rgba(255,255,255,0.30)' }} />
+        </a>
       </div>
 
       {/* Edit button */}
