@@ -5,5 +5,5 @@ export default function JoinPage({
 }: {
   params: { code: string }
 }) {
-  redirect(`/home?join=${params.code}`)
+  redirect(`/?join=${params.code}`)
 }

@@ -252,9 +252,10 @@ function SelectionCard({
 
 interface Props {
   userId: string | null
+  joinCode: string | null
 }
 
-export default function OnboardingClient({ userId }: Props) {
+export default function OnboardingClient({ userId, joinCode }: Props) {
   const [championTla,  setChampionTla]  = useState<string | null>(null)
   const [championName, setChampionName] = useState<string | null>(null)
   const [topScorer,    setTopScorer]    = useState('')
@@ -264,6 +265,7 @@ export default function OnboardingClient({ userId }: Props) {
   const supabase = useRef(createClient()).current
 
   const handleLogin = async () => {
+    if (joinCode) sessionStorage.setItem('pending_join', joinCode)
     await supabase.auth.signInWithOAuth({
       provider: 'google',
       options:  { redirectTo: `${window.location.origin}/auth/callback` },
@@ -288,7 +290,7 @@ export default function OnboardingClient({ userId }: Props) {
       setSaving(false)
       return
     }
-    router.push('/home')
+    router.push(joinCode ? `/home?join=${joinCode}` : '/home')
   }
 
   const card = userId ? (
