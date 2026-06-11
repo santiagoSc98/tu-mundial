@@ -758,43 +758,6 @@ export default function InicioView({
 
         {/* ── RIGHT ───────────────────────────────────────────────────── */}
         <div className="space-y-6">
-           {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
-          {liveMatch && (() => {
-            const [homeRaw,, awayRaw] = getOptions(liveMatch.options)
-            const home = getTeamNameES(homeRaw)
-            const away = getTeamNameES(awayRaw)
-            const homeFlag = getFlagUrl(liveMatch.home_team_code)
-            const awayFlag = getFlagUrl(liveMatch.away_team_code)
-            const score    = existingScores?.[liveMatch.id]
-            const answered = existingAnswers[liveMatch.id]
-            return (
-              <div className="rounded-2xl p-4" style={{ background: 'rgba(206,17,38,0.10)', border: '1px solid rgba(206,17,38,0.30)' }}>
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="w-2 h-2 rounded-full bg-[#CE1126] animate-pulse" />
-                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#CE1126' }}>En vivo ahora</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    {homeFlag && <img src={homeFlag} alt={home} className="w-8 h-6 rounded object-cover" />}
-                    <span className="text-sm font-bold text-white">{home}</span>
-                  </div>
-                  <span className="text-xs px-3" style={{ color: 'rgba(255,255,255,0.40)' }}>VS</span>
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm font-bold text-white">{away}</span>
-                    {awayFlag && <img src={awayFlag} alt={away} className="w-8 h-6 rounded object-cover" />}
-                  </div>
-                </div>
-                {answered && (
-                  <p className="text-xs text-center mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    Tu predicción:{' '}
-                    <span className="text-white font-medium">
-                      {score ? `${answered} ${score.home}–${score.away}` : answered}
-                    </span>
-                  </p>
-                )}
-              </div>
-            )
-          })()}
           <div style={{ ...GLASS, padding: 24 }}>
             <div className="flex items-center justify-between mb-5">
               <h3 className="text-base font-black" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
@@ -839,6 +802,43 @@ export default function InicioView({
               />
             </div>
           </div>
+           {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
+          {liveMatch && (() => {
+            const [homeRaw,, awayRaw] = getOptions(liveMatch.options)
+            const home = getTeamNameES(homeRaw)
+            const away = getTeamNameES(awayRaw)
+            const homeFlag = getFlagUrl(liveMatch.home_team_code)
+            const awayFlag = getFlagUrl(liveMatch.away_team_code)
+            const score    = existingScores?.[liveMatch.id]
+            const answered = existingAnswers[liveMatch.id]
+            return (
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(206,17,38,0.10)', border: '1px solid rgba(206,17,38,0.30)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-[#CE1126] animate-pulse" />
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#CE1126' }}>En vivo ahora</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {homeFlag && <img src={homeFlag} alt={home} className="w-8 h-6 rounded object-cover" />}
+                    <span className="text-sm font-bold text-white">{home}</span>
+                  </div>
+                  <span className="text-xs px-3" style={{ color: 'rgba(255,255,255,0.40)' }}>VS</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{away}</span>
+                    {awayFlag && <img src={awayFlag} alt={away} className="w-8 h-6 rounded object-cover" />}
+                  </div>
+                </div>
+                {answered && (
+                  <p className="text-xs text-center mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    Tu predicción:{' '}
+                    <span className="text-white font-medium">
+                      {score ? `${answered} ${score.home}–${score.away}` : answered}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )
+          })()}
 
         </div>
       </div>
