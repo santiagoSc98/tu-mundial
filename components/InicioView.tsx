@@ -830,7 +830,7 @@ export default function InicioView({
                 </div>
                 {answered && (
                   <p className="text-xs text-center mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-                    Tu predicción:{' '}
+                    Tu predicción:{' '} 
                     <span className="text-white font-medium">
                       {score ? `${answered} ${score.home}–${score.away}` : answered}
                     </span>
