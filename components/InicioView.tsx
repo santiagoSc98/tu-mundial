@@ -7,6 +7,7 @@ import {
 } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
+import { CountdownTimer } from '@/components/CountdownTimer'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -334,7 +335,7 @@ function FeaturedMatchPanel({
   if (showSuccess && confirmedData) {
     const resultColor = confirmedData.result === home ? '#00C46A' : confirmedData.result === away ? '#4d9fff' : '#6E7A99'
     const waText = encodeURIComponent(
-      `Predije ${home} ${confirmedData.home}-${confirmedData.away} ${away} en TU MUNDIAL 🏆⚽\n¿Vos qué decís? https://predique.vercel.app`
+      `Predije ${home} ${confirmedData.home}-${confirmedData.away} ${away} en TU MUNDIAL 🏆⚽\n¿Vos qué decís? https://tu-mundial.vercel.app/`
     )
     return (
       <div className="animate-fade-in" style={{ ...GLASS, padding: 28, textAlign: 'center' }}>
@@ -555,6 +556,20 @@ export default function InicioView({
 
   const now = useMemo(() => new Date(), [])
 
+  const liveMatch = useMemo(() => predictions.find(p => {
+    if (!p.home_team_code || !p.away_team_code) return false
+    const start = new Date(p.deadline ?? 0)
+    const diff = (now.getTime() - start.getTime()) / 60000
+    return diff >= 0 && diff <= 120
+  }), [predictions, now])
+
+  const nextMatch = useMemo(() => predictions.find(p => {
+    if (!p.home_team_code || !p.away_team_code) return false
+    const start = new Date(p.deadline ?? 0)
+    const diff = (start.getTime() - now.getTime()) / 60000
+    return diff > 0 && diff <= 1440
+  }), [predictions, now])
+
   const openPredictions = useMemo(
     () => predictions.filter(p => p.status === 'open' && new Date(p.deadline ?? 0) > now),
     [predictions, now]
@@ -630,6 +645,73 @@ export default function InicioView({
 
         {/* ── LEFT ────────────────────────────────────────────────────── */}
         <div className="space-y-4">
+
+          {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
+          {liveMatch && (() => {
+            const [homeRaw,, awayRaw] = getOptions(liveMatch.options)
+            const home = getTeamNameES(homeRaw)
+            const away = getTeamNameES(awayRaw)
+            const homeFlag = getFlagUrl(liveMatch.home_team_code)
+            const awayFlag = getFlagUrl(liveMatch.away_team_code)
+            const score    = existingScores?.[liveMatch.id]
+            const answered = existingAnswers[liveMatch.id]
+            return (
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(206,17,38,0.10)', border: '1px solid rgba(206,17,38,0.30)' }}>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="w-2 h-2 rounded-full bg-[#CE1126] animate-pulse" />
+                  <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: '#CE1126' }}>En vivo ahora</span>
+                </div>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    {homeFlag && <img src={homeFlag} alt={home} className="w-8 h-6 rounded object-cover" />}
+                    <span className="text-sm font-bold text-white">{home}</span>
+                  </div>
+                  <span className="text-xs px-3" style={{ color: 'rgba(255,255,255,0.40)' }}>VS</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{away}</span>
+                    {awayFlag && <img src={awayFlag} alt={away} className="w-8 h-6 rounded object-cover" />}
+                  </div>
+                </div>
+                {answered && (
+                  <p className="text-xs text-center mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                    Tu predicción:{' '}
+                    <span className="text-white font-medium">
+                      {score ? `${answered} ${score.home}–${score.away}` : answered}
+                    </span>
+                  </p>
+                )}
+              </div>
+            )
+          })()}
+
+          {/* ── PRÓXIMO PARTIDO ──────────────────────────────────────── */}
+          {!liveMatch && nextMatch && (() => {
+            const [homeRaw,, awayRaw] = getOptions(nextMatch.options)
+            const home = getTeamNameES(homeRaw)
+            const away = getTeamNameES(awayRaw)
+            const homeFlag = getFlagUrl(nextMatch.home_team_code)
+            const awayFlag = getFlagUrl(nextMatch.away_team_code)
+            return (
+              <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  Próximo partido
+                </p>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center gap-2">
+                    {homeFlag && <img src={homeFlag} alt={home} className="w-7 h-5 rounded object-cover" />}
+                    <span className="text-sm font-bold text-white">{home}</span>
+                  </div>
+                  <span className="text-xs" style={{ color: 'rgba(255,255,255,0.30)' }}>vs</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm font-bold text-white">{away}</span>
+                    {awayFlag && <img src={awayFlag} alt={away} className="w-7 h-5 rounded object-cover" />}
+                  </div>
+                </div>
+                <CountdownTimer deadline={nextMatch.deadline ?? ''} />
+              </div>
+            )
+          })()}
+
           {/* Featured match */}
           <FeaturedMatchPanel
             key={featured?.id ?? 'none'}
