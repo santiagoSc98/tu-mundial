@@ -128,7 +128,21 @@ export default function AdminTab() {
         showToast('error', 'El partido todavía no terminó')
         return
       }
-      const correctAnswer = data.winner
+
+      // Determine winner from score and derive correct_answer from opts[]
+      // so it always matches what users voted (no English/Spanish mismatch)
+      const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
+      const homeOpt = opts[0] ?? ''
+      const drawOpt = opts[1] ?? 'Empate'
+      const awayOpt = opts[2] ?? ''
+      let correctAnswer: string
+      if (data.homeScore > data.awayScore) correctAnswer = homeOpt
+      else if (data.awayScore > data.homeScore) correctAnswer = awayOpt
+      else correctAnswer = drawOpt
+
+      const nrm = (s: string) =>
+        (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
       const points = Math.round(pred.difficulty_multiplier * 10)
       const { data: userPreds } = await supabase
         .from('user_predictions').select('*').eq('prediction_id', pred.id)
@@ -137,12 +151,14 @@ export default function AdminTab() {
       }).eq('id', pred.id)
       let correctCount = 0
       if (userPreds?.length) {
-        await Promise.all(userPreds.map(async up => {
-          const isCorrect = up.predicted_answer === correctAnswer
+        for (const up of userPreds) {
+          // Normalize comparison so "Corea del Sur" matches "South Korea" after stripping accents
+          const isCorrect = nrm(up.predicted_answer) === nrm(correctAnswer)
           if (isCorrect) correctCount++
-          await supabase.from('user_predictions').update({
+          const { error: upErr } = await supabase.from('user_predictions').update({
             is_correct: isCorrect, points_earned: isCorrect ? points : 0,
           }).eq('id', up.id)
+          if (upErr) { console.error('[AdminTab] update user_prediction:', upErr); continue }
           const { data: profile } = await supabase
             .from('profiles').select('total_points, current_streak').eq('id', up.user_id).single()
           if (profile) {
@@ -151,7 +167,7 @@ export default function AdminTab() {
               current_streak: isCorrect ? profile.current_streak + 1 : 0,
             }).eq('id', up.user_id)
           }
-        }))
+        }
       }
       showToast('success', `✓ ${data.homeName} ${data.homeScore}–${data.awayScore} ${data.awayName} → ${correctAnswer} · ${correctCount} acierto${correctCount !== 1 ? 's' : ''}`)
       fetchPredictions()

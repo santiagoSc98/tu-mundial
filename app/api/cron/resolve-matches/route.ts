@@ -11,9 +11,8 @@ function getSupabase() {
 
 const DELAY_MS = 6200 // football-data.org free tier: 10 req/min
 
-// Strip accents for comparison — "México" === "Mexico" after normalize
 const normalize = (str: string) =>
-  str?.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim() ?? ''
+  (str ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
 
 function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
@@ -50,6 +49,84 @@ async function fetchMatchResult(fixtureId: string): Promise<{
   }
 }
 
+// Score all user_predictions for a prediction that is already resolved.
+// Returns the number of users awarded points.
+async function scoreUserPredictions(
+  supabase: ReturnType<typeof getSupabase>,
+  predId: string,
+  correctAnswer: string,
+  homeGoals: number,
+  awayGoals: number,
+  affectedUserIds: Set<string>,
+): Promise<number> {
+  const { data: userPreds, error: fetchErr } = await supabase
+    .from('user_predictions')
+    .select('*')
+    .eq('prediction_id', predId)
+    .is('is_correct', null) // only unscored rows
+
+  if (fetchErr) {
+    console.error(`[resolve-matches] fetch user_predictions for ${predId}:`, fetchErr)
+    return 0
+  }
+  if (!userPreds?.length) return 0
+
+  let awarded = 0
+
+  for (const up of userPreds) {
+    const isCorrect = normalize(up.predicted_answer) === normalize(correctAnswer)
+    let pointsEarned = 0
+    if (isCorrect) pointsEarned += 3
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const upAny = up as any
+    if (
+      upAny.home_score_prediction != null &&
+      upAny.away_score_prediction != null &&
+      upAny.home_score_prediction === homeGoals &&
+      upAny.away_score_prediction === awayGoals
+    ) {
+      pointsEarned += 5
+    }
+
+    const { error: upErr } = await supabase
+      .from('user_predictions')
+      .update({ is_correct: isCorrect, points_earned: pointsEarned })
+      .eq('id', up.id)
+
+    if (upErr) {
+      console.error(`[resolve-matches] update user_prediction ${up.id}:`, upErr)
+      continue
+    }
+
+    const { data: profile, error: profileErr } = await supabase
+      .from('profiles')
+      .select('total_points')
+      .eq('id', up.user_id)
+      .single()
+
+    if (profileErr || !profile) {
+      console.error(`[resolve-matches] fetch profile ${up.user_id}:`, profileErr)
+      continue
+    }
+
+    const { error: profileUpErr } = await supabase
+      .from('profiles')
+      .update({ total_points: profile.total_points + pointsEarned })
+      .eq('id', up.user_id)
+
+    if (profileUpErr) {
+      console.error(`[resolve-matches] update profile ${up.user_id}:`, profileUpErr)
+      continue
+    }
+
+    affectedUserIds.add(up.user_id)
+    if (isCorrect) awarded++
+  }
+
+  return awarded
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const isVercelCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
@@ -58,10 +135,9 @@ export async function GET(request: Request) {
   }
 
   const supabase = getSupabase()
-
   const now = new Date().toISOString()
 
-  // Fetch unresolved predictions with a fixture_id whose deadline has passed
+  // ── Pass 1: resolve matches that finished but haven't been marked yet ─────────
   const { data: predictions, error: predError } = await supabase
     .from('predictions')
     .select('*')
@@ -134,52 +210,10 @@ export async function GET(request: Request) {
       continue
     }
 
-    // Fetch all user votes for this prediction
-    const { data: userPreds } = await supabase
-      .from('user_predictions')
-      .select('*')
-      .eq('prediction_id', pred.id)
-
-    let matchUsersAwarded = 0
-
-    if (userPreds?.length) {
-      await Promise.all(userPreds.map(async (up) => {
-        // Normalize both sides so accent differences don't cause mismatches
-        const isCorrect = normalize(up.predicted_answer) === normalize(correctAnswer)
-        let pointsEarned = 0
-        if (isCorrect) pointsEarned += 3
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const upAny = up as any
-        if (
-          upAny.home_score_prediction !== null && upAny.home_score_prediction !== undefined &&
-          upAny.away_score_prediction !== null && upAny.away_score_prediction !== undefined &&
-          upAny.home_score_prediction === homeGoals &&
-          upAny.away_score_prediction === awayGoals
-        ) {
-          pointsEarned += 5
-        }
-
-        await supabase
-          .from('user_predictions')
-          .update({ is_correct: isCorrect, points_earned: pointsEarned })
-          .eq('id', up.id)
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('total_points')
-          .eq('id', up.user_id)
-          .single()
-
-        if (profile) {
-          await supabase
-            .from('profiles')
-            .update({ total_points: profile.total_points + pointsEarned })
-            .eq('id', up.user_id)
-          affectedUserIds.add(up.user_id)
-          if (isCorrect) matchUsersAwarded++
-        }
-      }))
-    }
+    // Score every user who voted on this prediction
+    const matchUsersAwarded = await scoreUserPredictions(
+      supabase, pred.id, correctAnswer, homeGoals, awayGoals, affectedUserIds
+    )
 
     resolved++
     usersAwarded += matchUsersAwarded
@@ -188,11 +222,40 @@ export async function GET(request: Request) {
       result: `${homeOpt} ${homeGoals}–${awayGoals} ${awayOpt} → ${correctAnswer}`,
       users: matchUsersAwarded,
     })
-
     console.log(`[resolve-matches] resolved fixture ${pred.fixture_id}: ${correctAnswer}, ${matchUsersAwarded} users awarded`)
   }
 
-  // Recalculate streaks for all affected users from scratch
+  // ── Pass 2: re-score already-resolved predictions with unscored user votes ────
+  // Handles: admin manual resolve, previous cron run that failed mid-way, etc.
+  const { data: resolvedPreds } = await supabase
+    .from('predictions')
+    .select('id, options, correct_answer')
+    .eq('status', 'resolved')
+    .not('correct_answer', 'is', null)
+
+  let rescored = 0
+
+  for (const pred of (resolvedPreds ?? [])) {
+    const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
+    // Check if any user_predictions for this prediction still have is_correct = null
+    const { count } = await supabase
+      .from('user_predictions')
+      .select('id', { count: 'exact', head: true })
+      .eq('prediction_id', pred.id)
+      .is('is_correct', null)
+
+    if (!count) continue
+
+    console.log(`[resolve-matches] re-scoring ${count} unscored votes for resolved prediction ${pred.id}`)
+
+    // We don't have exact scores for manually resolved predictions — use 0 for bonus check
+    const users = await scoreUserPredictions(
+      supabase, pred.id, pred.correct_answer!, 0, 0, affectedUserIds
+    )
+    rescored += users
+  }
+
+  // ── Recalculate streaks for all affected users ────────────────────────────────
   for (const uid of affectedUserIds) {
     const { data: userVotes } = await supabase
       .from('user_predictions')
@@ -213,5 +276,5 @@ export async function GET(request: Request) {
       .eq('id', uid)
   }
 
-  return NextResponse.json({ checked, resolved, usersAwarded, details })
+  return NextResponse.json({ checked, resolved, usersAwarded, rescored, details })
 }
