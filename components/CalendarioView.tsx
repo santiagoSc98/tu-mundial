@@ -148,6 +148,19 @@ function initStats(team: { name: string; tla: string }): TeamStats {
   return { ...team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
 }
 
+// Strip accents + lowercase for robust answer comparison
+function nrmCA(s: string): string {
+  return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+}
+// Match correct_answer against a candidate team name.
+// Handles: accent differences + English API names vs Spanish opts[] names.
+function caMatches(correctAnswer: string, candidate: string): boolean {
+  if (!correctAnswer || !candidate) return false
+  if (nrmCA(correctAnswer) === nrmCA(candidate)) return true
+  // Try converting English API name → Spanish before comparing
+  return nrmCA(getTeamNameES(correctAnswer)) === nrmCA(candidate)
+}
+
 function computeGroupStandings(
   predictions: Prediction[],
   teams: { name: string; tla: string }[],
@@ -169,8 +182,9 @@ function computeGroupStandings(
     const a = map[p.away_team_code!]
     if (!h || !a) continue
 
-    const isDraw  = p.correct_answer === opts[1] || p.correct_answer === 'Empate'
-    const homeWin = !isDraw && p.correct_answer === opts[0]
+    const ca = p.correct_answer!
+    const isDraw  = caMatches(ca, opts[1] ?? '') || nrmCA(ca) === 'empate'
+    const homeWin = !isDraw && caMatches(ca, opts[0] ?? '')
     const awayWin = !isDraw && !homeWin
 
     if (filter !== 'visitante') {
