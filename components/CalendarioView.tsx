@@ -489,18 +489,50 @@ function MatchdayPanel({
           const homeName = getTeamNameES(opts[0] ?? p.home_team_code ?? '')
           const awayName = getTeamNameES(opts[2] ?? p.away_team_code ?? '')
 
+          const isResolved = p.status === 'resolved' && !!p.correct_answer
+          const ca = (p.correct_answer ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+          const h  = (opts[0] ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+          const a  = (opts[2] ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+          const homeWon = isResolved && ca === h && h !== ''
+          const awayWon = isResolved && ca === a && a !== ''
+          const isDraw  = isResolved && !homeWon && !awayWon
+
           return (
             <div
               key={p.id}
               className="flex items-center gap-2 px-3 py-2 rounded-lg"
-              style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+              style={{
+                background: isResolved ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.04)',
+                border: `1px solid ${isResolved ? 'rgba(255,255,255,0.12)' : 'rgba(255,255,255,0.07)'}`,
+              }}
             >
               <Flag tla={p.home_team_code} w={18} h={12} />
-              <span style={{ fontSize: 11, color: '#fff', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              <span style={{
+                fontSize: 11, flex: 1,
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                color: homeWon ? '#22c55e' : awayWon ? 'rgba(255,255,255,0.35)' : '#fff',
+                fontWeight: homeWon ? 700 : 400,
+              }}>
                 {homeName || '?'}
               </span>
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', fontWeight: 700, flexShrink: 0 }}>{timeStr}</span>
-              <span style={{ fontSize: 11, color: '#fff', flex: 1, textAlign: 'right', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+
+              {isResolved ? (
+                <span style={{ fontSize: 10, fontWeight: 800, flexShrink: 0, letterSpacing: '0.04em',
+                  color: isDraw ? '#f59e0b' : '#22c55e' }}>
+                  {homeWon ? 'G · P' : isDraw ? 'E · E' : 'P · G'}
+                </span>
+              ) : (
+                <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', fontWeight: 700, flexShrink: 0 }}>
+                  {timeStr}
+                </span>
+              )}
+
+              <span style={{
+                fontSize: 11, flex: 1, textAlign: 'right',
+                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                color: awayWon ? '#22c55e' : homeWon ? 'rgba(255,255,255,0.35)' : '#fff',
+                fontWeight: awayWon ? 700 : 400,
+              }}>
                 {awayName || '?'}
               </span>
               <Flag tla={p.away_team_code} w={18} h={12} />
