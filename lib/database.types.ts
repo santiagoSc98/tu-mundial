@@ -59,6 +59,8 @@ export interface Database {
           auto_resolved: boolean
           home_team_code: string | null
           away_team_code: string | null
+          exact_score_home: number | null
+          exact_score_away: number | null
           created_at: string
         }
         Insert: {
@@ -75,6 +77,8 @@ export interface Database {
           auto_resolved?: boolean
           home_team_code?: string | null
           away_team_code?: string | null
+          exact_score_home?: number | null
+          exact_score_away?: number | null
           created_at?: string
         }
         Update: {
@@ -91,6 +95,8 @@ export interface Database {
           auto_resolved?: boolean
           home_team_code?: string | null
           away_team_code?: string | null
+          exact_score_home?: number | null
+          exact_score_away?: number | null
           created_at?: string
         }
       }

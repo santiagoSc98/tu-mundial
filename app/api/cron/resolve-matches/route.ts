@@ -134,6 +134,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  // DEBUG: confirm which Supabase key is active
+  const usingServiceRole = !!process.env.SUPABASE_SERVICE_ROLE_KEY
+  console.log('[resolve-matches] key check — usingServiceRole:', usingServiceRole)
+
   const supabase = getSupabase()
   const now = new Date().toISOString()
 
@@ -194,8 +198,17 @@ export async function GET(request: Request) {
     else correctAnswer = drawOpt
 
     // Mark prediction resolved and store exact scores
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error: updatePredError } = await (supabase.from('predictions') as any)
+    console.log('[resolve-matches] BEFORE update predictions:', {
+      predictionId: pred.id,
+      fixtureId: pred.fixture_id,
+      newStatus: 'resolved',
+      correctAnswer,
+      homeGoals,
+      awayGoals,
+    })
+
+    const { error: updatePredError, data: updatedRows } = await supabase
+      .from('predictions')
       .update({
         correct_answer: correctAnswer,
         status: 'resolved',
@@ -204,9 +217,19 @@ export async function GET(request: Request) {
         exact_score_away: awayGoals,
       })
       .eq('id', pred.id)
+      .select('id')
+
+    console.log('[resolve-matches] AFTER update predictions:', {
+      updatedRows,
+      updatePredError,
+    })
 
     if (updatePredError) {
-      console.error(`[resolve-matches] update prediction ${pred.id}:`, updatePredError)
+      console.error(`[resolve-matches] update prediction ${pred.id} ERROR:`, updatePredError)
+      continue
+    }
+    if (!updatedRows?.length) {
+      console.error(`[resolve-matches] update prediction ${pred.id}: 0 rows matched — id not found or RLS blocking?`)
       continue
     }
 
