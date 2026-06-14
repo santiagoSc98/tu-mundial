@@ -4,6 +4,8 @@ import { cookies } from 'next/headers'
 import { createClient } from '@/lib/supabase/server'
 import HomeClient from '@/components/HomeClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
+import { fetchWCStandings } from '@/lib/grupos'
+import type { StandingsByType } from '@/lib/grupos'
 
 const PRED_COLS = [
   'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
@@ -199,6 +201,17 @@ async function HomeData() {
     avgAccuracy:      resolvedPreds.length > 0 ? Math.round((correctPreds.length / resolvedPreds.length) * 100) : 0,
   }
 
+  // Fetch real WC standings (cached 1h by Next.js — fast on subsequent requests)
+  let wcStandings: StandingsByType | null = null
+  try {
+    wcStandings = await Promise.race([
+      fetchWCStandings(),
+      new Promise<null>(resolve => setTimeout(() => resolve(null), 5000)),
+    ])
+  } catch {
+    // fallback to null — CalendarioView handles it gracefully
+  }
+
   console.log(`[home] total: ${Date.now() - t0}ms`)
 
   const username =
@@ -238,6 +251,7 @@ async function HomeData() {
       initialGroups={initialGroups}
       currentStreak={currentStreak}
       pendingJoinCode={pendingJoinCode}
+      wcStandings={wcStandings}
       profileData={{ id: user.id, username, avatarUrl, total_points: profile.total_points, current_streak: currentStreak, country: profile.country ?? 'Paraguay' }}
     />
   )

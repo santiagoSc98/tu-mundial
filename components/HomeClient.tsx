@@ -11,6 +11,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary'
 import PrediccionesTab from '@/components/PrediccionesTab'
 import CalendarioView from '@/components/CalendarioView'
 import type { Database } from '@/lib/database.types'
+import type { StandingsByType } from '@/lib/grupos'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 import RankingsTab from '@/components/RankingsTab'
@@ -76,6 +77,7 @@ interface Props {
   initialGroups: Group[]
   currentStreak: number
   pendingJoinCode: string | null
+  wcStandings: StandingsByType | null
   profileData: { id: string; username: string; avatarUrl: string | null; total_points: number; current_streak: number; country: string }
 }
 
@@ -156,7 +158,7 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, profileData,
+  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
@@ -500,7 +502,7 @@ export default function HomeClient({
           )}
           {activeTab === 'calendario' && (
             <ErrorBoundary>
-              <CalendarioView predictions={predictions} />
+              <CalendarioView predictions={predictions} wcStandings={wcStandings} />
             </ErrorBoundary>
           )}
           {activeTab === 'perfil' && (

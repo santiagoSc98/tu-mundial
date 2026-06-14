@@ -5,88 +5,13 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import type { Database } from '@/lib/database.types'
+import type { GroupTeam, StandingsByType } from '@/lib/grupos'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 type CalTab = 'resumen' | 'clasificacion' | 'eliminatoria'
 type TableFilter = 'todos' | 'local' | 'visitante'
 
 // WC_START is derived from predictions at runtime (see component)
-
-// ─── Static group data ────────────────────────────────────────────────────────
-const WC_GROUPS: Record<string, { name: string; tla: string }[]> = {
-  A: [
-    { name: 'México',         tla: 'MEX' },
-    { name: 'Sudáfrica',      tla: 'RSA' },
-    { name: 'Corea del Sur',  tla: 'KOR' },
-    { name: 'Rep. Checa',     tla: 'CZE' },
-  ],
-  B: [
-    { name: 'Bosnia',         tla: 'BIH' },
-    { name: 'Canadá',         tla: 'CAN' },
-    { name: 'Catar',          tla: 'QAT' },
-    { name: 'Suiza',          tla: 'SUI' },
-  ],
-  C: [
-    { name: 'Eslovenia',      tla: 'SVN' },
-    { name: 'Serbia',         tla: 'SRB' },
-    { name: 'Inglaterra',     tla: 'ENG' },
-    { name: 'Dinamarca',      tla: 'DEN' },
-  ],
-  D: [
-    { name: 'Paraguay',       tla: 'PAR' },
-    { name: 'Dinamarca',      tla: 'DEN' },
-    { name: 'EE.UU.',         tla: 'USA' },
-    { name: 'Arabia Saudita', tla: 'SAU' },
-  ],
-  E: [
-    { name: 'Argentina',      tla: 'ARG' },
-    { name: 'Nigeria',        tla: 'NGA' },
-    { name: 'Australia',      tla: 'AUS' },
-    { name: 'Noruega',        tla: 'NOR' },
-  ],
-  F: [
-    { name: 'España',         tla: 'ESP' },
-    { name: 'Brasil',         tla: 'BRA' },
-    { name: 'Marruecos',      tla: 'MAR' },
-    { name: 'Japón',          tla: 'JPN' },
-  ],
-  G: [
-    { name: 'Francia',        tla: 'FRA' },
-    { name: 'Uruguay',        tla: 'URU' },
-    { name: 'Colombia',       tla: 'COL' },
-    { name: 'Túnez',          tla: 'TUN' },
-  ],
-  H: [
-    { name: 'Alemania',       tla: 'GER' },
-    { name: 'Portugal',       tla: 'POR' },
-    { name: 'Bélgica',        tla: 'BEL' },
-    { name: 'Ghana',          tla: 'GHA' },
-  ],
-  I: [
-    { name: 'Países Bajos',   tla: 'NED' },
-    { name: 'Ecuador',        tla: 'ECU' },
-    { name: 'Senegal',        tla: 'SEN' },
-    { name: 'Vietnam',        tla: 'VIE' },
-  ],
-  J: [
-    { name: 'Croacia',        tla: 'CRO' },
-    { name: 'Venezuela',      tla: 'VEN' },
-    { name: 'Honduras',       tla: 'HON' },
-    { name: 'C. de Marfil',   tla: 'CIV' },
-  ],
-  K: [
-    { name: 'Italia',         tla: 'ITA' },
-    { name: 'Polonia',        tla: 'POL' },
-    { name: 'Argelia',        tla: 'ALG' },
-    { name: 'Jordania',       tla: 'JOR' },
-  ],
-  L: [
-    { name: 'Austria',        tla: 'AUT' },
-    { name: 'Uzbekistán',     tla: 'UZB' },
-    { name: 'Irán',           tla: 'IRN' },
-    { name: 'N. Zelanda',     tla: 'NZL' },
-  ],
-}
 
 // ─── Bracket data ─────────────────────────────────────────────────────────────
 interface BSlot { s1: string; s2: string; date: string }
@@ -131,81 +56,6 @@ const B_CARD_W = 118
 const B_CONN_W = 32
 const B_LINE   = 'rgba(255,255,255,0.22)'
 
-// ─── Standings helpers ────────────────────────────────────────────────────────
-interface TeamStats {
-  name: string
-  tla: string
-  played: number
-  won: number
-  drawn: number
-  lost: number
-  gf: number
-  ga: number
-  pts: number
-}
-
-function initStats(team: { name: string; tla: string }): TeamStats {
-  return { ...team, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
-}
-
-// Strip accents + lowercase for robust answer comparison
-function nrmCA(s: string): string {
-  return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-}
-// Match correct_answer against a candidate team name.
-// Handles: accent differences + English API names vs Spanish opts[] names.
-function caMatches(correctAnswer: string, candidate: string): boolean {
-  if (!correctAnswer || !candidate) return false
-  if (nrmCA(correctAnswer) === nrmCA(candidate)) return true
-  // Try converting English API name → Spanish before comparing
-  return nrmCA(getTeamNameES(correctAnswer)) === nrmCA(candidate)
-}
-
-function computeGroupStandings(
-  predictions: Prediction[],
-  teams: { name: string; tla: string }[],
-  filter: TableFilter,
-): TeamStats[] {
-  const map: Record<string, TeamStats> = {}
-  for (const t of teams) map[t.tla] = initStats(t)
-
-  const tlaSet = new Set(teams.map(t => t.tla))
-  const relevant = predictions.filter(
-    p => p.home_team_code && p.away_team_code &&
-         tlaSet.has(p.home_team_code) && tlaSet.has(p.away_team_code) &&
-         p.correct_answer
-  )
-
-  for (const p of relevant) {
-    const opts = Array.isArray(p.options) ? (p.options as string[]) : []
-    const h = map[p.home_team_code!]
-    const a = map[p.away_team_code!]
-    if (!h || !a) continue
-
-    const ca = p.correct_answer!
-    const isDraw  = caMatches(ca, opts[1] ?? '') || nrmCA(ca) === 'empate'
-    const homeWin = !isDraw && caMatches(ca, opts[0] ?? '')
-    const awayWin = !isDraw && !homeWin
-
-    if (filter !== 'visitante') {
-      h.played++
-      if (isDraw) { h.drawn++; h.pts++ }
-      else if (homeWin) { h.won++; h.pts += 3 }
-      else { h.lost++ }
-    }
-    if (filter !== 'local') {
-      a.played++
-      if (isDraw) { a.drawn++; a.pts++ }
-      else if (awayWin) { a.won++; a.pts += 3 }
-      else { a.lost++ }
-    }
-  }
-
-  return Object.values(map).sort((a, b) =>
-    b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf
-  )
-}
-
 // ─── Countdown hook ─────────────────────────────────────────────────────────
 // Starts null so SSR never renders a value that differs from the client tick.
 type Countdown = { days: number; hours: number; minutes: number; seconds: number }
@@ -236,13 +86,7 @@ function Flag({ tla, w = 22, h = 15 }: { tla?: string | null; w?: number; h?: nu
 }
 
 // ─── Compact group table (Resumen) ────────────────────────────────────────────
-function CompactGroupTable({
-  letter,
-  stats,
-}: {
-  letter: string
-  stats: TeamStats[]
-}) {
+function CompactGroupTable({ letter, table }: { letter: string; table: GroupTeam[] }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
@@ -267,12 +111,12 @@ function CompactGroupTable({
           </tr>
         </thead>
         <tbody>
-          {stats.map((team, i) => {
+          {table.map((row, i) => {
             const qual = i < 2
             const third = i === 2
             return (
               <tr
-                key={team.tla}
+                key={row.team.tla}
                 style={{
                   borderTop: '1px solid rgba(255,255,255,0.05)',
                   borderLeft: `3px solid ${qual ? '#22c55e' : third ? '#f59e0b' : 'transparent'}`,
@@ -281,14 +125,14 @@ function CompactGroupTable({
                 <td className="pl-2 pr-1 py-1.5 text-center" style={{ fontSize: 11, color: qual ? '#22c55e' : 'rgba(255,255,255,0.35)', fontWeight: 700, width: 20 }}>{i + 1}</td>
                 <td className="px-1 py-1.5">
                   <div className="flex items-center gap-1.5">
-                    <Flag tla={team.tla} w={18} h={12} />
-                    <span style={{ fontSize: 11, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 90 }}>{team.name}</span>
+                    <Flag tla={row.team.tla} w={18} h={12} />
+                    <span style={{ fontSize: 11, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: 90 }}>{getTeamNameES(row.team.name)}</span>
                   </div>
                 </td>
-                {[team.played, team.won, team.drawn, team.lost].map((v, j) => (
+                {[row.playedGames, row.won, row.draw, row.lost].map((v, j) => (
                   <td key={j} className="text-center px-1 py-1.5" style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)' }}>{v}</td>
                 ))}
-                <td className="text-center px-1 pr-3 py-1.5" style={{ fontSize: 12, fontWeight: 800, color: qual ? '#22c55e' : '#fff' }}>{team.pts}</td>
+                <td className="text-center px-1 pr-3 py-1.5" style={{ fontSize: 12, fontWeight: 800, color: qual ? '#22c55e' : '#fff' }}>{row.points}</td>
               </tr>
             )
           })}
@@ -299,7 +143,7 @@ function CompactGroupTable({
 }
 
 // ─── Full group table (Clasificación) ────────────────────────────────────────
-function FullGroupTable({ letter, stats }: { letter: string; stats: TeamStats[] }) {
+function FullGroupTable({ letter, table }: { letter: string; table: GroupTeam[] }) {
   return (
     <div style={{
       background: 'rgba(255,255,255,0.03)',
@@ -327,13 +171,13 @@ function FullGroupTable({ letter, stats }: { letter: string; stats: TeamStats[] 
             </tr>
           </thead>
           <tbody>
-            {stats.map((team, i) => {
+            {table.map((row, i) => {
               const qual = i < 2
               const third = i === 2
-              const dg = team.gf - team.ga
+              const dg = row.goalDifference
               return (
                 <tr
-                  key={team.tla + i}
+                  key={row.team.tla + i}
                   style={{
                     borderTop: '1px solid rgba(255,255,255,0.05)',
                     borderLeft: `3px solid ${qual ? '#22c55e' : third ? '#f59e0b' : 'transparent'}`,
@@ -343,17 +187,17 @@ function FullGroupTable({ letter, stats }: { letter: string; stats: TeamStats[] 
                   <td className="py-3 text-center px-2" style={{ fontSize: 12, color: qual ? '#22c55e' : 'rgba(255,255,255,0.35)', fontWeight: 700 }}>{i + 1}</td>
                   <td className="py-3 px-3">
                     <div className="flex items-center gap-2">
-                      <Flag tla={team.tla} w={22} h={15} />
-                      <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{team.name}</span>
+                      <Flag tla={row.team.tla} w={22} h={15} />
+                      <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{getTeamNameES(row.team.name)}</span>
                     </div>
                   </td>
-                  {[team.played, team.won, team.drawn, team.lost, team.gf, team.ga].map((v, j) => (
+                  {[row.playedGames, row.won, row.draw, row.lost, row.goalsFor, row.goalsAgainst].map((v, j) => (
                     <td key={j} className="py-3 text-center px-2" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{v}</td>
                   ))}
                   <td className="py-3 text-center px-2" style={{ fontSize: 12, color: dg > 0 ? '#22c55e' : dg < 0 ? '#f87171' : 'rgba(255,255,255,0.55)' }}>
                     {dg > 0 ? `+${dg}` : dg}
                   </td>
-                  <td className="py-3 text-center px-2" style={{ fontSize: 14, fontWeight: 800, color: qual ? '#22c55e' : '#fff' }}>{team.pts}</td>
+                  <td className="py-3 text-center px-2" style={{ fontSize: 14, fontWeight: 800, color: qual ? '#22c55e' : '#fff' }}>{row.points}</td>
                 </tr>
               )
             })}
@@ -559,7 +403,13 @@ function MatchdayPanel({
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function CalendarioView({ predictions }: { predictions: Prediction[] }) {
+export default function CalendarioView({
+  predictions,
+  wcStandings,
+}: {
+  predictions: Prediction[]
+  wcStandings: StandingsByType | null
+}) {
   const [calTab,   setCalTab]   = useState<CalTab>('resumen')
   const [dayIdx,   setDayIdx]   = useState(0)
   const [filter,   setFilter]   = useState<TableFilter>('todos')
@@ -612,14 +462,17 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
     setDayIdx(i === -1 ? matchdays.length - 1 : i)
   }, [matchdays])
 
-  // Compute standings per group
-  const standings = useMemo(() => {
-    const out: Record<string, TeamStats[]> = {}
-    for (const [letter, teams] of Object.entries(WC_GROUPS)) {
-      out[letter] = computeGroupStandings(predictions, teams, filter)
-    }
-    return out
-  }, [predictions, filter])
+  // Pick the right standings set from the API based on the active filter
+  const activeGroups = useMemo(() => {
+    if (!wcStandings) return []
+    const src =
+      filter === 'local'     && wcStandings.home.length ? wcStandings.home :
+      filter === 'visitante' && wcStandings.away.length ? wcStandings.away :
+      wcStandings.total
+    return src
+      .map(s => ({ letter: s.group.replace('GROUP_', ''), table: s.table }))
+      .sort((a, b) => a.letter.localeCompare(b.letter))
+  }, [wcStandings, filter])
 
   const CARD: React.CSSProperties = {
     background: 'var(--mundial-card-bg, rgba(255,255,255,0.04))',
@@ -679,8 +532,8 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
           {/* Left: groups 2-col grid */}
           <div className="lg:col-span-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {Object.entries(WC_GROUPS).map(([letter]) => (
-                <CompactGroupTable key={letter} letter={letter} stats={standings[letter] ?? []} />
+              {activeGroups.map(({ letter, table }) => (
+                <CompactGroupTable key={letter} letter={letter} table={table} />
               ))}
             </div>
 
@@ -791,8 +644,8 @@ export default function CalendarioView({ predictions }: { predictions: Predictio
 
           {/* All groups */}
           <div className="space-y-4">
-            {Object.entries(WC_GROUPS).map(([letter]) => (
-              <FullGroupTable key={letter} letter={letter} stats={standings[letter] ?? []} />
+            {activeGroups.map(({ letter, table }) => (
+              <FullGroupTable key={letter} letter={letter} table={table} />
             ))}
           </div>
         </div>
