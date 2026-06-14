@@ -1042,7 +1042,7 @@ export default function InicioView({
                     {awayFlag && <img src={awayFlag} alt={away} className="w-7 h-5 rounded object-cover" />}
                   </div>
                 </div>
-                <CountdownTimer deadline={nextMatch.deadline ?? ''} />
+                <CountdownTimer deadline={new Date(new Date(nextMatch.deadline ?? 0).getTime() + 10 * 60_000).toISOString()} />
               </div>
             )
           })()}
