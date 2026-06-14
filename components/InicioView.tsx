@@ -510,92 +510,157 @@ function MatchRow({
       : 'border-[rgba(206,17,38,0.25)] bg-[rgba(206,17,38,0.04)]'
     : 'border-white/[0.07] bg-white/[0.04]'
 
-  return (
-    <div className={`rounded-2xl border p-3 mb-2 ${cardClass}`}>
+  // Shared sub-elements
+  const scoreIcon = isCorrect
+    ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+    : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>
 
-      {/* TOP ROW: hora/fase + resultado */}
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-xs font-semibold text-white">{pyTime(ko)}</span>
-          <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">
-            {stage}
-          </span>
-        </div>
-        {isResolved && pred.exact_score_home != null && pred.exact_score_away != null && (
-          <div className="text-sm font-bold text-white bg-white/[0.07] rounded-lg px-2.5 py-0.5">
-            {pred.exact_score_home}–{pred.exact_score_away}
+  const pointsBadge = (
+    <span className={`text-[10px] font-bold rounded-md px-2 py-1 ${
+      isExact     ? 'bg-[rgba(0,196,106,0.15)] text-[#00C46A]'
+      : isCorrect ? 'bg-[rgba(77,159,255,0.15)] text-[#4d9fff]'
+      : 'bg-[rgba(206,17,38,0.12)] text-[#CE1126]'
+    }`}>
+      +{pointsEarned}
+    </span>
+  )
+
+  const editBtn = (
+    <button
+      onClick={e => { e.stopPropagation(); onEditClick() }}
+      className="text-xs border border-white/15 text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
+    >
+      Editar
+    </button>
+  )
+
+  const predictBtn = (
+    <button
+      onClick={e => { e.stopPropagation(); onExpand() }}
+      className="text-xs bg-[#0052A5] text-white px-3.5 py-1.5 rounded-lg font-semibold"
+    >
+      Pronostica
+    </button>
+  )
+
+  const actionNode = isResolved && hasMyAnswer ? pointsBadge
+    : !isResolved && hasMyAnswer && open ? editBtn
+    : !isResolved && !hasMyAnswer && open ? predictBtn
+    : null
+
+  const myPredNode = hasMyAnswer ? (
+    <div className="flex items-center gap-1.5">
+      <span className="text-[9px] text-gray-500 tracking-wide uppercase">Tu pronóstico</span>
+      {isResolved ? (
+        <span className={`flex items-center gap-1 text-sm font-bold ${isCorrect ? 'text-[#00C46A]' : 'text-[#CE1126]'}`}>
+          <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? 'bg-[rgba(0,196,106,0.15)]' : 'bg-[rgba(206,17,38,0.15)]'}`}>
+            {scoreIcon}
           </div>
-        )}
+          {myScore}
+        </span>
+      ) : (
+        <span className="text-sm font-bold text-gray-300">{myScore}</span>
+      )}
+    </div>
+  ) : isResolved ? null : (
+    <span className="text-[9px] text-gray-500 tracking-wide">SIN PREDICCIÓN</span>
+  )
+
+  const resultBadge = isResolved && pred.exact_score_home != null && pred.exact_score_away != null
+    ? (
+      <div className="text-sm font-bold text-white bg-white/[0.07] rounded-lg px-2.5 py-0.5 flex-shrink-0">
+        {pred.exact_score_home}–{pred.exact_score_away}
+      </div>
+    ) : null
+
+  return (
+    <>
+      {/* ── MOBILE: card vertical ──────────────────────────────────── */}
+      <div className={`md:hidden rounded-2xl border p-3 mb-2 ${cardClass}`}>
+
+        {/* TOP: hora + fase / resultado final */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-white">{pyTime(ko)}</span>
+            <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">{stage}</span>
+          </div>
+          {resultBadge}
+        </div>
+
+        {/* MIDDLE: equipos */}
+        <div className="flex items-center justify-between mb-2.5">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {homeFlag
+              ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+            <span className="text-xs font-medium text-gray-200 truncate">{home}</span>
+          </div>
+          <span className="text-[10px] text-gray-500 px-2 flex-shrink-0">vs</span>
+          <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+            <span className="text-xs font-medium text-gray-200 truncate text-right">{away}</span>
+            {awayFlag
+              ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+          </div>
+        </div>
+
+        {/* BOTTOM: mi predicción + acción */}
+        <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
+          <div className="flex items-center gap-1.5 min-w-0">
+            {myPredNode}
+          </div>
+          <div className="flex-shrink-0 ml-2">{actionNode}</div>
+        </div>
       </div>
 
-      {/* MIDDLE ROW: equipos */}
-      <div className="flex items-center justify-between mb-2.5">
-        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+      {/* ── DESKTOP: fila horizontal ───────────────────────────────── */}
+      <div className={`hidden md:flex items-center gap-3 rounded-2xl border px-3.5 py-3 mb-2 ${cardClass}`}>
+
+        {/* Hora + fase */}
+        <div className="w-11 flex-shrink-0">
+          <p className="text-xs font-semibold text-white leading-tight">{pyTime(ko)}</p>
+          <p className="text-[10px] text-white/30 leading-tight">{stage}</p>
+        </div>
+
+        {/* Equipos */}
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
           {homeFlag
-            ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
-          <span className="text-xs font-medium text-gray-200 truncate">{home}</span>
-        </div>
-        <span className="text-[10px] text-gray-500 px-2 flex-shrink-0">vs</span>
-        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-          <span className="text-xs font-medium text-gray-200 truncate text-right">{away}</span>
+            ? <img src={homeFlag} alt={home} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className="text-xs text-white/75 truncate min-w-0">{home}</span>
+          <span className="text-[10px] text-white/25 flex-shrink-0">vs</span>
+          <span className="text-xs text-white/75 truncate min-w-0">{away}</span>
           {awayFlag
-            ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+            ? <img src={awayFlag} alt={away} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
         </div>
-      </div>
 
-      {/* BOTTOM ROW: mi predicción + acción */}
-      <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
-        <div className="flex items-center gap-1.5">
+        {/* Resultado final */}
+        {resultBadge ?? <div className="w-[52px] flex-shrink-0" />}
+
+        {/* Mi predicción */}
+        <div className="flex flex-col items-end gap-0.5 flex-shrink-0 min-w-[62px]">
           {hasMyAnswer ? (
             <>
-              <span className="text-[9px] text-gray-500 tracking-wide">TU PRONÓSTICO</span>
+              <span className="text-[9px] text-white/30 tracking-wide font-bold">TU PRONÓSTICO</span>
               {isResolved ? (
-                <span className={`flex items-center gap-1 text-sm font-bold ${isCorrect ? 'text-[#00C46A]' : 'text-[#CE1126]'}`}>
-                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? 'bg-[rgba(0,196,106,0.15)]' : 'bg-[rgba(206,17,38,0.15)]'}`}>
-                    {isCorrect
-                      ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                      : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>}
-                  </div>
+                <span className={`flex items-center gap-1 text-xs font-semibold ${isCorrect ? 'text-[#00C46A]' : 'text-[#CE1126]'}`}>
+                  <span className={`w-3.5 h-3.5 rounded-full inline-flex items-center justify-center flex-shrink-0 ${isCorrect ? 'bg-[rgba(0,196,106,0.15)]' : 'bg-[rgba(206,17,38,0.15)]'}`}>
+                    {scoreIcon}
+                  </span>
                   {myScore}
                 </span>
               ) : (
-                <span className="text-sm font-bold text-gray-300">{myScore}</span>
+                <span className="text-xs font-semibold text-white/65">{myScore}</span>
               )}
             </>
-          ) : (
-            <span className="text-[9px] text-gray-500 tracking-wide">SIN PREDICCIÓN</span>
-          )}
+          ) : isResolved ? null : null}
         </div>
 
-        <div className="flex-shrink-0">
-          {isResolved && hasMyAnswer ? (
-            <span className={`text-[10px] font-bold rounded-md px-2 py-1 ${
-              isExact    ? 'bg-[rgba(0,196,106,0.15)] text-[#00C46A]'
-              : isCorrect ? 'bg-[rgba(77,159,255,0.15)] text-[#4d9fff]'
-              : 'bg-[rgba(206,17,38,0.12)] text-[#CE1126]'
-            }`}>
-              +{pointsEarned}
-            </span>
-          ) : !isResolved && hasMyAnswer && open ? (
-            <button
-              onClick={e => { e.stopPropagation(); onEditClick() }}
-              className="text-xs border border-white/15 text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
-            >
-              Editar
-            </button>
-          ) : !isResolved && !hasMyAnswer && open ? (
-            <button
-              onClick={e => { e.stopPropagation(); onExpand() }}
-              className="text-xs bg-[#0052A5] text-white px-3.5 py-1.5 rounded-lg font-semibold"
-            >
-              Pronostica
-            </button>
-          ) : null}
-        </div>
+        {/* Acción / puntos */}
+        <div className="flex-shrink-0">{actionNode}</div>
       </div>
-    </div>
+    </>
   )
 }
 
