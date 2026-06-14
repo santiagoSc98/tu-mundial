@@ -79,6 +79,7 @@ interface Props {
   currentStreak: number
   pendingJoinCode: string | null
   wcStandings: StandingsByType | null
+  myBadges: { badge_id: string; unlocked_at: string }[]
   profileData: { id: string; username: string; avatarUrl: string | null; total_points: number; current_streak: number; country: string }
 }
 
@@ -159,7 +160,7 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, existingVotes, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, profileData,
+  predictions, existingAnswers, existingScores, existingVotes, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, myBadges, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
@@ -513,6 +514,7 @@ export default function HomeClient({
               myStats={{ totalPredictions: myStats.total, correctPredictions: myStats.correct, rank }}
               currentStreak={currentStreak}
               isAdmin={isAdmin}
+              myBadges={myBadges}
               onTabChange={(tab: string) => setActiveTab(tab as Tab)}
               onSignOut={signOut}
             />

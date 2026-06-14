@@ -1,8 +1,9 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight, LogOut, Edit2 } from 'lucide-react'
+import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight, LogOut, Edit2, Target, Flame, Crosshair, Trophy, ListChecks } from 'lucide-react'
 import { updateProfile } from '@/app/actions/profile'
+import { BADGES } from '@/lib/badges'
 
 interface Profile {
   id: string
@@ -13,11 +14,21 @@ interface Profile {
   country: string | null
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const ICON_MAP: Record<string, any> = {
+  target:       Target,
+  flame:        Flame,
+  crosshair:    Crosshair,
+  trophy:       Trophy,
+  'list-check': ListChecks,
+}
+
 interface Props {
   profile: Profile
   myStats: { totalPredictions: number; correctPredictions: number; rank: number }
   currentStreak: number
   isAdmin: boolean
+  myBadges: { badge_id: string; unlocked_at: string }[]
   onTabChange: (tab: string) => void
   onSignOut: () => void
 }
@@ -92,7 +103,7 @@ const INPUT_STYLE: React.CSSProperties = {
   color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
 
-export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, onTabChange, onSignOut }: Props) {
+export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, myBadges, onTabChange, onSignOut }: Props) {
   const [profile,     setProfile]     = useState(initialProfile)
   const [isEditing,   setIsEditing]   = useState(false)
   const [editName,    setEditName]    = useState(profile.username ?? '')
@@ -247,6 +258,31 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(246,183,60,0.10)', border: '1px solid rgba(246,183,60,0.20)', borderRadius: 14, padding: '10px 16px', marginBottom: 12 }}>
           <span>🔥</span>
           <span style={{ fontSize: 13, color: '#F6B73C', fontWeight: 600 }}>{currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos</span>
+        </div>
+      )}
+
+      {/* Logros */}
+      {myBadges.length > 0 && (
+        <div className="mb-4">
+          <p className="text-xs text-gray-500 font-semibold mb-2 px-1">LOGROS</p>
+          <div className="grid grid-cols-2 gap-2">
+            {myBadges.map(badge => {
+              const def = BADGES[badge.badge_id as keyof typeof BADGES]
+              if (!def) return null
+              const Icon = ICON_MAP[def.icon]
+              return (
+                <div key={badge.badge_id} className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl p-2.5">
+                  <div className="w-8 h-8 rounded-lg bg-[rgba(0,106,51,0.15)] flex items-center justify-center flex-shrink-0">
+                    {Icon && <Icon size={15} className="text-[#00C46A]" />}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-white truncate">{def.name}</p>
+                    <p className="text-[10px] text-gray-500 truncate">{def.description}</p>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 

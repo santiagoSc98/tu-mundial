@@ -76,6 +76,7 @@ async function HomeData() {
   const [
     specialRes, profileRes, predsRes, answersRes,
     rankingsRes, myStatsRes, allUserPredsRes, totalUsersRes, allVotesRes, groupsRes,
+    badgesRes,
   ] = await withRetry(() =>
     withTimeout(
       Promise.all([
@@ -127,6 +128,13 @@ async function HomeData() {
           .from('group_members')
           .select('groups(id, name, code, created_by, prize_amount, entry_fee, currency)')
           .eq('user_id', user.id),
+        // User badges
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any)
+          .from('user_badges')
+          .select('badge_id, unlocked_at')
+          .eq('user_id', user.id)
+          .order('unlocked_at', { ascending: false }),
       ]),
       18000,
       'all-data'
@@ -136,6 +144,7 @@ async function HomeData() {
 
   const special     = specialRes.data
   const profileData = profileRes.data
+  const myBadges    = (badgesRes.data ?? []) as { badge_id: string; unlocked_at: string }[]
 
   // Build existingAnswers + existingScores + existingVotes maps
   const existingAnswers: Record<string, string> = {}
@@ -259,6 +268,7 @@ async function HomeData() {
       currentStreak={currentStreak}
       pendingJoinCode={pendingJoinCode}
       wcStandings={wcStandings}
+      myBadges={myBadges}
       profileData={{ id: user.id, username, avatarUrl, total_points: profile.total_points, current_streak: currentStreak, country: profile.country ?? 'Paraguay' }}
     />
   )
