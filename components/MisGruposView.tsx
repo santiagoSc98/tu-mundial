@@ -443,11 +443,11 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
                     <span style={{ fontSize: 14, fontWeight: 700, color: isMe ? '#4ade80' : 'rgba(255,255,255,0.55)' }}>
                       {m.total_points} pts
                     </span>
-                    {isAdmin && (
+                    {/* {isAdmin && (
                       <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, border: '1px solid rgba(246,183,60,0.30)', padding: '2px 7px', borderRadius: 8 }}>
                         Admin
                       </span>
-                    )}
+                    )} */}
                     {isCreator && !isMe && (
                       <button
                         onClick={() => handleRemoveMember(m.user_id, m.username ?? 'Jugador')}
