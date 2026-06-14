@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import {
-  Calendar, Target, Trophy, CheckCircle, BarChart3, Zap, Clock,
+  Calendar, Target, Trophy, CheckCircle, BarChart3, Zap,
   ChevronLeft, ChevronRight,
 } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
@@ -471,6 +471,11 @@ function FeaturedMatchPanel({
   )
 }
 
+// ─── Normalize helper (accent-insensitive comparison) ────────────────────────
+
+const normalize = (str: string | null | undefined) =>
+  (str ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
+
 // ─── Match row ────────────────────────────────────────────────────────────────
 
 function MatchRow({
@@ -487,76 +492,115 @@ function MatchRow({
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
   const awayFlag = getFlagUrl(prediction.away_team_code)
-  const stage    = STAGE_LABELS[parseStage(prediction.description)] ?? ''
+  const stage    = STAGE_LABELS[parseStage(prediction.description)] ?? 'Grupos'
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
-  const answered = !!existingAnswer
 
-  const badgeLabel = localScore != null
-    ? `${localScore.home}–${localScore.away}`
-    : existingAnswer ?? ''
+  const isResolved  = prediction.status === 'resolved'
+  const hasMyAnswer = !!existingAnswer
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const pred = prediction as any
+
+  const isCorrect = isResolved && hasMyAnswer && !!prediction.correct_answer &&
+    normalize(existingAnswer) === normalize(prediction.correct_answer)
+
+  const isExact = isCorrect && localScore != null &&
+    pred.exact_score_home != null && pred.exact_score_away != null &&
+    localScore.home === pred.exact_score_home &&
+    localScore.away === pred.exact_score_away
+
+  const pointsEarned = isExact ? 8 : isCorrect ? 3 : 0
+
+  const rowBorder = isResolved && hasMyAnswer
+    ? isCorrect ? 'rgba(0,196,106,0.30)' : 'rgba(206,17,38,0.25)'
+    : 'rgba(255,255,255,0.07)'
+  const rowBg = isResolved && hasMyAnswer
+    ? isCorrect ? 'rgba(0,196,106,0.05)' : 'rgba(206,17,38,0.04)'
+    : 'rgba(255,255,255,0.04)'
 
   return (
-    <div
-      onClick={onExpand}
-      className="flex items-center gap-3 px-3 py-2.5"
-      style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 12, cursor: 'pointer', transition: 'background 0.12s' }}
-      onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
-      onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
-    >
-      <div className="shrink-0 w-10">
-        <p className="text-xs font-semibold" style={{ color: '#fff' }}>{pyTime(ko)}</p>
-        {stage && <p className="text-[10px]" style={{ color: 'rgba(255,255,255,0.30)' }}>{stage}</p>}
+    <div style={{ background: rowBg, border: `1px solid ${rowBorder}`, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+
+      {/* Time / stage */}
+      <div style={{ width: 44, flexShrink: 0 }}>
+        <p style={{ fontSize: 12, fontWeight: 600, color: '#fff', margin: 0 }}>{pyTime(ko)}</p>
+        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', margin: 0 }}>{stage}</p>
       </div>
 
-      <div className="flex items-center gap-1.5 flex-1 min-w-0">
+      {/* Teams */}
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap', overflow: 'hidden' }}>
         {homeFlag
-          ? <img src={homeFlag} alt={home} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-          : <div style={{ width: 20, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
-        }
-        <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{home}</span>
-        <span className="text-[10px] shrink-0" style={{ color: 'rgba(255,255,255,0.25)' }}>vs</span>
-        <span className="text-xs truncate" style={{ color: 'rgba(255,255,255,0.70)' }}>{away}</span>
+          ? <img src={homeFlag} alt={home} style={{ width: 18, height: 13, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+          : <div style={{ width: 18, height: 13, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />}
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{home}</span>
+        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>vs</span>
+        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{away}</span>
         {awayFlag
-          ? <img src={awayFlag} alt={away} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-          : <div style={{ width: 20, height: 14, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
-        }
+          ? <img src={awayFlag} alt={away} style={{ width: 18, height: 13, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+          : <div style={{ width: 18, height: 13, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />}
       </div>
 
-      <div className="flex items-center gap-1.5 shrink-0">
-        {answered ? (
-          <>
-            {/* Score / answer badge */}
-            <div className="flex items-center gap-1" style={{ background: 'rgba(0,106,51,0.18)', border: '1px solid rgba(0,106,51,0.35)', borderRadius: 8, padding: '3px 8px' }}>
-              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-              <span className="text-xs font-bold" style={{ color: '#4ade80' }}>{badgeLabel}</span>
-            </div>
-            {/* Edit button — only before deadline */}
-            {open && (
-              <button
-                onClick={e => { e.stopPropagation(); onEditClick() }}
-                className="text-xs font-semibold px-2 py-1 rounded-lg transition-colors"
-                style={{ border: '1px solid rgba(255,255,255,0.14)', color: 'rgba(255,255,255,0.55)', background: 'transparent', cursor: 'pointer' }}
-                onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
-                onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
-              >
-                Editar
-              </button>
-            )}
-          </>
-        ) : open ? (
+      {/* Result (if played and scores available) */}
+      {isResolved && pred.exact_score_home != null && pred.exact_score_away != null && (
+        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.08)', borderRadius: 7, padding: '3px 8px', flexShrink: 0 }}>
+          {pred.exact_score_home}–{pred.exact_score_away}
+        </div>
+      )}
+
+      {/* My prediction */}
+      {hasMyAnswer ? (
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0, minWidth: 62 }}>
+          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.05em', fontWeight: 700 }}>TU PRONÓSTICO</span>
+          {isResolved ? (
+            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: isCorrect ? '#00C46A' : '#CE1126' }}>
+              <span style={{ width: 14, height: 14, borderRadius: '50%', background: isCorrect ? 'rgba(0,196,106,0.15)' : 'rgba(206,17,38,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                {isCorrect
+                  ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                  : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>}
+              </span>
+              {localScore != null ? `${localScore.home}–${localScore.away}` : existingAnswer}
+            </span>
+          ) : (
+            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>
+              {localScore != null ? `${localScore.home}–${localScore.away}` : existingAnswer}
+            </span>
+          )}
+        </div>
+      ) : isResolved ? (
+        <div style={{ minWidth: 62, flexShrink: 0 }} />
+      ) : null}
+
+      {/* Action / Points */}
+      <div style={{ flexShrink: 0 }}>
+        {isResolved && hasMyAnswer ? (
+          <span style={{
+            fontSize: 11, fontWeight: 800, borderRadius: 6, padding: '3px 7px',
+            background: isExact ? 'rgba(0,196,106,0.15)' : isCorrect ? 'rgba(77,159,255,0.15)' : 'rgba(206,17,38,0.12)',
+            color: isExact ? '#00C46A' : isCorrect ? '#4d9fff' : '#CE1126',
+          }}>
+            +{pointsEarned}
+          </span>
+        ) : !isResolved && hasMyAnswer ? (
+          open ? (
+            <button
+              onClick={e => { e.stopPropagation(); onEditClick() }}
+              style={{ fontSize: 12, border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.55)', background: 'transparent', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
+            >
+              Editar
+            </button>
+          ) : null
+        ) : !isResolved && !hasMyAnswer && open ? (
           <button
             onClick={e => { e.stopPropagation(); onExpand() }}
-            className="text-xs font-bold px-3 py-1.5 rounded-lg"
-            style={{ background: '#0052A5', color: '#fff', border: 'none', cursor: 'pointer' }}
+            style={{ fontSize: 12, background: '#0052A5', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
+            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
+            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
           >
             Pronostica
           </button>
-        ) : (
-          <span className="text-xs px-2 py-1 rounded-lg" style={{ color: 'rgba(255,255,255,0.30)', border: '1px solid rgba(255,255,255,0.10)' }}>
-            <Clock className="h-3 w-3 inline mr-0.5" />Ver votos
-          </span>
-        )}
+        ) : null}
       </div>
     </div>
   )
@@ -762,6 +806,26 @@ export default function InicioView({
                     )}
                   </div>
                 ))}
+              </div>
+
+              {/* Legend */}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(0,196,106,0.50)', border: '1px solid #00C46A' }} />
+                  Acertaste
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(206,17,38,0.40)', border: '1px solid #CE1126' }} />
+                  Fallaste
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 5, padding: '2px 6px', background: 'rgba(0,196,106,0.15)', color: '#00C46A' }}>+8</span>
+                  Marcador exacto
+                </div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                  <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 5, padding: '2px 6px', background: 'rgba(77,159,255,0.15)', color: '#4d9fff' }}>+3</span>
+                  Resultado correcto
+                </div>
               </div>
 
               {/* Ver calendario completo */}
