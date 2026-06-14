@@ -500,96 +500,100 @@ function MatchRow({
   const pointsEarned = vote?.pointsEarned ?? 0
   const isExact      = pointsEarned >= 8
 
-  const rowBorder = isResolved && hasMyAnswer
-    ? isCorrect ? 'rgba(0,196,106,0.30)' : 'rgba(206,17,38,0.25)'
-    : 'rgba(255,255,255,0.07)'
-  const rowBg = isResolved && hasMyAnswer
-    ? isCorrect ? 'rgba(0,196,106,0.05)' : 'rgba(206,17,38,0.04)'
-    : 'rgba(255,255,255,0.04)'
+  const myScore = localScore != null
+    ? `${localScore.home}–${localScore.away}`
+    : existingAnswer ?? ''
+
+  const cardClass = isResolved && hasMyAnswer
+    ? isCorrect
+      ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.05)]'
+      : 'border-[rgba(206,17,38,0.25)] bg-[rgba(206,17,38,0.04)]'
+    : 'border-white/[0.07] bg-white/[0.04]'
 
   return (
-    <div style={{ background: rowBg, border: `1px solid ${rowBorder}`, borderRadius: 12, padding: '10px 14px', display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div className={`rounded-2xl border p-3 mb-2 ${cardClass}`}>
 
-      {/* Time / stage */}
-      <div style={{ width: 44, flexShrink: 0 }}>
-        <p style={{ fontSize: 12, fontWeight: 600, color: '#fff', margin: 0 }}>{pyTime(ko)}</p>
-        <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', margin: 0 }}>{stage}</p>
-      </div>
-
-      {/* Teams */}
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 5, flexWrap: 'nowrap', overflow: 'hidden' }}>
-        {homeFlag
-          ? <img src={homeFlag} alt={home} style={{ width: 18, height: 13, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-          : <div style={{ width: 18, height: 13, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />}
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{home}</span>
-        <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)', flexShrink: 0 }}>vs</span>
-        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', minWidth: 0 }}>{away}</span>
-        {awayFlag
-          ? <img src={awayFlag} alt={away} style={{ width: 18, height: 13, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-          : <div style={{ width: 18, height: 13, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />}
-      </div>
-
-      {/* Result (if played and scores available) */}
-      {isResolved && pred.exact_score_home != null && pred.exact_score_away != null && (
-        <div style={{ fontSize: 13, fontWeight: 700, color: '#fff', background: 'rgba(255,255,255,0.08)', borderRadius: 7, padding: '3px 8px', flexShrink: 0 }}>
-          {pred.exact_score_home}–{pred.exact_score_away}
+      {/* TOP ROW: hora/fase + resultado */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-xs font-semibold text-white">{pyTime(ko)}</span>
+          <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">
+            {stage}
+          </span>
         </div>
-      )}
+        {isResolved && pred.exact_score_home != null && pred.exact_score_away != null && (
+          <div className="text-sm font-bold text-white bg-white/[0.07] rounded-lg px-2.5 py-0.5">
+            {pred.exact_score_home}–{pred.exact_score_away}
+          </div>
+        )}
+      </div>
 
-      {/* My prediction */}
-      {hasMyAnswer ? (
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flexShrink: 0, minWidth: 62 }}>
-          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.05em', fontWeight: 700 }}>TU PRONÓSTICO</span>
-          {isResolved ? (
-            <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: isCorrect ? '#00C46A' : '#CE1126' }}>
-              <span style={{ width: 14, height: 14, borderRadius: '50%', background: isCorrect ? 'rgba(0,196,106,0.15)' : 'rgba(206,17,38,0.15)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                {isCorrect
-                  ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
-                  : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>}
-              </span>
-              {localScore != null ? `${localScore.home}–${localScore.away}` : existingAnswer}
-            </span>
+      {/* MIDDLE ROW: equipos */}
+      <div className="flex items-center justify-between mb-2.5">
+        <div className="flex items-center gap-1.5 flex-1 min-w-0">
+          {homeFlag
+            ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className="text-xs font-medium text-gray-200 truncate">{home}</span>
+        </div>
+        <span className="text-[10px] text-gray-500 px-2 flex-shrink-0">vs</span>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+          <span className="text-xs font-medium text-gray-200 truncate text-right">{away}</span>
+          {awayFlag
+            ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+        </div>
+      </div>
+
+      {/* BOTTOM ROW: mi predicción + acción */}
+      <div className="flex items-center justify-between border-t border-white/[0.06] pt-2">
+        <div className="flex items-center gap-1.5">
+          {hasMyAnswer ? (
+            <>
+              <span className="text-[9px] text-gray-500 tracking-wide">TU PRONÓSTICO</span>
+              {isResolved ? (
+                <span className={`flex items-center gap-1 text-sm font-bold ${isCorrect ? 'text-[#00C46A]' : 'text-[#CE1126]'}`}>
+                  <div className={`w-3.5 h-3.5 rounded-full flex items-center justify-center flex-shrink-0 ${isCorrect ? 'bg-[rgba(0,196,106,0.15)]' : 'bg-[rgba(206,17,38,0.15)]'}`}>
+                    {isCorrect
+                      ? <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#00C46A" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                      : <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="3"><path d="M18 6L6 18M6 6l12 12"/></svg>}
+                  </div>
+                  {myScore}
+                </span>
+              ) : (
+                <span className="text-sm font-bold text-gray-300">{myScore}</span>
+              )}
+            </>
           ) : (
-            <span style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.65)' }}>
-              {localScore != null ? `${localScore.home}–${localScore.away}` : existingAnswer}
-            </span>
+            <span className="text-[9px] text-gray-500 tracking-wide">SIN PREDICCIÓN</span>
           )}
         </div>
-      ) : isResolved ? (
-        <div style={{ minWidth: 62, flexShrink: 0 }} />
-      ) : null}
 
-      {/* Action / Points */}
-      <div style={{ flexShrink: 0 }}>
-        {isResolved && hasMyAnswer ? (
-          <span style={{
-            fontSize: 11, fontWeight: 800, borderRadius: 6, padding: '3px 7px',
-            background: isExact ? 'rgba(0,196,106,0.15)' : isCorrect ? 'rgba(77,159,255,0.15)' : 'rgba(206,17,38,0.12)',
-            color: isExact ? '#00C46A' : isCorrect ? '#4d9fff' : '#CE1126',
-          }}>
-            +{pointsEarned}
-          </span>
-        ) : !isResolved && hasMyAnswer ? (
-          open ? (
+        <div className="flex-shrink-0">
+          {isResolved && hasMyAnswer ? (
+            <span className={`text-[10px] font-bold rounded-md px-2 py-1 ${
+              isExact    ? 'bg-[rgba(0,196,106,0.15)] text-[#00C46A]'
+              : isCorrect ? 'bg-[rgba(77,159,255,0.15)] text-[#4d9fff]'
+              : 'bg-[rgba(206,17,38,0.12)] text-[#CE1126]'
+            }`}>
+              +{pointsEarned}
+            </span>
+          ) : !isResolved && hasMyAnswer && open ? (
             <button
               onClick={e => { e.stopPropagation(); onEditClick() }}
-              style={{ fontSize: 12, border: '1px solid rgba(255,255,255,0.15)', color: 'rgba(255,255,255,0.55)', background: 'transparent', padding: '4px 10px', borderRadius: 8, cursor: 'pointer' }}
-              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; e.currentTarget.style.color = '#fff' }}
-              onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'rgba(255,255,255,0.55)' }}
+              className="text-xs border border-white/15 text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
             >
               Editar
             </button>
-          ) : null
-        ) : !isResolved && !hasMyAnswer && open ? (
-          <button
-            onClick={e => { e.stopPropagation(); onExpand() }}
-            style={{ fontSize: 12, background: '#0052A5', color: '#fff', border: 'none', padding: '6px 12px', borderRadius: 8, cursor: 'pointer', fontWeight: 600 }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.85')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
-          >
-            Pronostica
-          </button>
-        ) : null}
+          ) : !isResolved && !hasMyAnswer && open ? (
+            <button
+              onClick={e => { e.stopPropagation(); onExpand() }}
+              className="text-xs bg-[#0052A5] text-white px-3.5 py-1.5 rounded-lg font-semibold"
+            >
+              Pronostica
+            </button>
+          ) : null}
+        </div>
       </div>
     </div>
   )
@@ -800,21 +804,21 @@ export default function InicioView({
               </div>
 
               {/* Legend */}
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px 16px', marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(0,196,106,0.50)', border: '1px solid #00C46A' }} />
-                  Acertaste
+              <div className="flex flex-wrap gap-3 mt-3 pt-3 border-t border-white/[0.07]">
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[rgba(0,196,106,0.5)] border border-[#00C46A] flex-shrink-0" />
+                  Acertaste el resultado
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
-                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: 'rgba(206,17,38,0.40)', border: '1px solid #CE1126' }} />
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <div className="w-2.5 h-2.5 rounded-full bg-[rgba(206,17,38,0.4)] border border-[#CE1126] flex-shrink-0" />
                   Fallaste
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 5, padding: '2px 6px', background: 'rgba(0,196,106,0.15)', color: '#00C46A' }}>+8</span>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <span className="text-[10px] font-bold rounded-md px-1.5 py-0.5 bg-[rgba(0,196,106,0.15)] text-[#00C46A]">+8</span>
                   Marcador exacto
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
-                  <span style={{ fontSize: 10, fontWeight: 800, borderRadius: 5, padding: '2px 6px', background: 'rgba(77,159,255,0.15)', color: '#4d9fff' }}>+3</span>
+                <div className="flex items-center gap-1.5 text-[11px] text-gray-400">
+                  <span className="text-[10px] font-bold rounded-md px-1.5 py-0.5 bg-[rgba(77,159,255,0.15)] text-[#4d9fff]">+3</span>
                   Resultado correcto
                 </div>
               </div>
