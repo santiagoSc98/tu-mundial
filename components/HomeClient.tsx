@@ -69,6 +69,7 @@ interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores: Record<string, { home: number; away: number }>
+  existingVotes: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
   rankings: RankEntry[]
   myStats: MyStats
   predCounts: Record<string, number>
@@ -158,7 +159,7 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
 export default function HomeClient({
   userId, points, username, avatarUrl, championTeam, topScorer, rank, isAdmin,
-  predictions, existingAnswers, existingScores, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, profileData,
+  predictions, existingAnswers, existingScores, existingVotes, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
@@ -459,6 +460,7 @@ export default function HomeClient({
                 predictions={predictions}
                 existingAnswers={mergedAnswers}
                 existingScores={mergedScores}
+                existingVotes={existingVotes}
                 voteDistributions={localVotes}
                 onPredict={handlePredict}
                 onGoToMisPredicciones={() => setActiveTab('mis-predicciones')}

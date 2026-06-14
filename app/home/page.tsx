@@ -10,6 +10,7 @@ import type { StandingsByType } from '@/lib/grupos'
 const PRED_COLS = [
   'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
   'difficulty_multiplier', 'status', 'options', 'home_team_code', 'away_team_code',
+  'exact_score_home', 'exact_score_away',
 ].join(', ')
 
 // ─── Timeout helper ──────────────────────────────────────────────────────────
@@ -93,11 +94,11 @@ async function HomeData() {
           .from('predictions')
           .select(PRED_COLS)
           .order('deadline', { ascending: true }),
-        // Current user's predictions — for existingAnswers + existingScores
+        // Current user's predictions — for existingAnswers + existingScores + existingVotes
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from('user_predictions')
-          .select('prediction_id, predicted_answer, home_score_prediction, away_score_prediction')
+          .select('prediction_id, predicted_answer, home_score_prediction, away_score_prediction, is_correct, points_earned')
           .eq('user_id', user.id),
         supabase
           .from('profiles')
@@ -136,9 +137,10 @@ async function HomeData() {
   const special     = specialRes.data
   const profileData = profileRes.data
 
-  // Build existingAnswers + existingScores maps
+  // Build existingAnswers + existingScores + existingVotes maps
   const existingAnswers: Record<string, string> = {}
   const existingScores: Record<string, { home: number; away: number }> = {}
+  const existingVotes: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }> = {}
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   answersRes.data?.forEach((up: any) => {
     existingAnswers[up.prediction_id] = up.predicted_answer
@@ -147,6 +149,10 @@ async function HomeData() {
         home: up.home_score_prediction,
         away: up.away_score_prediction,
       }
+    }
+    existingVotes[up.prediction_id] = {
+      isCorrect:    up.is_correct    ?? null,
+      pointsEarned: up.points_earned ?? null,
     }
   })
 
@@ -243,6 +249,7 @@ async function HomeData() {
       predictions={(predsRes.data ?? []) as any[]}
       existingAnswers={existingAnswers}
       existingScores={existingScores}
+      existingVotes={existingVotes}
       rankings={rankings}
       myStats={myStats}
       predCounts={predCounts}

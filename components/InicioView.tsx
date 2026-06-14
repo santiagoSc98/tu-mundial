@@ -470,20 +470,15 @@ function FeaturedMatchPanel({
     </div>
   )
 }
-
-// ─── Normalize helper (accent-insensitive comparison) ────────────────────────
-
-const normalize = (str: string | null | undefined) =>
-  (str ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-
 // ─── Match row ────────────────────────────────────────────────────────────────
 
 function MatchRow({
-  prediction, existingAnswer, localScore, onExpand, onEditClick,
+  prediction, existingAnswer, localScore, vote, onExpand, onEditClick,
 }: {
   prediction: Prediction
   existingAnswer: string | null
   localScore?: { home: number; away: number }
+  vote?: { isCorrect: boolean | null; pointsEarned: number | null }
   onExpand: () => void
   onEditClick: () => void
 }) {
@@ -501,15 +496,9 @@ function MatchRow({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const pred = prediction as any
 
-  const isCorrect = isResolved && hasMyAnswer && !!prediction.correct_answer &&
-    normalize(existingAnswer) === normalize(prediction.correct_answer)
-
-  const isExact = isCorrect && localScore != null &&
-    pred.exact_score_home != null && pred.exact_score_away != null &&
-    localScore.home === pred.exact_score_home &&
-    localScore.away === pred.exact_score_away
-
-  const pointsEarned = isExact ? 8 : isCorrect ? 3 : 0
+  const isCorrect    = vote?.isCorrect    ?? false
+  const pointsEarned = vote?.pointsEarned ?? 0
+  const isExact      = pointsEarned >= 8
 
   const rowBorder = isResolved && hasMyAnswer
     ? isCorrect ? 'rgba(0,196,106,0.30)' : 'rgba(206,17,38,0.25)'
@@ -615,6 +604,7 @@ interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores?: Record<string, { home: number; away: number }>
+  existingVotes?: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
   voteDistributions: Record<string, Record<string, number>>
   onPredict: (predictionId: string, answer: string, homeScore: number, awayScore: number) => void
   onGoToMisPredicciones: () => void
@@ -622,7 +612,7 @@ interface Props {
 }
 
 export default function InicioView({
-  points, rank, predictions, existingAnswers, existingScores, voteDistributions,
+  points, rank, predictions, existingAnswers, existingScores, existingVotes, voteDistributions,
   onPredict, onGoToMisPredicciones, onCalendarioClick,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -788,6 +778,7 @@ export default function InicioView({
                       prediction={p}
                       existingAnswer={existingAnswers[p.id] ?? null}
                       localScore={existingScores?.[p.id]}
+                      vote={existingVotes?.[p.id]}
                       onExpand={() => handleExpand(p.id)}
                       onEditClick={() => handleEditClick(p.id)}
                     />
