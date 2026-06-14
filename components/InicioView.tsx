@@ -890,12 +890,12 @@ export default function InicioView({
                 </div>
               </div>
 
-              {/* Ver calendario completo */}
               <button
-                onClick={onCalendarioClick}
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006A33', fontSize: 12, fontWeight: 600, marginTop: 10, display: 'block', marginLeft: 'auto' }}
+                onClick={onGoToMisPredicciones}
+                className="text-sm text-[#006A33] mt-3 w-full text-right hover:underline"
+                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
               >
-                Ver calendario completo →
+                Ver mis pronósticos →
               </button>
             </div>
           )}
