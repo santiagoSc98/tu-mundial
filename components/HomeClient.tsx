@@ -464,6 +464,7 @@ export default function HomeClient({
                 existingVotes={existingVotes}
                 voteDistributions={localVotes}
                 onPredict={handlePredict}
+                userGroups={initialGroups}
                 onGoToMisPredicciones={() => setActiveTab('mis-predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />

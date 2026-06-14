@@ -8,6 +8,8 @@ import {
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import { CountdownTimer } from '@/components/CountdownTimer'
+import { GroupPredictionsModal } from '@/components/GroupPredictionsModal'
+import type { Group } from '@/components/MisGruposView'
 import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
@@ -342,9 +344,6 @@ function FeaturedMatchPanel({
   const resultPoints = Math.round(3 * (prediction.difficulty_multiplier ?? 1))
   const exactPoints  = Math.round(8 * (prediction.difficulty_multiplier ?? 1))
 
-  const total = Object.values(voteData).reduce((a, b) => a + b, 0)
-  const pct   = (key: string) => total > 0 ? Math.round((voteData[key] ?? 0) / total * 100) : 0
-
   // ── State 3: success ──────────────────────────────────────────────────────
   if (showSuccess && confirmedData) {
     const resultColor = confirmedData.result === home ? '#00C46A' : confirmedData.result === away ? '#4d9fff' : '#6E7A99'
@@ -501,15 +500,17 @@ function FeaturedMatchPanel({
 // ─── Match row ────────────────────────────────────────────────────────────────
 
 function MatchRow({
-  prediction, existingAnswer, localScore, vote, onExpand, onEditClick,
+  prediction, existingAnswer, localScore, vote, userGroups, onExpand, onEditClick,
 }: {
   prediction: Prediction
   existingAnswer: string | null
   localScore?: { home: number; away: number }
   vote?: { isCorrect: boolean | null; pointsEarned: number | null }
+  userGroups: Group[]
   onExpand: () => void
   onEditClick: () => void
 }) {
+  const [showGroupModal, setShowGroupModal] = useState(false)
   const rowOpts = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
   const homeRaw = rowOpts[0] ?? ''
   const awayRaw = rowOpts.length === 2 ? (rowOpts[1] ?? '') : (rowOpts[2] ?? '')
@@ -575,10 +576,25 @@ function MatchRow({
     </button>
   )
 
-  const actionNode = isResolved && hasMyAnswer ? pointsBadge
-    : !isResolved && hasMyAnswer && open ? editBtn
-    : !isResolved && !hasMyAnswer && open ? predictBtn
-    : null
+  const groupBtn = isResolved && userGroups.length > 0 ? (
+    <button
+      onClick={e => { e.stopPropagation(); setShowGroupModal(true) }}
+      className="text-[10px] text-gray-400 border border-white/10 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors ml-1"
+      style={{ cursor: 'pointer' }}
+    >
+      Ver grupo
+    </button>
+  ) : null
+
+  const actionNode = (
+    <div className="flex items-center gap-1">
+      {isResolved && hasMyAnswer ? pointsBadge
+        : !isResolved && hasMyAnswer && open ? editBtn
+        : !isResolved && !hasMyAnswer && open ? predictBtn
+        : null}
+      {groupBtn}
+    </div>
+  )
 
   const myPredNode = hasMyAnswer ? (
     <div className="flex items-center gap-1.5">
@@ -692,6 +708,18 @@ function MatchRow({
         {/* Acción / puntos */}
         <div className="flex-shrink-0">{actionNode}</div>
       </div>
+
+      {showGroupModal && (
+        <GroupPredictionsModal
+          groups={userGroups}
+          prediction={{
+            id:                prediction.id,
+            exact_score_home:  prediction.exact_score_home,
+            exact_score_away:  prediction.exact_score_away,
+          }}
+          onClose={() => setShowGroupModal(false)}
+        />
+      )}
     </>
   )
 }
@@ -707,6 +735,7 @@ interface Props {
   existingScores?: Record<string, { home: number; away: number }>
   existingVotes?: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
   voteDistributions: Record<string, Record<string, number>>
+  userGroups?: Group[]
   onPredict: (predictionId: string, answer: string, homeScore: number, awayScore: number) => void
   onGoToMisPredicciones: () => void
   onCalendarioClick: () => void
@@ -714,6 +743,7 @@ interface Props {
 
 export default function InicioView({
   points, rank, predictions, existingAnswers, existingScores, existingVotes, voteDistributions,
+  userGroups = [],
   onPredict, onGoToMisPredicciones, onCalendarioClick,
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -880,6 +910,7 @@ export default function InicioView({
                       existingAnswer={existingAnswers[p.id] ?? null}
                       localScore={existingScores?.[p.id]}
                       vote={existingVotes?.[p.id]}
+                      userGroups={userGroups}
                       onExpand={() => handleExpand(p.id)}
                       onEditClick={() => handleEditClick(p.id)}
                     />

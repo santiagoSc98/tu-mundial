@@ -313,6 +313,65 @@ export async function getGroupPhases(groupId: string) {
   return { data: data as GroupPhase[], error: null }
 }
 
+export async function getGroupPredictionsForMatch({
+  groupId,
+  predictionId,
+}: {
+  groupId: string
+  predictionId: string
+}) {
+  const supabase = await createClient()
+
+  // Only show after the match is resolved
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: pred } = await (supabase as any)
+    .from('predictions')
+    .select('status, exact_score_home, exact_score_away')
+    .eq('id', predictionId)
+    .single()
+
+  if (pred?.status !== 'resolved') {
+    return { error: 'El partido todavía no terminó' }
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: members } = await (supabase as any)
+    .from('group_members')
+    .select('user_id, profiles(id, username, avatar_url)')
+    .eq('group_id', groupId)
+
+  if (!members) return { data: [] }
+
+  const userIds = (members as { user_id: string }[]).map(m => m.user_id)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: votes } = await (supabase as any)
+    .from('user_predictions')
+    .select('user_id, home_score_prediction, away_score_prediction, is_correct, points_earned')
+    .eq('prediction_id', predictionId)
+    .in('user_id', userIds)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const result = (members as any[]).map((member: any) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const vote = (votes as any[])?.find((v: any) => v.user_id === member.user_id)
+    return {
+      user: member.profiles as { id: string; username: string | null; avatar_url: string | null },
+      homeScore:    vote?.home_score_prediction ?? null,
+      awayScore:    vote?.away_score_prediction ?? null,
+      isCorrect:    vote?.is_correct    ?? null,
+      pointsEarned: vote?.points_earned ?? null,
+      hasPredicted: !!vote,
+    }
+  })
+
+  result.sort((a: { pointsEarned: number | null }, b: { pointsEarned: number | null }) =>
+    (b.pointsEarned ?? -1) - (a.pointsEarned ?? -1)
+  )
+
+  return { data: result }
+}
+
 export async function getGroupMembers(groupId: string) {
   const supabase = await createClient()
 
