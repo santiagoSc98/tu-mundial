@@ -8,7 +8,7 @@ import {
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import { CountdownTimer } from '@/components/CountdownTimer'
-import { GroupPredictionsModal } from '@/components/GroupPredictionsModal'
+import { PredictionsModal } from '@/components/PredictionsModal'
 import type { Group } from '@/components/MisGruposView'
 import type { Database } from '@/lib/database.types'
 
@@ -510,7 +510,7 @@ function MatchRow({
   onExpand: () => void
   onEditClick: () => void
 }) {
-  const [showGroupModal, setShowGroupModal] = useState(false)
+  const [showPredictionsModal, setShowPredictionsModal] = useState(false)
   const rowOpts = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
   const homeRaw = rowOpts[0] ?? ''
   const awayRaw = rowOpts.length === 2 ? (rowOpts[1] ?? '') : (rowOpts[2] ?? '')
@@ -576,13 +576,13 @@ function MatchRow({
     </button>
   )
 
-  const groupBtn = isResolved && userGroups.length > 0 ? (
+  const predictionsBtn = isResolved ? (
     <button
-      onClick={e => { e.stopPropagation(); setShowGroupModal(true) }}
+      onClick={e => { e.stopPropagation(); setShowPredictionsModal(true) }}
       className="text-[10px] text-gray-400 border border-white/10 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors"
       style={{ cursor: 'pointer' }}
     >
-      Ver grupo
+      Predicciones
     </button>
   ) : null
 
@@ -592,7 +592,7 @@ function MatchRow({
         : !isResolved && hasMyAnswer && open ? editBtn
         : !isResolved && !hasMyAnswer && open ? predictBtn
         : null}
-      {groupBtn}
+      {predictionsBtn}
     </div>
   )
 
@@ -662,7 +662,7 @@ function MatchRow({
               : !isResolved && hasMyAnswer && open ? editBtn
               : !isResolved && !hasMyAnswer && open ? predictBtn
               : null}
-            {groupBtn}
+            {predictionsBtn}
           </div>
         </div>
       </div>
@@ -715,15 +715,16 @@ function MatchRow({
         <div className="flex-shrink-0">{actionNode}</div>
       </div>
 
-      {showGroupModal && (
-        <GroupPredictionsModal
-          groups={userGroups}
+      {showPredictionsModal && (
+        <PredictionsModal
           prediction={{
-            id:                prediction.id,
-            exact_score_home:  prediction.exact_score_home,
-            exact_score_away:  prediction.exact_score_away,
+            id:               prediction.id,
+            exact_score_home: prediction.exact_score_home,
+            exact_score_away: prediction.exact_score_away,
           }}
-          onClose={() => setShowGroupModal(false)}
+          userGroups={userGroups}
+          matchTitle={`${home} vs ${away}`}
+          onClose={() => setShowPredictionsModal(false)}
         />
       )}
     </>
