@@ -58,6 +58,7 @@ async function scoreUserPredictions(
   correctAnswer: string,
   homeGoals: number,
   awayGoals: number,
+  difficultyMultiplier: number,
   affectedUserIds: Set<string>,
 ): Promise<number> {
   const { data: userPreds, error: fetchErr } = await supabase
@@ -72,23 +73,23 @@ async function scoreUserPredictions(
   }
   if (!userPreds?.length) return 0
 
+  const resultPoints = Math.round(3 * difficultyMultiplier)
+  const exactPoints  = Math.round(8 * difficultyMultiplier)
+
   let awarded = 0
 
   for (const up of userPreds) {
     const isCorrect = normalize(up.predicted_answer) === normalize(correctAnswer)
-    let pointsEarned = 0
-    if (isCorrect) pointsEarned += 3
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const upAny = up as any
-    if (
+    const isExact = isCorrect &&
       upAny.home_score_prediction != null &&
       upAny.away_score_prediction != null &&
       upAny.home_score_prediction === homeGoals &&
       upAny.away_score_prediction === awayGoals
-    ) {
-      pointsEarned += 5
-    }
+
+    const pointsEarned = isExact ? exactPoints : isCorrect ? resultPoints : 0
 
     const { error: upErr } = await supabase
       .from('user_predictions')
@@ -236,7 +237,8 @@ export async function GET(request: Request) {
 
     // Score every user who voted on this prediction
     const matchUsersAwarded = await scoreUserPredictions(
-      supabase, pred.id, correctAnswer, homeGoals, awayGoals, affectedUserIds
+      supabase, pred.id, correctAnswer, homeGoals, awayGoals,
+      (pred as any).difficulty_multiplier ?? 1, affectedUserIds
     )
 
     resolved++
@@ -253,7 +255,7 @@ export async function GET(request: Request) {
   // Handles: admin manual resolve, previous cron run that failed mid-way, etc.
   const { data: resolvedPreds } = await supabase
     .from('predictions')
-    .select('id, options, correct_answer')
+    .select('id, options, correct_answer, difficulty_multiplier')
     .eq('status', 'resolved')
     .not('correct_answer', 'is', null)
 
@@ -274,7 +276,9 @@ export async function GET(request: Request) {
 
     // We don't have exact scores for manually resolved predictions — use 0 for bonus check
     const users = await scoreUserPredictions(
-      supabase, pred.id, pred.correct_answer!, 0, 0, affectedUserIds
+      supabase, pred.id, pred.correct_answer!, 0, 0,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (pred as any).difficulty_multiplier ?? 1, affectedUserIds
     )
     rescored += users
   }

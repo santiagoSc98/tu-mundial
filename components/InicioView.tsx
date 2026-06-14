@@ -80,7 +80,7 @@ function PercentBar({
 
 // ─── Shared helpers ───────────────────────────────────────────────────────────
 
-function deduceResult(homeScore: number, awayScore: number, home: string, away: string, draw: string): string {
+function deduceResult(homeScore: number, awayScore: number, home: string, away: string, draw: string | null): string | null {
   if (homeScore > awayScore) return home
   if (awayScore > homeScore) return away
   return draw
@@ -161,7 +161,11 @@ function PredictPanel({
   localScore?: { home: number; away: number }
   initialEditMode?: boolean
 }) {
-  const [homeRaw, draw, awayRaw] = getOptions(prediction.options)
+  const rawOpts    = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
+  const isKnockout = rawOpts.length === 2
+  const homeRaw    = rawOpts[0] ?? ''
+  const awayRaw    = isKnockout ? (rawOpts[1] ?? '') : (rawOpts[2] ?? '')
+  const draw: string | null = isKnockout ? null : (rawOpts[1] ?? 'Empate')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
@@ -170,6 +174,8 @@ function PredictPanel({
   const answered = !!existingAnswer
   const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
+  const resultPoints = Math.round(3 * (prediction.difficulty_multiplier ?? 1))
+  const exactPoints  = Math.round(8 * (prediction.difficulty_multiplier ?? 1))
 
   const [showPredict, setShowPredict] = useState(() => !!(initialEditMode || (!answered && open && isFootball)))
   const [homeScore,   setHomeScore]   = useState(localScore?.home ?? 0)
@@ -202,19 +208,26 @@ function PredictPanel({
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
-        <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
-        </p>
+        {isKnockout && homeScore === awayScore ? (
+          <p className="text-center text-xs mb-4" style={{ color: '#CE1126' }}>
+            En eliminatoria no hay empates — ajustá el marcador
+          </p>
+        ) : (
+          <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
+          </p>
+        )}
         <p className="text-center text-xs mb-4">
-          <span style={{ color: '#00C46A' }}>+3 pts resultado</span>
+          <span style={{ color: '#00C46A' }}>+{resultPoints} pts resultado</span>
           <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 5px' }}>·</span>
-          <span style={{ color: '#F6B73C' }}>+8 pts exacto</span>
+          <span style={{ color: '#F6B73C' }}>+{exactPoints} pts exacto</span>
         </p>
         <button
-          onClick={() => { if (!submitting) { onPredict(deduced, homeScore, awayScore); setShowPredict(false) } }}
+          disabled={isKnockout && homeScore === awayScore || submitting}
+          onClick={() => { if (!submitting && deduced) { onPredict(deduced, homeScore, awayScore); setShowPredict(false) } }}
           className="w-full text-white font-semibold text-base rounded-2xl transition-colors"
-          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.6 : 1 }}
-          onMouseEnter={e => { if (!submitting) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
+          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: (isKnockout && homeScore === awayScore) || submitting ? 'default' : 'pointer', opacity: (isKnockout && homeScore === awayScore) || submitting ? 0.4 : 1 }}
+          onMouseEnter={e => { if (!submitting && deduced) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
           {canEdit ? 'Guardar cambio' : 'Confirmar predicción'}
@@ -238,14 +251,14 @@ function PredictPanel({
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
           <PercentBar label={home} percent={pct(home)} selected={existingAnswer === home} flag={homeFlag} barColor="#006A33" />
-          <PercentBar label={draw} percent={pct(draw)} selected={existingAnswer === draw} barColor="#6E7A99" />
+          {!isKnockout && draw && <PercentBar label={draw} percent={pct(draw)} selected={existingAnswer === draw} barColor="#6E7A99" />}
           <PercentBar label={away} percent={pct(away)} selected={existingAnswer === away} flag={awayFlag} barColor="#0052A5" />
         </div>
       )}
       <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: open && !answered && isFootball ? 14 : 0 }}>
         <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.30)' }}>👥 {total} predicciones</span>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#22c55e' }}>
-          🏆 +3 pts{isFootball && <span style={{ color: '#F6B73C' }}> · +8 exacto</span>}
+          🏆 +{resultPoints} pts{isFootball && <span style={{ color: '#F6B73C' }}> · +{exactPoints} exacto</span>}
         </span>
       </div>
       {open && !answered && isFootball && (
@@ -310,7 +323,11 @@ function FeaturedMatchPanel({
     )
   }
 
-  const [homeRaw, draw, awayRaw] = getOptions(prediction.options)
+  const rawOpts2   = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
+  const isKnockout = rawOpts2.length === 2
+  const homeRaw    = rawOpts2[0] ?? ''
+  const awayRaw    = isKnockout ? (rawOpts2[1] ?? '') : (rawOpts2[2] ?? '')
+  const draw: string | null = isKnockout ? null : (rawOpts2[1] ?? 'Empate')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
@@ -321,6 +338,8 @@ function FeaturedMatchPanel({
   const answered = !!existingAnswer
   const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
+  const resultPoints = Math.round(3 * (prediction.difficulty_multiplier ?? 1))
+  const exactPoints  = Math.round(8 * (prediction.difficulty_multiplier ?? 1))
 
   const total = Object.values(voteData).reduce((a, b) => a + b, 0)
   const pct   = (key: string) => total > 0 ? Math.round((voteData[key] ?? 0) / total * 100) : 0
@@ -344,7 +363,7 @@ function FeaturedMatchPanel({
           Ganará: <strong style={{ color: resultColor }}>{confirmedData.result}</strong>
         </p>
         <p style={{ fontSize: 12, color: '#F6B73C', margin: '0 0 20px' }}>
-          +8 pts si acertás el marcador exacto
+          +{exactPoints} pts si acertás el marcador exacto
         </p>
         <button
           onClick={() => window.open(`https://wa.me/?text=${waText}`, '_blank')}
@@ -377,16 +396,24 @@ function FeaturedMatchPanel({
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
-        <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-          Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
-        </p>
+        {isKnockout && homeScore === awayScore ? (
+          <p className="text-center text-xs mb-4" style={{ color: '#CE1126' }}>
+            En eliminatoria no hay empates — ajustá el marcador
+          </p>
+        ) : (
+          <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+            Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
+          </p>
+        )}
         <p className="text-center text-xs mb-4">
-          <span style={{ color: '#00C46A' }}>+3 pts resultado</span>
+          <span style={{ color: '#00C46A' }}>+{resultPoints} pts resultado</span>
           <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 5px' }}>·</span>
-          <span style={{ color: '#F6B73C' }}>+8 pts exacto</span>
+          <span style={{ color: '#F6B73C' }}>+{exactPoints} pts exacto</span>
         </p>
         <button
+          disabled={isKnockout && homeScore === awayScore}
           onClick={() => {
+            if (!deduced) return
             setConfirmedData({ home: homeScore, away: awayScore, result: deduced })
             onPredict(deduced, homeScore, awayScore)
             setShowSuccess(true)
@@ -397,8 +424,8 @@ function FeaturedMatchPanel({
             }, 2000)
           }}
           className="w-full text-white font-semibold text-base rounded-2xl transition-colors"
-          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: 'pointer' }}
-          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
+          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: (isKnockout && homeScore === awayScore) ? 'default' : 'pointer', opacity: (isKnockout && homeScore === awayScore) ? 0.4 : 1 }}
+          onMouseEnter={e => { if (deduced) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
           {canEdit ? 'Guardar cambio' : 'Confirmar predicción'}
