@@ -129,6 +129,48 @@ async function scoreUserPredictions(
   return awarded
 }
 
+// Re-scores ALL user_predictions for a prediction (used in Pass 3 to fix wrongly-scored rows).
+// Unlike scoreUserPredictions, this does not filter by is_correct IS NULL.
+// Returns set of affected user ids.
+async function rescoreAllVotes(
+  supabase: ReturnType<typeof getSupabase>,
+  predId: string,
+  correctAnswer: string,
+  homeGoals: number,
+  awayGoals: number,
+  difficultyMultiplier: number,
+  affected: Set<string>,
+): Promise<void> {
+  const { data: userPreds } = await supabase
+    .from('user_predictions')
+    .select('*')
+    .eq('prediction_id', predId)
+
+  if (!userPreds?.length) return
+
+  const resultPoints = Math.round(3 * difficultyMultiplier)
+  const exactPoints  = Math.round(8 * difficultyMultiplier)
+
+  for (const up of userPreds) {
+    const isCorrect = normalize(up.predicted_answer) === normalize(correctAnswer)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const upAny = up as any
+    const isExact = isCorrect &&
+      upAny.home_score_prediction != null &&
+      upAny.away_score_prediction != null &&
+      upAny.home_score_prediction === homeGoals &&
+      upAny.away_score_prediction === awayGoals
+    const pointsEarned = isExact ? exactPoints : isCorrect ? resultPoints : 0
+
+    await supabase
+      .from('user_predictions')
+      .update({ is_correct: isCorrect, points_earned: pointsEarned })
+      .eq('id', up.id)
+
+    affected.add(up.user_id)
+  }
+}
+
 export async function GET(request: Request) {
   const authHeader = request.headers.get('authorization')
   const isVercelCron = authHeader === `Bearer ${process.env.CRON_SECRET}`
@@ -165,11 +207,12 @@ export async function GET(request: Request) {
   for (let i = 0; i < (predictions ?? []).length; i++) {
     const pred = predictions![i]
     const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
+    const isKnockout = opts.length === 2
     const homeOpt = opts[0] ?? ''
-    const drawOpt = opts[1] ?? 'Empate'
-    const awayOpt = opts[2] ?? ''
+    const awayOpt = isKnockout ? (opts[1] ?? '') : (opts[2] ?? '')
+    const drawOpt = isKnockout ? null : (opts[1] ?? 'Empate')
 
-    console.log(`[resolve-matches] checking fixture ${pred.fixture_id} (${homeOpt} vs ${awayOpt})`)
+    console.log(`[resolve-matches] checking fixture ${pred.fixture_id} (${homeOpt} vs ${awayOpt}${isKnockout ? ' [knockout]' : ''})`)
 
     if (i > 0) await sleep(DELAY_MS)
 
@@ -193,11 +236,11 @@ export async function GET(request: Request) {
       continue
     }
 
-    // Derive correct answer from opts[] (accented names) — never use raw API team name
+    // Derive correct answer from opts[] (Spanish names) — never use raw API team name
     let correctAnswer: string
     if (homeGoals > awayGoals) correctAnswer = homeOpt
     else if (awayGoals > homeGoals) correctAnswer = awayOpt
-    else correctAnswer = drawOpt
+    else correctAnswer = drawOpt ?? 'Empate' // drawOpt is null for knockouts; tie shouldn't happen
 
     // Mark prediction resolved and store exact scores
     console.log('[resolve-matches] BEFORE update predictions:', {
@@ -283,6 +326,68 @@ export async function GET(request: Request) {
     rescored += users
   }
 
+  // ── Pass 3: fix predictions with wrong correct_answer (e.g. saved in English) ──
+  // Uses exact_score_home/away already stored in DB — no API calls needed.
+  const { data: allResolvedPreds } = await supabase
+    .from('predictions')
+    .select('id, options, correct_answer, exact_score_home, exact_score_away, difficulty_multiplier, title')
+    .eq('status', 'resolved')
+    .not('exact_score_home', 'is', null)
+    .not('exact_score_away', 'is', null)
+
+  const pass3AffectedIds = new Set<string>()
+  let pass3Fixed = 0
+
+  for (const pred of (allResolvedPreds ?? [])) {
+    const home = pred.exact_score_home as number
+    const away = pred.exact_score_away as number
+    const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
+    const isKo = opts.length === 2
+    const homeOpt = opts[0] ?? ''
+    const awayOpt = isKo ? (opts[1] ?? '') : (opts[2] ?? '')
+    const drawOpt = isKo ? null : (opts[1] ?? 'Empate')
+
+    let expected: string
+    if (home > away) expected = homeOpt
+    else if (away > home) expected = awayOpt
+    else expected = drawOpt ?? 'Empate'
+
+    if (!expected) continue
+    if (normalize(pred.correct_answer ?? '') === normalize(expected)) continue
+
+    console.log(`[Pass3] Fixing "${pred.title}": stored="${pred.correct_answer}" → correct="${expected}"`)
+
+    await supabase
+      .from('predictions')
+      .update({ correct_answer: expected })
+      .eq('id', pred.id)
+
+    await rescoreAllVotes(
+      supabase, pred.id, expected, home, away,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (pred as any).difficulty_multiplier ?? 1, pass3AffectedIds,
+    )
+
+    pass3Fixed++
+  }
+
+  // Recalculate total_points from scratch for Pass 3 affected users
+  for (const uid of pass3AffectedIds) {
+    const { data: allVotes } = await supabase
+      .from('user_predictions')
+      .select('points_earned')
+      .eq('user_id', uid)
+
+    const total = (allVotes ?? []).reduce((sum, v) => sum + ((v.points_earned as number | null) ?? 0), 0)
+
+    await supabase
+      .from('profiles')
+      .update({ total_points: total })
+      .eq('id', uid)
+
+    pass3AffectedIds.forEach(id => affectedUserIds.add(id))
+  }
+
   // ── Recalculate streaks + unlock badges for all affected users ───────────────
   for (const uid of affectedUserIds) {
     const { data: userVotes } = await supabase
@@ -306,5 +411,5 @@ export async function GET(request: Request) {
     await checkAndUnlockBadges(supabase, uid)
   }
 
-  return NextResponse.json({ checked, resolved, usersAwarded, rescored, details })
+  return NextResponse.json({ checked, resolved, usersAwarded, rescored, pass3Fixed, details })
 }
