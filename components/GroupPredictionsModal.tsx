@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { getGroupPredictionsForMatch } from '@/app/actions/groups'
 import type { Group } from '@/components/MisGruposView'
 
@@ -36,9 +37,17 @@ export function GroupPredictionsModal({ groups, prediction, onClose }: Props) {
       })
   }, [group.id, prediction.id])
 
-  return (
+  // Lock body scroll while modal is open
+  useEffect(() => {
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = prev }
+  }, [])
+
+  const content = (
     <div
-      className="fixed inset-0 bg-black/70 flex items-end sm:items-center justify-center z-50 p-4"
+      className="fixed inset-0 bg-black/70 flex items-center justify-center z-[9999] p-4"
+      style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
       <div className="bg-[#0f1a2e] border border-white/10 rounded-2xl p-5 w-full max-w-sm max-h-[80vh] overflow-y-auto">
@@ -136,4 +145,6 @@ export function GroupPredictionsModal({ groups, prediction, onClose }: Props) {
       </div>
     </div>
   )
+
+  return createPortal(content, document.body)
 }
