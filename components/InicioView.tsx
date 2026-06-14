@@ -529,6 +529,7 @@ function MatchRow({
     <button
       onClick={e => { e.stopPropagation(); onEditClick() }}
       className="text-xs border border-white/15 text-gray-300 px-3 py-1.5 rounded-lg hover:bg-white/[0.08] transition-colors"
+      style={{ cursor: 'pointer' }}
     >
       Editar
     </button>
@@ -538,6 +539,7 @@ function MatchRow({
     <button
       onClick={e => { e.stopPropagation(); onExpand() }}
       className="text-xs bg-[#0052A5] text-white px-3.5 py-1.5 rounded-lg font-semibold"
+      style={{ cursor: 'pointer' }}
     >
       Pronostica
     </button>
