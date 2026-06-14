@@ -13,18 +13,19 @@ import type { Database } from '@/lib/database.types'
 type Prediction = Database['public']['Tables']['predictions']['Row']
 
 const STAGE_LABELS: Record<string, string> = {
-  GROUP_STAGE: 'Grupos', ROUND_OF_16: 'Octavos', QUARTER_FINALS: 'Cuartos',
-  SEMI_FINALS: 'Semis', THIRD_PLACE: '3er Puesto', FINAL: 'Final',
+  GROUP_STAGE:    'Grupos',
+  LAST_16:        'Octavos',
+  ROUND_OF_16:    'Octavos',
+  QUARTER_FINALS: 'Cuartos',
+  SEMI_FINALS:    'Semifinal',
+  THIRD_PLACE:    '3er Puesto',
+  FINAL:          'Final',
 }
 
 function parseStage(desc: string | null): string {
   return desc?.match(/Fase: ([A-Z_]+)/)?.[1] ?? ''
 }
 
-function getOptions(options: unknown): [string, string, string] {
-  const opts = Array.isArray(options) ? (options as string[]) : []
-  return [opts[0] ?? '', opts[1] ?? 'Empate', opts[2] ?? '']
-}
 
 function kickoff(p: Prediction): Date {
   const d = new Date((p.deadline ?? '') as string)
@@ -509,7 +510,9 @@ function MatchRow({
   onExpand: () => void
   onEditClick: () => void
 }) {
-  const [homeRaw, , awayRaw] = getOptions(prediction.options)
+  const rowOpts = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
+  const homeRaw = rowOpts[0] ?? ''
+  const awayRaw = rowOpts.length === 2 ? (rowOpts[1] ?? '') : (rowOpts[2] ?? '')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
@@ -976,7 +979,9 @@ export default function InicioView({
           </div>
           {/* ── PARTIDO EN VIVO ──────────────────────────────────────── */}
           {liveMatch && (() => {
-            const [homeRaw,, awayRaw] = getOptions(liveMatch.options)
+            const liveOpts = Array.isArray(liveMatch.options) ? (liveMatch.options as string[]) : []
+            const homeRaw = liveOpts[0] ?? ''
+            const awayRaw = liveOpts.length === 2 ? (liveOpts[1] ?? '') : (liveOpts[2] ?? '')
             const home = getTeamNameES(homeRaw)
             const away = getTeamNameES(awayRaw)
             const homeFlag = getFlagUrl(liveMatch.home_team_code)
@@ -1014,7 +1019,9 @@ export default function InicioView({
 
           {/* ── PRÓXIMO PARTIDO ──────────────────────────────────────── */}
           {!liveMatch && nextMatch && (() => {
-            const [homeRaw,, awayRaw] = getOptions(nextMatch.options)
+            const nextOpts = Array.isArray(nextMatch.options) ? (nextMatch.options as string[]) : []
+            const homeRaw = nextOpts[0] ?? ''
+            const awayRaw = nextOpts.length === 2 ? (nextOpts[1] ?? '') : (nextOpts[2] ?? '')
             const home = getTeamNameES(homeRaw)
             const away = getTeamNameES(awayRaw)
             const homeFlag = getFlagUrl(nextMatch.home_team_code)
