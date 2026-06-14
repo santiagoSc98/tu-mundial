@@ -579,7 +579,7 @@ function MatchRow({
   const groupBtn = isResolved && userGroups.length > 0 ? (
     <button
       onClick={e => { e.stopPropagation(); setShowGroupModal(true) }}
-      className="text-[10px] text-gray-400 border border-white/10 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors ml-1"
+      className="text-[10px] text-gray-400 border border-white/10 px-2 py-1 rounded-md hover:bg-white/[0.06] transition-colors"
       style={{ cursor: 'pointer' }}
     >
       Ver grupo
@@ -657,7 +657,13 @@ function MatchRow({
           <div className="flex items-center gap-1.5 min-w-0">
             {myPredNode}
           </div>
-          <div className="flex-shrink-0 ml-2">{actionNode}</div>
+          <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
+            {isResolved && hasMyAnswer ? pointsBadge
+              : !isResolved && hasMyAnswer && open ? editBtn
+              : !isResolved && !hasMyAnswer && open ? predictBtn
+              : null}
+            {groupBtn}
+          </div>
         </div>
       </div>
 
