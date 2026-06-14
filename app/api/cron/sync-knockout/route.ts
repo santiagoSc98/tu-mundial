@@ -95,7 +95,7 @@ export async function GET(request: Request) {
         description:          `Fase: ${stage}`,
         category:             'eliminatoria',
         deadline,
-        options:              [homeTeam, awayTeam],
+        options:              [homeES, awayES],
         fixture_id:           fixtureId,
         status:               'open',
         difficulty_multiplier: multiplier,
