@@ -127,6 +127,67 @@ function Skeleton() {
   )
 }
 
+// ─── Ranking row ─────────────────────────────────────────────────────────────
+function RankingRow({
+  entry, rank, isMe, isTop, preds,
+}: {
+  entry: RankEntry; rank: number; isMe: boolean; isTop: boolean; preds: number
+}) {
+  const name   = entry.username ?? 'Anónimo'
+  const streak = entry.current_streak ?? 0
+
+  return (
+    <div className={`flex items-center gap-2.5 px-2.5 py-2.5 rounded-2xl mb-1.5 border ${
+      isMe
+        ? 'bg-[rgba(0,196,106,0.07)] border-[rgba(0,196,106,0.3)]'
+        : isTop
+        ? 'bg-[rgba(246,183,60,0.06)] border-[rgba(246,183,60,0.18)]'
+        : 'border-transparent'
+    }`}>
+      {/* Rank number */}
+      <span className={`w-5 text-center text-sm font-bold flex-shrink-0 ${
+        rank === 1 ? 'text-[#F6B73C]' : 'text-gray-500'
+      }`}>
+        {rank}
+      </span>
+
+      {/* Avatar with streak badge overlay */}
+      <div className="relative flex-shrink-0">
+        {entry.avatar_url ? (
+          <img src={entry.avatar_url} alt={name} className="w-9 h-9 rounded-full object-cover" />
+        ) : (
+          <div className="w-9 h-9 rounded-full bg-[#1e293b] flex items-center justify-center text-sm font-bold text-white">
+            {name[0]?.toUpperCase()}
+          </div>
+        )}
+        {streak > 0 && (
+          <div className="absolute -bottom-0.5 -right-0.5 bg-[#1a2a4a] rounded-full w-4 h-4 flex items-center justify-center text-[9px] border-[1.5px] border-[#0B132B]">
+            🔥
+          </div>
+        )}
+      </div>
+
+      {/* Name + subtitle */}
+      <div className="flex-1 min-w-0">
+        <p className="text-[13px] font-semibold text-white truncate m-0">
+          {name}
+          {isMe && <span className="text-[10px] text-[#00C46A] font-medium ml-1">(tú)</span>}
+        </p>
+        <p className="text-[11px] text-gray-500 mt-0.5 m-0">
+          {preds} predicciones
+          {streak > 0 && ` · racha de ${streak}`}
+        </p>
+      </div>
+
+      {/* Points */}
+      <div className="flex-shrink-0 text-right">
+        <p className="text-base font-bold text-white m-0">{entry.total_points.toLocaleString()}</p>
+        <span className="text-[9px] text-gray-500">PUNTOS</span>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function RankingsTab({
   currentUserId, rankings, myStats, predCounts, globalStats,
@@ -235,78 +296,22 @@ export default function RankingsTab({
       <div style={{ ...CARD, marginTop: 24, padding: 24 }}>
         <p style={SECTION_LABEL}>CLASIFICACIÓN COMPLETA</p>
 
-        {/* Header */}
-        <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 100px 80px', gap: 8, padding: '0 12px', marginBottom: 6 }}>
-          {['#', 'Usuario', 'Predicciones', 'Puntos'].map((h, i) => (
-            <p key={h} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.28)', margin: 0, textAlign: i > 1 ? 'right' : 'left' }}>
-              {h}
-            </p>
-          ))}
-        </div>
-
-        {/* Filas */}
         {rankings.length === 0 ? (
           <p style={{ textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.30)', padding: '32px 0', margin: 0 }}>
             Solo vos por ahora · Invitá amigos para competir
           </p>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {rankings.map((entry, i) => {
-              const isMe = entry.id === currentUserId
-              const name = entry.username ?? 'Anónimo'
-              const preds = predCounts[entry.id] ?? 0
-              return (
-                <div
-                  key={entry.id}
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: '48px 1fr 100px 80px',
-                    gap: 8,
-                    padding: '10px 12px',
-                    borderRadius: 14,
-                    alignItems: 'center',
-                    background: isMe ? 'rgba(0,106,51,0.18)' : 'transparent',
-                    border: isMe ? '1px solid rgba(0,106,51,0.28)' : '1px solid transparent',
-                  }}
-                >
-                  {/* Posición */}
-                  <p style={{ fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                    {i + 1}
-                  </p>
-
-                  {/* Avatar + nombre */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
-                    {entry.avatar_url ? (
-                      <img src={entry.avatar_url} alt={name} style={{ width: 34, height: 34, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
-                    ) : (
-                      <div style={{ width: 34, height: 34, borderRadius: '50%', background: isMe ? '#006A33' : '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
-                        {name[0]?.toUpperCase()}
-                      </div>
-                    )}
-                    <div style={{ minWidth: 0 }}>
-                      <span style={{ fontSize: 13, fontWeight: 600, color: isMe ? '#22c55e' : '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
-                        {name}{isMe && ' (tú)'}
-                      </span>
-                      {(entry.current_streak ?? 0) > 0 && (
-                        <span style={{ fontSize: 10, color: '#F6B73C', fontWeight: 600 }}>
-                          🔥 {entry.current_streak}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Predicciones */}
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0, textAlign: 'right' }}>
-                    {preds}
-                  </p>
-
-                  {/* Puntos */}
-                  <p style={{ fontSize: 13, fontWeight: 800, color: '#fff', margin: 0, textAlign: 'right' }}>
-                    {entry.total_points.toLocaleString()}
-                  </p>
-                </div>
-              )
-            })}
+          <div>
+            {rankings.map((entry, i) => (
+              <RankingRow
+                key={entry.id}
+                entry={entry}
+                rank={i + 1}
+                isMe={entry.id === currentUserId}
+                isTop={i === 0}
+                preds={predCounts[entry.id] ?? 0}
+              />
+            ))}
           </div>
         )}
       </div>
