@@ -60,13 +60,14 @@ interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores: Record<string, { home: number; away: number }>
+  existingVotes?: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
   onTabChange?: (tab: string) => void
   onPredict?: (predictionId: string, answer: string, homeScore: number, awayScore: number) => Promise<void>
   rank?: number
   points?: number
 }
 
-export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, onTabChange, onPredict, rank, points }: Props) {
+export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, existingVotes, onTabChange, onPredict, rank, points }: Props) {
   const [filter, setFilter] = useState<Filter>('todas')
   const [editingId,  setEditingId]  = useState<string | null>(null)
   const [editHome,   setEditHome]   = useState(0)
@@ -96,23 +97,31 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     [predictions, existingAnswers]
   )
 
+  const dbIsCorrect = (p: Prediction): boolean | null => {
+    const v = existingVotes?.[p.id]
+    if (v) return v.isCorrect
+    return p.status === 'resolved' ? existingAnswers[p.id] === p.correct_answer : null
+  }
+
   const stats = useMemo(() => {
     const resolved = myPredictions.filter(p => p.status === 'resolved')
     return {
       total:   myPredictions.length,
-      correct: resolved.filter(p => existingAnswers[p.id] === p.correct_answer).length,
+      correct: resolved.filter(p => dbIsCorrect(p) === true).length,
       pending: myPredictions.filter(p => p.status !== 'resolved').length,
     }
-  }, [myPredictions, existingAnswers])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPredictions, existingAnswers, existingVotes])
 
   const filtered = useMemo(() => {
     switch (filter) {
-      case 'acertadas':  return myPredictions.filter(p => p.status === 'resolved' && existingAnswers[p.id] === p.correct_answer)
-      case 'falladas':   return myPredictions.filter(p => p.status === 'resolved' && existingAnswers[p.id] !== p.correct_answer)
+      case 'acertadas':  return myPredictions.filter(p => p.status === 'resolved' && dbIsCorrect(p) === true)
+      case 'falladas':   return myPredictions.filter(p => p.status === 'resolved' && dbIsCorrect(p) === false)
       case 'pendientes': return myPredictions.filter(p => p.status !== 'resolved')
       default:           return myPredictions
     }
-  }, [myPredictions, existingAnswers, filter])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myPredictions, existingAnswers, existingVotes, filter])
 
   const sorted = useMemo(
     () => [...filtered].sort((a, b) => {
@@ -221,8 +230,8 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
             const stage    = getStage(p.description)
 
             const isResolved = p.status === 'resolved'
-            const isCorrect  = isResolved && answered === p.correct_answer
-            const isFailed   = isResolved && !isCorrect
+            const isCorrect  = isResolved && (dbIsCorrect(p) === true)
+            const isFailed   = isResolved && (dbIsCorrect(p) === false)
             const canEdit    = onPredict && !isResolved && new Date() < new Date((p.deadline ?? 0) as string)
             const isEditing  = editingId === p.id
 
@@ -267,7 +276,9 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
                   <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
                     {STATUS.icon}
                     {isCorrect && (
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#22c55e' }}>+3 pts</span>
+                      <span style={{ fontSize: 11, fontWeight: 800, color: '#22c55e' }}>
+                        +{existingVotes?.[p.id]?.pointsEarned ?? 3} pts
+                      </span>
                     )}
                   </div>
                 </div>
@@ -387,6 +398,11 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
                   {isResolved ? (
                     <span style={{ fontSize: 12, fontWeight: 600, color: isCorrect ? '#22c55e' : '#f87171' }}>
                       {p.correct_answer ?? '—'}
+                      {(p as { exact_score_home?: number | null }).exact_score_home != null && (
+                        <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>
+                          {(p as { exact_score_home?: number | null }).exact_score_home}–{(p as { exact_score_away?: number | null }).exact_score_away}
+                        </span>
+                      )}
                     </span>
                   ) : (
                     <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Pendiente</span>
