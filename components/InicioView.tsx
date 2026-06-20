@@ -153,7 +153,7 @@ function ScorePicker({
 // ─── Predict panel (match list rows) ─────────────────────────────────────────
 
 function PredictPanel({
-  prediction, existingAnswer, voteData, loading, submitting, onPredict, localScore, initialEditMode,
+  prediction, existingAnswer, voteData, loading, submitting, onPredict, localScore, initialEditMode, onClose,
 }: {
   prediction: Prediction
   existingAnswer: string | null
@@ -163,6 +163,7 @@ function PredictPanel({
   onPredict: (answer: string, homeScore: number, awayScore: number) => void
   localScore?: { home: number; away: number }
   initialEditMode?: boolean
+  onClose?: () => void
 }) {
   const rawOpts    = Array.isArray(prediction.options) ? (prediction.options as string[]) : []
   const isKnockout = rawOpts.length === 2
@@ -199,7 +200,7 @@ function PredictPanel({
     return (
       <div className="animate-fade-in" style={outer}>
         <button
-          onClick={() => setShowPredict(false)}
+          onClick={() => { onClose ? onClose() : setShowPredict(false) }}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', color: 'rgba(255,255,255,0.50)', cursor: 'pointer', fontSize: 13, fontWeight: 600, marginBottom: 20, padding: 0 }}
           onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.50)')}
@@ -932,6 +933,7 @@ export default function InicioView({
                         localScore={existingScores?.[p.id]}
                         initialEditMode={expandedEditId === p.id}
                         onPredict={(answer, hs, as) => handlePredict(p.id, answer, hs, as)}
+                        onClose={() => { setExpandedId(null); setExpandedEditId(null) }}
                       />
                     )}
                   </div>
