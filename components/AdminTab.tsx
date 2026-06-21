@@ -159,279 +159,292 @@ export default function AdminTab() {
 
   return (
     <>
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
-          Admin
-        </h1>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
-          Solo visible para administradores
-        </p>
-      </div>
+      <div className="max-w-6xl mx-auto">
 
-      <div className="space-y-4">
-        {/* Info banner */}
+        {/* Header */}
+        <div style={{ marginBottom: 20 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
+            Admin
+          </h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
+            Solo visible para administradores
+          </p>
+        </div>
+
+        {/* Info banner — full width */}
         <div
-          className="rounded-xl px-4 py-3 text-sm"
+          className="rounded-xl px-4 py-3 text-sm mb-5"
           style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.20)', color: 'rgba(255,255,255,0.55)' }}
         >
           🤖 El sistema resuelve partidos automáticamente cada 5 minutos. Esta sección es solo para casos excepcionales.
         </div>
 
-        {/* Advanced tools toggle */}
-        <button
-          onClick={() => setShowAdvanced(v => !v)}
-          className="flex items-center gap-2 text-xs font-semibold"
-          style={{ color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-        >
-          <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
-          {showAdvanced ? 'Ocultar herramientas avanzadas' : 'Mostrar herramientas avanzadas'}
-        </button>
+        {/* 2-column grid on desktop */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
 
-        {/* Import squads card — advanced */}
-        {showAdvanced && (
-        <div style={CARD}>
-          <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
-            <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>IMPORTAR PLANTELES</span>
-          </div>
-          <div className="p-5 space-y-4">
-            <p className="text-sm" style={{ color: 'var(--mundial-muted)' }}>
-              Descarga los planteles del Mundial 2026 desde Football-Data.org. El proceso puede tardar varios minutos (límite de 10 req/min en el plan gratuito).
-            </p>
-            <motion.button
-              onClick={handleImportSquads}
-              disabled={importing}
-              whileHover={!importing ? { scale: 1.02 } : {}}
-              whileTap={!importing ? { scale: 0.98 } : {}}
-              className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl text-sm font-black"
-              style={{
-                background: importing ? 'rgba(0,82,165,0.30)' : '#0052A5',
-                color: '#fff',
-                cursor: importing ? 'not-allowed' : 'pointer',
-                boxShadow: importing ? 'none' : '0 4px 20px rgba(0,82,165,0.30)',
-              }}
-            >
-              {importing
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Importando planteles...</>
-                : <><Download className="h-4 w-4" />Importar Planteles</>}
-            </motion.button>
-          </div>
-        </div>
-        )}
+          {/* ── LEFT COLUMN ── */}
+          <div className="space-y-4">
 
-        {/* Auto-resolve card */}
-        <div style={CARD}>
-          <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
-            <span className="text-sm font-black tracking-wider" style={{ color: '#22c55e' }}>🔄 VERIFICAR RESULTADOS</span>
-          </div>
-          <div className="p-5 space-y-4">
-            <p className="text-sm" style={{ color: 'var(--mundial-muted)' }}>
-              Revisa todos los partidos con deadline vencido, resuelve los finalizados y premia a los usuarios correctos.
-            </p>
-
-            <motion.button
-              onClick={handleResolveAll}
-              disabled={resolving}
-              whileHover={!resolving ? { scale: 1.02 } : {}}
-              whileTap={!resolving ? { scale: 0.98 } : {}}
-              className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl text-sm font-black"
-              style={{
-                background: resolving ? 'rgba(34,197,94,0.30)' : '#22c55e',
-                color: '#fff',
-                cursor: resolving ? 'not-allowed' : 'pointer',
-                boxShadow: resolving ? 'none' : '0 4px 20px rgba(34,197,94,0.30)',
-              }}
-            >
-              {resolving
-                ? <><Loader2 className="h-4 w-4 animate-spin" />Verificando...</>
-                : <><RefreshCw className="h-4 w-4" />Verificar Resultados Automáticamente</>}
-            </motion.button>
-
-            {/* Last result */}
-            {lastChecked && (
-              <div
-                className="rounded-xl px-4 py-3 space-y-1 text-xs"
-                style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)' }}
-              >
-                <p style={{ color: 'rgba(255,255,255,0.50)' }}>
-                  Última verificación: <span style={{ color: '#22c55e' }}>{formatDistanceToNow(lastChecked, { locale: es, addSuffix: true })}</span>
+            {/* Auto-resolve card */}
+            <div style={CARD}>
+              <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+                <span className="text-sm font-black tracking-wider" style={{ color: '#22c55e' }}>🔄 VERIFICAR RESULTADOS</span>
+              </div>
+              <div className="p-5 space-y-4">
+                <p className="text-sm" style={{ color: 'var(--mundial-muted)' }}>
+                  Revisa todos los partidos con deadline vencido, resuelve los finalizados y premia a los usuarios correctos.
                 </p>
-                {lastResult && (
-                  <p style={{ color: 'rgba(255,255,255,0.50)' }}>
-                    Revisados: <strong style={{ color: '#fff' }}>{lastResult.checked}</strong> ·
-                    Resueltos: <strong style={{ color: '#22c55e' }}>{lastResult.resolved}</strong> ·
-                    Usuarios premiados: <strong style={{ color: '#FFD700' }}>{lastResult.usersAwarded}</strong>
-                  </p>
+
+                <motion.button
+                  onClick={handleResolveAll}
+                  disabled={resolving}
+                  whileHover={!resolving ? { scale: 1.02 } : {}}
+                  whileTap={!resolving ? { scale: 0.98 } : {}}
+                  className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl text-sm font-black"
+                  style={{
+                    background: resolving ? 'rgba(34,197,94,0.30)' : '#22c55e',
+                    color: '#fff',
+                    cursor: resolving ? 'not-allowed' : 'pointer',
+                    boxShadow: resolving ? 'none' : '0 4px 20px rgba(34,197,94,0.30)',
+                  }}
+                >
+                  {resolving
+                    ? <><Loader2 className="h-4 w-4 animate-spin" />Verificando...</>
+                    : <><RefreshCw className="h-4 w-4" />Verificar Resultados Automáticamente</>}
+                </motion.button>
+
+                {/* Last result */}
+                {lastChecked && (
+                  <div
+                    className="rounded-xl px-4 py-3 space-y-1 text-xs"
+                    style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)' }}
+                  >
+                    <p style={{ color: 'rgba(255,255,255,0.50)' }}>
+                      Última verificación: <span style={{ color: '#22c55e' }}>{formatDistanceToNow(lastChecked, { locale: es, addSuffix: true })}</span>
+                    </p>
+                    {lastResult && (
+                      <p style={{ color: 'rgba(255,255,255,0.50)' }}>
+                        Revisados: <strong style={{ color: '#fff' }}>{lastResult.checked}</strong> ·
+                        Resueltos: <strong style={{ color: '#22c55e' }}>{lastResult.resolved}</strong> ·
+                        Premiados: <strong style={{ color: '#FFD700' }}>{lastResult.usersAwarded}</strong>
+                      </p>
+                    )}
+                  </div>
                 )}
+
+                {/* Stats row */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Total', value: predictions.length, color: '#a78bfa' },
+                    { label: 'Pendientes', value: pending.length, color: '#f59e0b' },
+                    { label: 'Resueltos', value: totalResolved, color: '#22c55e' },
+                  ].map(({ label, value, color }) => (
+                    <div key={label} className="flex flex-col items-center py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
+                      <span className="text-xl font-black" style={{ color }}>{value}</span>
+                      <span className="text-xs mt-0.5" style={{ color: 'var(--mundial-muted)' }}>{label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Pending matches list */}
+            {pending.length > 0 && (
+              <div style={CARD}>
+                <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+                  <span className="text-sm font-black tracking-wider" style={{ color: '#f59e0b' }}>
+                    ⏳ PENDIENTES DE RESOLVER ({pending.length})
+                  </span>
+                </div>
+                <div>
+                  {pending.map((pred, i) => {
+                    const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
+                    const homeTeam = opts[0] ?? ''
+                    const awayTeam = opts[2] ?? ''
+                    const homeFlag = getFlagUrl(pred.home_team_code)
+                    const awayFlag = getFlagUrl(pred.away_team_code)
+                    const stage = STAGE_LABELS[parseStage(pred.description)] ?? ''
+                    const status = STATUS_BADGE[pred.status]
+
+                    return (
+                      <div
+                        key={pred.id}
+                        className="px-5 py-4"
+                        style={{ borderTop: i > 0 ? '1px solid var(--mundial-header-border)' : 'none' }}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          {/* Teams */}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 flex-wrap mb-1">
+                              {homeFlag && <img src={homeFlag} alt={homeTeam} style={{ height: 16, width: 'auto' }} />}
+                              <span className="text-sm font-semibold" style={{ color: '#fff' }}>{homeTeam}</span>
+                              <span className="text-xs" style={{ color: 'var(--mundial-muted)' }}>vs</span>
+                              <span className="text-sm font-semibold" style={{ color: '#fff' }}>{awayTeam}</span>
+                              {awayFlag && <img src={awayFlag} alt={awayTeam} style={{ height: 16, width: 'auto' }} />}
+                              <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}` }}>
+                                {status.label}
+                              </span>
+                            </div>
+                            <p className="text-xs" style={{ color: 'var(--mundial-muted)' }}>
+                              {stage && `${stage} · `}📅 {format(new Date(pred.deadline), 'dd/MM HH:mm')} · 👥 {pred.responseCount}
+                            </p>
+                          </div>
+
+                          {/* Delete action */}
+                          <div className="flex items-center gap-2 shrink-0">
+                            {deleteId === pred.id ? (
+                              <div className="flex items-center gap-1">
+                                <button
+                                  onClick={() => handleDelete(pred.id)}
+                                  className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
+                                  style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#f87171', cursor: 'pointer' }}
+                                >Sí</button>
+                                <button
+                                  onClick={() => setDeleteId(null)}
+                                  className="px-2.5 py-1.5 rounded-lg text-xs"
+                                  style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}
+                                >No</button>
+                              </div>
+                            ) : (
+                              <button
+                                onClick={() => setDeleteId(pred.id)}
+                                className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs"
+                                style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', cursor: 'pointer' }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
             )}
 
-            {/* Stats row */}
-            <div className="grid grid-cols-3 gap-3">
-              {[
-                { label: 'Total partidos', value: predictions.length, color: '#a78bfa' },
-                { label: 'Pendientes', value: pending.length, color: '#f59e0b' },
-                { label: 'Resueltos', value: totalResolved, color: '#22c55e' },
-              ].map(({ label, value, color }) => (
-                <div key={label} className="flex flex-col items-center py-3 rounded-xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
-                  <span className="text-xl font-black" style={{ color }}>{value}</span>
-                  <span className="text-xs mt-0.5" style={{ color: 'var(--mundial-muted)' }}>{label}</span>
-                </div>
-              ))}
-            </div>
+            {!loading && pending.length === 0 && (
+              <div
+                className="rounded-xl px-5 py-4 text-center text-sm"
+                style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e' }}
+              >
+                ✓ No hay partidos pendientes de resolver
+              </div>
+            )}
           </div>
-        </div>
 
-        {/* Pending matches list */}
-        {pending.length > 0 && (
-          <div style={CARD}>
-            <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
-              <span className="text-sm font-black tracking-wider" style={{ color: '#f59e0b' }}>
-                ⏳ PENDIENTES DE RESOLVER ({pending.length})
-              </span>
-            </div>
-            <div>
-              {pending.map((pred, i) => {
-                const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
-                const homeTeam = opts[0] ?? ''
-                const awayTeam = opts[2] ?? ''
-                const homeFlag = getFlagUrl(pred.home_team_code)
-                const awayFlag = getFlagUrl(pred.away_team_code)
-                const stage = STAGE_LABELS[parseStage(pred.description)] ?? ''
-                const status = STATUS_BADGE[pred.status]
+          {/* ── RIGHT COLUMN ── */}
+          <div className="space-y-4">
 
-                return (
-                  <div
-                    key={pred.id}
-                    className="px-5 py-4"
-                    style={{ borderTop: i > 0 ? '1px solid var(--mundial-header-border)' : 'none' }}
-                  >
-                    <div className="flex items-center justify-between gap-3 flex-wrap">
-                      {/* Teams */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap mb-1">
-                          {homeFlag && <img src={homeFlag} alt={homeTeam} style={{ height: 16, width: 'auto' }} />}
-                          <span className="text-sm font-semibold" style={{ color: '#fff' }}>{homeTeam}</span>
-                          <span className="text-xs" style={{ color: 'var(--mundial-muted)' }}>vs</span>
-                          <span className="text-sm font-semibold" style={{ color: '#fff' }}>{awayTeam}</span>
-                          {awayFlag && <img src={awayFlag} alt={awayTeam} style={{ height: 16, width: 'auto' }} />}
-                          <span className="px-2 py-0.5 rounded-full text-xs font-medium" style={{ background: status.bg, color: status.color, border: `1px solid ${status.border}` }}>
-                            {status.label}
-                          </span>
-                        </div>
-                        <p className="text-xs" style={{ color: 'var(--mundial-muted)' }}>
-                          {stage && `${stage} · `}📅 {format(new Date(pred.deadline), 'dd/MM HH:mm')} · 👥 {pred.responseCount}
-                        </p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex items-center gap-2 shrink-0">
-                        {deleteId === pred.id ? (
-                          <div className="flex items-center gap-1">
-                            <button
-                              onClick={() => handleDelete(pred.id)}
-                              className="px-2.5 py-1.5 rounded-lg text-xs font-medium"
-                              style={{ background: 'rgba(239,68,68,0.12)', border: '1px solid rgba(239,68,68,0.28)', color: '#f87171', cursor: 'pointer' }}
-                            >Sí</button>
-                            <button
-                              onClick={() => setDeleteId(null)}
-                              className="px-2.5 py-1.5 rounded-lg text-xs"
-                              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.50)', cursor: 'pointer' }}
-                            >No</button>
-                          </div>
-                        ) : (
-                          <button
-                            onClick={() => setDeleteId(pred.id)}
-                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs"
-                            style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.16)', color: '#f87171', cursor: 'pointer' }}
-                          >
-                            <Trash2 className="h-3 w-3" />
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* All matches (resolved) — collapsed count */}
-        {!loading && pending.length === 0 && (
-          <div
-            className="rounded-xl px-5 py-4 text-center text-sm"
-            style={{ background: 'rgba(34,197,94,0.06)', border: '1px solid rgba(34,197,94,0.18)', color: '#22c55e' }}
-          >
-            ✓ No hay partidos pendientes de resolver
-          </div>
-        )}
-      </div>
-
-      {/* User activity */}
-      <div style={CARD}>
-        <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
-          <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>ACTIVIDAD DE USUARIOS</span>
-        </div>
-        <div className="p-5">
-          {loadingActivity ? (
-            <p className="text-sm text-center py-4" style={{ color: 'var(--mundial-muted)' }}>Cargando...</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm border-collapse">
-                  <thead>
-                    <tr>
-                      {['USUARIO', 'ÚLTIMA VISITA', 'PUNTOS'].map((h, i) => (
-                        <th key={h} className={`pb-2 ${i === 0 ? 'text-left' : 'text-right'}`}
-                          style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', color: 'rgba(255,255,255,0.35)' }}>
-                          {h}
-                        </th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {usersActivity.map(u => {
-                      const ago = timeAgo(u.last_seen_at)
-                      const never    = !u.last_seen_at
-                      const inactive = !never && (Date.now() - new Date(u.last_seen_at!).getTime()) > 3 * 24 * 3600_000
-                      const timeColor = never ? '#ef4444' : inactive ? '#f97316' : 'rgba(255,255,255,0.65)'
-                      return (
-                        <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
-                          <td className="py-2 pr-3">
-                            <div className="flex items-center gap-2">
-                              {u.avatar_url ? (
-                                <img src={u.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
-                              ) : (
-                                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
-                                  style={{ background: 'rgba(255,255,255,0.1)' }}>
-                                  {(u.username ?? '?')[0].toUpperCase()}
-                                </div>
-                              )}
-                              <span style={{ color: '#fff', fontWeight: 500 }}>{u.username ?? 'Anónimo'}</span>
-                            </div>
-                          </td>
-                          <td className="py-2 text-right" style={{ color: timeColor, fontWeight: 600, whiteSpace: 'nowrap' }}>
-                            {ago}
-                          </td>
-                          <td className="py-2 text-right" style={{ color: 'rgba(255,255,255,0.55)' }}>
-                            {u.total_points}
-                          </td>
+            {/* User activity */}
+            <div style={CARD}>
+              <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+                <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>ACTIVIDAD DE USUARIOS</span>
+              </div>
+              <div className="p-5">
+                {loadingActivity ? (
+                  <p className="text-sm text-center py-4" style={{ color: 'var(--mundial-muted)' }}>Cargando...</p>
+                ) : (
+                  <>
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr>
+                          {['USUARIO', 'ÚLTIMA VISITA', 'PTS'].map((h, i) => (
+                            <th key={h} className={`pb-2 ${i === 0 ? 'text-left' : 'text-right'}`}
+                              style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', color: 'rgba(255,255,255,0.35)' }}>
+                              {h}
+                            </th>
+                          ))}
                         </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                      </thead>
+                      <tbody>
+                        {usersActivity.map(u => {
+                          const ago = timeAgo(u.last_seen_at)
+                          const never    = !u.last_seen_at
+                          const inactive = !never && (Date.now() - new Date(u.last_seen_at!).getTime()) > 3 * 24 * 3600_000
+                          const timeColor = never ? '#ef4444' : inactive ? '#f97316' : 'rgba(255,255,255,0.65)'
+                          return (
+                            <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                              <td className="py-2 pr-3">
+                                <div className="flex items-center gap-2">
+                                  {u.avatar_url ? (
+                                    <img src={u.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                                  ) : (
+                                    <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+                                      style={{ background: 'rgba(255,255,255,0.1)' }}>
+                                      {(u.username ?? '?')[0].toUpperCase()}
+                                    </div>
+                                  )}
+                                  <span className="truncate" style={{ color: '#fff', fontWeight: 500 }}>{u.username ?? 'Anónimo'}</span>
+                                </div>
+                              </td>
+                              <td className="py-2 text-right" style={{ color: timeColor, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                                {ago}
+                              </td>
+                              <td className="py-2 text-right" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                                {u.total_points}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                    <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                      <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                        <span style={{ color: '#f97316' }}>● </span>3+ días inactivo
+                      </span>
+                      <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                        <span style={{ color: '#ef4444' }}>● </span>nunca entró
+                      </span>
+                    </div>
+                  </>
+                )}
               </div>
-              <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
-                <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                  <span style={{ color: '#f97316' }}>● </span>sin entrar 3+ días
-                </span>
-                <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                  <span style={{ color: '#ef4444' }}>● </span>nunca entró
-                </span>
-              </div>
-            </>
-          )}
+            </div>
+
+            {/* Advanced tools toggle + import */}
+            <div>
+              <button
+                onClick={() => setShowAdvanced(v => !v)}
+                className="flex items-center gap-2 text-xs font-semibold mb-3"
+                style={{ color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              >
+                <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+                {showAdvanced ? 'Ocultar herramientas avanzadas' : 'Mostrar herramientas avanzadas'}
+              </button>
+
+              {showAdvanced && (
+                <div style={CARD}>
+                  <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+                    <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>IMPORTAR PLANTELES</span>
+                  </div>
+                  <div className="p-5 space-y-4">
+                    <p className="text-sm" style={{ color: 'var(--mundial-muted)' }}>
+                      Descarga los planteles del Mundial 2026 desde Football-Data.org. Puede tardar varios minutos (límite de 10 req/min en el plan gratuito).
+                    </p>
+                    <motion.button
+                      onClick={handleImportSquads}
+                      disabled={importing}
+                      whileHover={!importing ? { scale: 1.02 } : {}}
+                      whileTap={!importing ? { scale: 0.98 } : {}}
+                      className="w-full flex items-center justify-center gap-2.5 py-4 rounded-xl text-sm font-black"
+                      style={{
+                        background: importing ? 'rgba(0,82,165,0.30)' : '#0052A5',
+                        color: '#fff',
+                        cursor: importing ? 'not-allowed' : 'pointer',
+                        boxShadow: importing ? 'none' : '0 4px 20px rgba(0,82,165,0.30)',
+                      }}
+                    >
+                      {importing
+                        ? <><Loader2 className="h-4 w-4 animate-spin" />Importando planteles...</>
+                        : <><Download className="h-4 w-4" />Importar Planteles</>}
+                    </motion.button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+          </div>
         </div>
       </div>
 
