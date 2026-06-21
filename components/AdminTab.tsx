@@ -59,7 +59,7 @@ export default function AdminTab() {
   const [loading, setLoading] = useState(true)
   const [resolving, setResolving] = useState(false)
   const [importing, setImporting] = useState(false)
-  const [verifying, setVerifying] = useState<Record<string, boolean>>({})
+  const [showAdvanced, setShowAdvanced] = useState(false)
   const [deleteId, setDeleteId] = useState<string | null>(null)
   const [usersActivity, setUsersActivity] = useState<UserActivity[]>([])
   const [loadingActivity, setLoadingActivity] = useState(true)
@@ -147,67 +147,6 @@ export default function AdminTab() {
     }
   }
 
-  const handleVerify = async (pred: PredictionRow) => {
-    if (!pred.fixture_id) return
-    setVerifying(v => ({ ...v, [pred.id]: true }))
-    try {
-      const res = await fetch(`/api/mundial/match/${pred.fixture_id}`)
-      const data = await res.json()
-      if (!data.finished) {
-        showToast('error', 'El partido todavía no terminó')
-        return
-      }
-
-      // Determine winner from score and derive correct_answer from opts[]
-      // so it always matches what users voted (no English/Spanish mismatch)
-      const opts = Array.isArray(pred.options) ? (pred.options as string[]) : []
-      const homeOpt = opts[0] ?? ''
-      const drawOpt = opts[1] ?? 'Empate'
-      const awayOpt = opts[2] ?? ''
-      let correctAnswer: string
-      if (data.homeScore > data.awayScore) correctAnswer = homeOpt
-      else if (data.awayScore > data.homeScore) correctAnswer = awayOpt
-      else correctAnswer = drawOpt
-
-      const nrm = (s: string) =>
-        (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim()
-
-      const points = Math.round(pred.difficulty_multiplier * 10)
-      const { data: userPreds } = await supabase
-        .from('user_predictions').select('*').eq('prediction_id', pred.id)
-      await supabase.from('predictions').update({
-        correct_answer: correctAnswer, status: 'resolved', auto_resolved: true,
-      }).eq('id', pred.id)
-      let correctCount = 0
-      if (userPreds?.length) {
-        for (const up of userPreds) {
-          // Normalize comparison so "Corea del Sur" matches "South Korea" after stripping accents
-          const isCorrect = nrm(up.predicted_answer) === nrm(correctAnswer)
-          if (isCorrect) correctCount++
-          const { error: upErr } = await supabase.from('user_predictions').update({
-            is_correct: isCorrect, points_earned: isCorrect ? points : 0,
-          }).eq('id', up.id)
-          if (upErr) { console.error('[AdminTab] update user_prediction:', upErr); continue }
-          const { data: profile } = await supabase
-            .from('profiles').select('total_points, current_streak').eq('id', up.user_id).single()
-          if (profile) {
-            await supabase.from('profiles').update({
-              total_points: profile.total_points + (isCorrect ? points : 0),
-              current_streak: isCorrect ? profile.current_streak + 1 : 0,
-            }).eq('id', up.user_id)
-          }
-        }
-      }
-      showToast('success', `✓ ${data.homeName} ${data.homeScore}–${data.awayScore} ${data.awayName} → ${correctAnswer} · ${correctCount} acierto${correctCount !== 1 ? 's' : ''}`)
-      fetchPredictions()
-    } catch (err) {
-      console.error('[AdminTab] verify:', err)
-      showToast('error', 'Error al verificar el resultado')
-    } finally {
-      setVerifying(v => ({ ...v, [pred.id]: false }))
-    }
-  }
-
   const handleDelete = async (id: string) => {
     await supabase.from('user_predictions').delete().eq('prediction_id', id)
     await supabase.from('predictions').delete().eq('id', id)
@@ -230,7 +169,26 @@ export default function AdminTab() {
       </div>
 
       <div className="space-y-4">
-        {/* Import squads card */}
+        {/* Info banner */}
+        <div
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{ background: 'rgba(59,130,246,0.07)', border: '1px solid rgba(59,130,246,0.20)', color: 'rgba(255,255,255,0.55)' }}
+        >
+          🤖 El sistema resuelve partidos automáticamente cada 5 minutos. Esta sección es solo para casos excepcionales.
+        </div>
+
+        {/* Advanced tools toggle */}
+        <button
+          onClick={() => setShowAdvanced(v => !v)}
+          className="flex items-center gap-2 text-xs font-semibold"
+          style={{ color: 'rgba(255,255,255,0.35)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+        >
+          <span style={{ transition: 'transform 0.2s', display: 'inline-block', transform: showAdvanced ? 'rotate(90deg)' : 'rotate(0deg)' }}>▶</span>
+          {showAdvanced ? 'Ocultar herramientas avanzadas' : 'Mostrar herramientas avanzadas'}
+        </button>
+
+        {/* Import squads card — advanced */}
+        {showAdvanced && (
         <div style={CARD}>
           <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
             <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>IMPORTAR PLANTELES</span>
@@ -258,6 +216,7 @@ export default function AdminTab() {
             </motion.button>
           </div>
         </div>
+        )}
 
         {/* Auto-resolve card */}
         <div style={CARD}>
@@ -366,21 +325,6 @@ export default function AdminTab() {
 
                       {/* Actions */}
                       <div className="flex items-center gap-2 shrink-0">
-                        <button
-                          onClick={() => handleVerify(pred)}
-                          disabled={verifying[pred.id]}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium"
-                          style={{
-                            background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.22)',
-                            color: '#22c55e', cursor: verifying[pred.id] ? 'not-allowed' : 'pointer',
-                          }}
-                        >
-                          {verifying[pred.id]
-                            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                            : <RefreshCw className="h-3.5 w-3.5" />}
-                          {verifying[pred.id] ? 'Verificando...' : 'Verificar'}
-                        </button>
-
                         {deleteId === pred.id ? (
                           <div className="flex items-center gap-1">
                             <button
