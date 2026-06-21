@@ -67,6 +67,14 @@ async function HomeData() {
   console.log(`[home] auth: ${Date.now() - t0}ms`)
   if (!user) redirect('/')
 
+  // Fire-and-forget — does not block page load
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  ;(supabase as any)
+    .from('profiles')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('id', user.id)
+    .then(() => {})
+
   // Read pending join code cookie (deletion happens via server action after client consumes it)
   const cookieStore = await cookies()
   const pendingJoinCode = cookieStore.get('pending_join_code')?.value ?? null

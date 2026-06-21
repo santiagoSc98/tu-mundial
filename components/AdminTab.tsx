@@ -11,6 +11,23 @@ import type { Database } from '@/lib/database.types'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 type PredictionRow = Prediction & { responseCount: number }
+type UserActivity = {
+  id: string
+  username: string | null
+  avatar_url: string | null
+  last_seen_at: string | null
+  total_points: number
+}
+
+function timeAgo(date: string | null): string {
+  if (!date) return 'Nunca'
+  const diff = Date.now() - new Date(date).getTime()
+  const hours = Math.floor(diff / 3600000)
+  if (hours < 1) return 'hace minutos'
+  if (hours < 24) return `hace ${hours}h`
+  const days = Math.floor(hours / 24)
+  return `hace ${days}d`
+}
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string; border: string }> = {
   open:     { label: 'Abierta',  color: '#22c55e', bg: 'rgba(34,197,94,0.10)',   border: 'rgba(34,197,94,0.25)' },
@@ -44,6 +61,8 @@ export default function AdminTab() {
   const [importing, setImporting] = useState(false)
   const [verifying, setVerifying] = useState<Record<string, boolean>>({})
   const [deleteId, setDeleteId] = useState<string | null>(null)
+  const [usersActivity, setUsersActivity] = useState<UserActivity[]>([])
+  const [loadingActivity, setLoadingActivity] = useState(true)
   const [lastResult, setLastResult] = useState<{ checked: number; resolved: number; usersAwarded: number } | null>(null)
   const [lastChecked, setLastChecked] = useState<Date | null>(null)
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string; visible: boolean }>({
@@ -72,7 +91,17 @@ export default function AdminTab() {
     setLoading(false)
   }
 
-  useEffect(() => { fetchPredictions() }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  const fetchUsersActivity = async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data } = await (supabase as any)
+      .from('profiles')
+      .select('id, username, avatar_url, last_seen_at, total_points')
+      .order('last_seen_at', { ascending: false, nullsFirst: false })
+    setUsersActivity(data ?? [])
+    setLoadingActivity(false)
+  }
+
+  useEffect(() => { fetchPredictions(); fetchUsersActivity() }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleImportSquads = async () => {
     setImporting(true)
@@ -392,6 +421,74 @@ export default function AdminTab() {
             ✓ No hay partidos pendientes de resolver
           </div>
         )}
+      </div>
+
+      {/* User activity */}
+      <div style={CARD}>
+        <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+          <span className="text-sm font-black tracking-wider" style={{ color: '#0052A5' }}>ACTIVIDAD DE USUARIOS</span>
+        </div>
+        <div className="p-5">
+          {loadingActivity ? (
+            <p className="text-sm text-center py-4" style={{ color: 'var(--mundial-muted)' }}>Cargando...</p>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm border-collapse">
+                  <thead>
+                    <tr>
+                      {['USUARIO', 'ÚLTIMA VISITA', 'PUNTOS'].map((h, i) => (
+                        <th key={h} className={`pb-2 ${i === 0 ? 'text-left' : 'text-right'}`}
+                          style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', color: 'rgba(255,255,255,0.35)' }}>
+                          {h}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usersActivity.map(u => {
+                      const ago = timeAgo(u.last_seen_at)
+                      const never    = !u.last_seen_at
+                      const inactive = !never && (Date.now() - new Date(u.last_seen_at!).getTime()) > 3 * 24 * 3600_000
+                      const timeColor = never ? '#ef4444' : inactive ? '#f97316' : 'rgba(255,255,255,0.65)'
+                      return (
+                        <tr key={u.id} style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                          <td className="py-2 pr-3">
+                            <div className="flex items-center gap-2">
+                              {u.avatar_url ? (
+                                <img src={u.avatar_url} alt="" className="w-6 h-6 rounded-full object-cover flex-shrink-0" />
+                              ) : (
+                                <div className="w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center text-[10px] font-bold text-white"
+                                  style={{ background: 'rgba(255,255,255,0.1)' }}>
+                                  {(u.username ?? '?')[0].toUpperCase()}
+                                </div>
+                              )}
+                              <span style={{ color: '#fff', fontWeight: 500 }}>{u.username ?? 'Anónimo'}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 text-right" style={{ color: timeColor, fontWeight: 600, whiteSpace: 'nowrap' }}>
+                            {ago}
+                          </td>
+                          <td className="py-2 text-right" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                            {u.total_points}
+                          </td>
+                        </tr>
+                      )
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="flex items-center gap-4 mt-3 pt-3" style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  <span style={{ color: '#f97316' }}>● </span>sin entrar 3+ días
+                </span>
+                <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.40)' }}>
+                  <span style={{ color: '#ef4444' }}>● </span>nunca entró
+                </span>
+              </div>
+            </>
+          )}
+        </div>
       </div>
 
       {/* Toast */}
