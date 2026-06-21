@@ -128,7 +128,7 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
       const aOpen = a.status !== 'resolved' ? 0 : 1
       const bOpen = b.status !== 'resolved' ? 0 : 1
       if (aOpen !== bOpen) return aOpen - bOpen
-      return new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime()
+      return new Date(b.deadline ?? 0).getTime() - new Date(a.deadline ?? 0).getTime()
     }),
     [filtered]
   )
