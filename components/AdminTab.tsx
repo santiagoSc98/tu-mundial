@@ -19,14 +19,18 @@ type UserActivity = {
   total_points: number
 }
 
-function timeAgo(date: string | null): string {
-  if (!date) return 'Nunca'
-  const diff = Date.now() - new Date(date).getTime()
-  const hours = Math.floor(diff / 3600000)
-  if (hours < 1) return 'hace minutos'
-  if (hours < 24) return `hace ${hours}h`
-  const days = Math.floor(hours / 24)
-  return `hace ${days}d`
+function timeAgo(dateStr: string | null): string {
+  if (!dateStr) return 'Nunca'
+  const date = new Date(dateStr.includes('Z') ? dateStr : dateStr + 'Z')
+  const diffMs = Date.now() - date.getTime()
+  const diffMin = Math.floor(diffMs / 60000)
+  console.log('[timeAgo]', dateStr, '→', diffMin, 'minutos')
+  if (diffMin < 1) return 'ahora'
+  if (diffMin < 60) return `hace ${diffMin}m`
+  const diffH = Math.floor(diffMin / 60)
+  if (diffH < 24) return `hace ${diffH}h`
+  const diffD = Math.floor(diffH / 24)
+  return `hace ${diffD}d`
 }
 
 const STATUS_BADGE: Record<string, { label: string; color: string; bg: string; border: string }> = {
