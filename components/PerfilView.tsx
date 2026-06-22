@@ -29,6 +29,7 @@ interface Props {
   currentStreak: number
   isAdmin: boolean
   myBadges: { badge_id: string; unlocked_at: string }[]
+  totalUsers?: number
   onTabChange: (tab: string) => void
   onSignOut: () => void
 }
@@ -103,7 +104,7 @@ const INPUT_STYLE: React.CSSProperties = {
   color: '#fff', fontSize: 14, outline: 'none', boxSizing: 'border-box',
 }
 
-export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, myBadges, onTabChange, onSignOut }: Props) {
+export default function PerfilView({ profile: initialProfile, myStats, currentStreak, isAdmin, myBadges, totalUsers = 0, onTabChange, onSignOut }: Props) {
   const [profile,     setProfile]     = useState(initialProfile)
   const [isEditing,   setIsEditing]   = useState(false)
   const [editName,    setEditName]    = useState(profile.username ?? '')
@@ -227,93 +228,325 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
     )
   }
 
+  const accuracy = myStats.totalPredictions > 0
+    ? Math.round((myStats.correctPredictions / myStats.totalPredictions) * 100)
+    : 0
+
   // ── VIEW MODE ────────────────────────────────────────────────────────────────
   return (
-    <div style={{ maxWidth: 480, margin: '0 auto' }}>
+    <>
+      {/* ── MOBILE (unchanged) ── */}
+      <div className="md:hidden" style={{ maxWidth: 480, margin: '0 auto' }}>
 
-      {/* Hero card */}
-      <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 12 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
-          <img src={profile.avatar_url ?? '/logo-mundial.png'} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)', flexShrink: 0 }} />
-          <div style={{ flex: 1, minWidth: 0 }}>
-            <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '1px 0 3px' }}>{handle}</p>
-            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: 0 }}>{countryFlag(profile.country)} {profile.country ?? 'Paraguay'}</p>
+        {/* Hero card */}
+        <div style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, padding: 20, marginBottom: 12 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 18 }}>
+            <img src={profile.avatar_url ?? '/logo-mundial.png'} alt={displayName} style={{ width: 60, height: 60, borderRadius: '50%', objectFit: 'cover', border: '2px solid rgba(0,106,51,0.60)', flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '1px 0 3px' }}>{handle}</p>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', margin: 0 }}>{countryFlag(profile.country)} {profile.country ?? 'Paraguay'}</p>
+            </div>
+            <button onClick={openEdit} style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
+              <Edit2 size={14} />
+            </button>
           </div>
-          <button onClick={openEdit} style={{ width: 32, height: 32, borderRadius: 10, background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', flexShrink: 0 }}>
-            <Edit2 size={14} />
-          </button>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
+            <StatMini num={myStats.totalPredictions}  label="Pred." />
+            <StatMini num={myStats.correctPredictions} label="Aciertos" color="green" />
+            <StatMini num={(profile.total_points ?? 0).toLocaleString('es-PY')} label="Puntos" color="gold" />
+            <StatMini num={`#${myStats.rank}`}         label="Posición" color="blue" />
+          </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8 }}>
-          <StatMini num={myStats.totalPredictions}  label="Pred." />
-          <StatMini num={myStats.correctPredictions} label="Aciertos" color="green" />
-          <StatMini num={(profile.total_points ?? 0).toLocaleString('es-PY')} label="Puntos" color="gold" />
-          <StatMini num={`#${myStats.rank}`}         label="Posición" color="blue" />
+        {/* Streak */}
+        {currentStreak > 0 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(246,183,60,0.10)', border: '1px solid rgba(246,183,60,0.20)', borderRadius: 14, padding: '10px 16px', marginBottom: 12 }}>
+            <span>🔥</span>
+            <span style={{ fontSize: 13, color: '#F6B73C', fontWeight: 600 }}>{currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos</span>
+          </div>
+        )}
+
+        {/* Logros */}
+        {myBadges.length > 0 && (
+          <div className="mb-4">
+            <p className="text-xs text-gray-500 font-semibold mb-2 px-1">LOGROS</p>
+            <div className="grid grid-cols-2 gap-2">
+              {myBadges.map(badge => {
+                const def = BADGES[badge.badge_id as keyof typeof BADGES]
+                if (!def) return null
+                const Icon = ICON_MAP[def.icon]
+                return (
+                  <div key={badge.badge_id} className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl p-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[rgba(0,106,51,0.15)] flex items-center justify-center flex-shrink-0">
+                      {Icon && <Icon size={15} className="text-[#00C46A]" />}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-white truncate">{def.name}</p>
+                      <p className="text-[10px] text-gray-500 truncate">{def.description}</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* MI CUENTA */}
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>MI CUENTA</p>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 12 }}>
+          <MenuItem icon={<ClipboardList size={16} />} iconBg="blue" label="Mis Predicciones" onClick={() => onTabChange('mis-predicciones')} />
+          <MenuItem icon={<Star size={16} />}          iconBg="gold" label="Mis Especiales"   onClick={() => onTabChange('especiales')} border={false} />
         </div>
+
+        {/* APP */}
+        <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>APP</p>
+        <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
+          <MenuItem icon={<BookOpen size={16} />} label="Reglas"     onClick={() => onTabChange('reglas')} />
+          <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" />
+          {isAdmin && <MenuItem icon={<Settings2 size={16} />} label="Admin" onClick={() => onTabChange('admin')} border={false} />}
+          {!isAdmin && <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" border={false} />}
+        </div>
+
+        {/* Sign out */}
+        <button
+          onClick={onSignOut}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(206,17,38,0.08)', border: '1px solid rgba(206,17,38,0.15)', borderRadius: 16, cursor: 'pointer' }}
+        >
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(206,17,38,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <LogOut size={15} style={{ color: '#f87171' }} />
+          </div>
+          <span style={{ fontSize: 14, color: '#f87171', fontWeight: 500 }}>Cerrar sesión</span>
+        </button>
       </div>
 
-      {/* Streak */}
-      {currentStreak > 0 && (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, background: 'rgba(246,183,60,0.10)', border: '1px solid rgba(246,183,60,0.20)', borderRadius: 14, padding: '10px 16px', marginBottom: 12 }}>
-          <span>🔥</span>
-          <span style={{ fontSize: 13, color: '#F6B73C', fontWeight: 600 }}>{currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos</span>
-        </div>
-      )}
+      {/* ── DESKTOP ── */}
+      <div className="hidden md:flex gap-5 max-w-5xl mx-auto">
 
-      {/* Logros */}
-      {myBadges.length > 0 && (
-        <div className="mb-4">
-          <p className="text-xs text-gray-500 font-semibold mb-2 px-1">LOGROS</p>
-          <div className="grid grid-cols-2 gap-2">
-            {myBadges.map(badge => {
-              const def = BADGES[badge.badge_id as keyof typeof BADGES]
-              if (!def) return null
-              const Icon = ICON_MAP[def.icon]
-              return (
-                <div key={badge.badge_id} className="flex items-center gap-2.5 bg-white/[0.04] border border-white/[0.07] rounded-xl p-2.5">
-                  <div className="w-8 h-8 rounded-lg bg-[rgba(0,106,51,0.15)] flex items-center justify-center flex-shrink-0">
-                    {Icon && <Icon size={15} className="text-[#00C46A]" />}
+        {/* COLUMNA PRINCIPAL */}
+        <div className="flex-1 flex flex-col gap-4 min-w-0">
+
+          {/* HERO */}
+          <div className="relative rounded-2xl overflow-hidden p-6" style={{ border: '1px solid rgba(255,255,255,0.08)' }}>
+            <div className="absolute inset-0 z-0" style={{ background: 'linear-gradient(135deg,#071A40,#0A2460 50%,#071A40)' }} />
+            <div className="absolute inset-0 z-[1] opacity-[0.07]" style={{
+              backgroundImage: `radial-gradient(circle at 50% 50%,transparent 38%,rgba(255,255,255,.8) 39%,transparent 40%),linear-gradient(rgba(255,255,255,.3) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.3) 1px,transparent 1px)`,
+              backgroundSize: '100% 100%,40px 40px,40px 40px',
+            }} />
+            <div className="relative z-[2] flex items-center gap-5">
+              <div className="relative flex-shrink-0">
+                <img
+                  src={profile.avatar_url ?? '/logo-mundial.png'}
+                  alt={displayName}
+                  className="w-20 h-20 rounded-full object-cover"
+                  style={{ border: '3px solid #006A33' }}
+                />
+                <button
+                  onClick={openEdit}
+                  className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#006A33] flex items-center justify-center"
+                >
+                  <Edit2 size={11} className="text-white" />
+                </button>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-xl font-bold text-white truncate">{displayName}</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{handle}</p>
+                <p className="text-xs text-gray-300 mt-1">{countryFlag(profile.country)} {profile.country ?? 'Paraguay'}</p>
+                {currentStreak > 0 && (
+                  <div className="inline-flex items-center gap-1.5 mt-2.5 rounded-full px-3 py-1 text-xs font-medium"
+                    style={{ background: 'rgba(246,183,60,0.12)', border: '1px solid rgba(246,183,60,0.25)', color: '#F6B73C' }}>
+                    🔥 {currentStreak} {currentStreak === 1 ? 'acierto' : 'aciertos'} seguidos
                   </div>
-                  <div className="min-w-0">
-                    <p className="text-xs font-semibold text-white truncate">{def.name}</p>
-                    <p className="text-[10px] text-gray-500 truncate">{def.description}</p>
-                  </div>
+                )}
+              </div>
+              <button
+                onClick={openEdit}
+                className="rounded-xl px-4 py-2 text-xs text-white self-start flex-shrink-0 transition hover:bg-white/[0.12]"
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
+              >
+                Editar perfil
+              </button>
+            </div>
+          </div>
+
+          {/* MÉTRICAS */}
+          <div className="grid grid-cols-4 gap-3">
+            {[
+              { num: myStats.totalPredictions,  label: 'Predicciones', color: 'text-white',      icon: '📋' },
+              { num: myStats.correctPredictions, label: 'Aciertos',     color: 'text-[#00C46A]',  icon: '✅' },
+              { num: (profile.total_points ?? 0).toLocaleString('es-PY'), label: 'Puntos', color: 'text-[#F6B73C]', icon: '⚡' },
+              { num: `#${myStats.rank}`,         label: 'Ranking',      color: 'text-[#4d9fff]',  icon: '🏅' },
+            ].map(m => (
+              <div key={m.label} className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <div className="text-lg mb-1">{m.icon}</div>
+                <div className={`text-2xl font-bold ${m.color}`}>{m.num}</div>
+                <div className="text-xs text-gray-400 mt-1">{m.label}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* LOGROS */}
+          {myBadges.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">LOGROS</p>
+              <div className="grid grid-cols-3 gap-2">
+                {myBadges.map(badge => {
+                  const def = BADGES[badge.badge_id as keyof typeof BADGES]
+                  if (!def) return null
+                  const Icon = ICON_MAP[def.icon]
+                  return (
+                    <div key={badge.badge_id} className="flex items-center gap-2.5 rounded-2xl p-3" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,106,51,0.15)' }}>
+                        {Icon && <Icon size={15} className="text-[#00C46A]" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-semibold text-white truncate">{def.name}</p>
+                        <p className="text-[10px] text-gray-500 truncate">{def.description}</p>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* MI CUENTA */}
+          <div>
+            <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">MI CUENTA</p>
+            <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+              <button onClick={() => onTabChange('mis-predicciones')}
+                className="w-full flex items-center gap-3 p-4 transition hover:bg-white/[0.04]"
+                style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm" style={{ background: 'rgba(77,159,255,0.15)' }}>📄</div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-white">Mis Predicciones</p>
+                  <p className="text-xs text-gray-400">Ver historial completo</p>
                 </div>
-              )
-            })}
+                <ChevronRight size={14} className="text-gray-600" />
+              </button>
+              <button onClick={() => onTabChange('especiales')}
+                className="w-full flex items-center gap-3 p-4 transition hover:bg-white/[0.04]">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm" style={{ background: 'rgba(246,183,60,0.15)' }}>⭐</div>
+                <div className="flex-1 text-left">
+                  <p className="text-sm font-medium text-white">Mis Especiales</p>
+                  <p className="text-xs text-gray-400">Campeón, goleador y más</p>
+                </div>
+                <ChevronRight size={14} className="text-gray-600" />
+              </button>
+            </div>
           </div>
+
+          {/* CONFIGURACIÓN */}
+          <div>
+            <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">CONFIGURACIÓN</p>
+            <div className="grid grid-cols-3 gap-3">
+              <button onClick={() => onTabChange('reglas')}
+                className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                <BookOpen size={18} className="text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-300">Reglas</p>
+              </button>
+              <a href="/privacidad" target="_blank" rel="noopener noreferrer"
+                className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'block' }}>
+                <Shield size={18} className="text-gray-400 mx-auto mb-2" />
+                <p className="text-xs text-gray-300">Privacidad</p>
+              </a>
+              {isAdmin && (
+                <button onClick={() => onTabChange('admin')}
+                  className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                  style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <Settings2 size={18} className="text-gray-400 mx-auto mb-2" />
+                  <p className="text-xs text-gray-300">Admin</p>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* CERRAR SESIÓN */}
+          <button onClick={onSignOut}
+            className="flex items-center gap-3 p-4 rounded-2xl transition hover:bg-[rgba(206,17,38,0.14)]"
+            style={{ background: 'rgba(206,17,38,0.08)', border: '1px solid rgba(206,17,38,0.20)' }}>
+            <LogOut size={16} className="text-[#CE1126]" />
+            <span className="text-sm text-[#CE1126] font-medium">Cerrar sesión</span>
+          </button>
+
         </div>
-      )}
 
-      {/* MI CUENTA */}
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>MI CUENTA</p>
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 12 }}>
-        <MenuItem icon={<ClipboardList size={16} />} iconBg="blue" label="Mis Predicciones" onClick={() => onTabChange('mis-predicciones')} />
-        <MenuItem icon={<Star size={16} />}          iconBg="gold" label="Mis Especiales"   onClick={() => onTabChange('especiales')} border={false} />
-      </div>
+        {/* SIDEBAR DERECHO */}
+        <div className="w-64 flex-shrink-0 flex flex-col gap-4">
 
-      {/* APP */}
-      <p style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.35)', margin: '0 0 8px 4px' }}>APP</p>
-      <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 20, overflow: 'hidden', marginBottom: 16 }}>
-        <MenuItem icon={<BookOpen size={16} />} label="Reglas"     onClick={() => onTabChange('reglas')} />
-        <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" />
-        {isAdmin && <MenuItem icon={<Settings2 size={16} />} label="Admin" onClick={() => onTabChange('admin')} border={false} />}
-        {!isAdmin && <MenuItem icon={<Shield size={16} />}   label="Privacidad" href="/privacidad" border={false} />}
-      </div>
+          {/* RENDIMIENTO */}
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">RENDIMIENTO</p>
+            <div className="flex items-end gap-1 h-16 mb-1">
+              {[30, 45, 55, 40, 70, 85, 100].map((h, i) => (
+                <div key={i} className={`flex-1 rounded-t-sm ${h > 60 ? 'bg-[#006A33]' : 'bg-white/10'}`}
+                  style={{ height: `${h}%` }} />
+              ))}
+            </div>
+            <div className="flex gap-1 mb-3">
+              {['D1', 'D2', 'D3', 'D4', 'D5', 'D6', 'D7'].map(d => (
+                <div key={d} className="flex-1 text-center text-[9px] text-gray-600">{d}</div>
+              ))}
+            </div>
+            <div className="grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p className="text-sm font-semibold text-white">{myStats.totalPredictions}</p>
+                <p className="text-[10px] text-gray-500">Pred.</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#00C46A]">{accuracy}%</p>
+                <p className="text-[10px] text-gray-500">Efectividad</p>
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-[#F6B73C]">{profile.total_points}</p>
+                <p className="text-[10px] text-gray-500">Puntos</p>
+              </div>
+            </div>
+          </div>
 
-      {/* Sign out */}
-      <button
-        onClick={onSignOut}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', background: 'rgba(206,17,38,0.08)', border: '1px solid rgba(206,17,38,0.15)', borderRadius: 16, cursor: 'pointer' }}
-      >
-        <div style={{ width: 32, height: 32, borderRadius: 9, background: 'rgba(206,17,38,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <LogOut size={15} style={{ color: '#f87171' }} />
+          {/* RANKING */}
+          <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">TU RANKING</p>
+            <div className="text-3xl mb-2">
+              {myStats.rank === 1 ? '🥇' : myStats.rank === 2 ? '🥈' : myStats.rank === 3 ? '🥉' : '🏅'}
+            </div>
+            <p className="text-3xl font-bold text-[#F6B73C]">#{myStats.rank}</p>
+            {totalUsers > 0 && <p className="text-xs text-gray-500 mt-1">de {totalUsers} participantes</p>}
+            <div className="mt-3 text-xs font-medium rounded-full px-3 py-1.5 inline-block"
+              style={{ color: '#00C46A', background: 'rgba(0,196,106,0.10)', border: '1px solid rgba(0,196,106,0.20)' }}>
+              {myStats.rank === 1 ? '¡Líder del ranking!' : '¡Seguí así!'}
+            </div>
+          </div>
+
+          {/* COMPARTIR */}
+          <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
+            <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">COMPARTIR</p>
+            <div className="flex flex-col gap-2">
+              <button
+                onClick={() => {
+                  const text = encodeURIComponent(`Estoy #${myStats.rank} en Predique con ${profile.total_points} pts.\n¿Me podés superar?`)
+                  window.open(`https://wa.me/?text=${text}`, '_blank')
+                }}
+                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-medium transition hover:bg-[rgba(37,211,102,0.18)]"
+                style={{ background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.20)', color: '#25D366' }}>
+                💬 Compartir en WhatsApp
+              </button>
+              <button
+                onClick={() => navigator.clipboard.writeText(window.location.origin)}
+                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs text-gray-300 transition hover:bg-white/[0.08]"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}>
+                🔗 Copiar enlace
+              </button>
+            </div>
+          </div>
+
         </div>
-        <span style={{ fontSize: 14, color: '#f87171', fontWeight: 500 }}>Cerrar sesión</span>
-      </button>
+      </div>
 
       {toast && <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>✓ {toast}</div>}
-    </div>
+    </>
   )
 }

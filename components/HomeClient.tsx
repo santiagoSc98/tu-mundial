@@ -517,6 +517,7 @@ export default function HomeClient({
               currentStreak={currentStreak}
               isAdmin={isAdmin}
               myBadges={myBadges}
+              totalUsers={globalStats.totalUsers}
               onTabChange={(tab: string) => setActiveTab(tab as Tab)}
               onSignOut={signOut}
             />
