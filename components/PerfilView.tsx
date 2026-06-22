@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowLeft, Camera, ClipboardList, Star, BookOpen, Settings2, Shield, ChevronRight, LogOut, Edit2, Target, Flame, Crosshair, Trophy, ListChecks } from 'lucide-react'
+import { ArrowLeft, Camera, ClipboardList, CheckCircle, Zap, Medal, Star, FileText, Trophy, Link, BookOpen, Settings2, Shield, ChevronRight, LogOut, Edit2, Target, Flame, Crosshair, ListChecks } from 'lucide-react'
 import { updateProfile } from '@/app/actions/profile'
 import { BADGES } from '@/lib/badges'
 
@@ -372,14 +372,14 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
 
           {/* MÉTRICAS */}
           <div className="grid grid-cols-4 gap-3">
-            {[
-              { num: myStats.totalPredictions,  label: 'Predicciones', color: 'text-white',      icon: '📋' },
-              { num: myStats.correctPredictions, label: 'Aciertos',     color: 'text-[#00C46A]',  icon: '✅' },
-              { num: (profile.total_points ?? 0).toLocaleString('es-PY'), label: 'Puntos', color: 'text-[#F6B73C]', icon: '⚡' },
-              { num: `#${myStats.rank}`,         label: 'Ranking',      color: 'text-[#4d9fff]',  icon: '🏅' },
-            ].map(m => (
+            {([
+              { num: myStats.totalPredictions,  label: 'Predicciones', color: 'text-white',     Icon: <ClipboardList size={18} className="text-gray-400 mx-auto mb-1" /> },
+              { num: myStats.correctPredictions, label: 'Aciertos',    color: 'text-[#00C46A]', Icon: <CheckCircle   size={18} className="text-[#00C46A] mx-auto mb-1" /> },
+              { num: (profile.total_points ?? 0).toLocaleString('es-PY'), label: 'Puntos', color: 'text-[#F6B73C]', Icon: <Zap size={18} className="text-[#F6B73C] mx-auto mb-1" /> },
+              { num: `#${myStats.rank}`,         label: 'Ranking',     color: 'text-[#4d9fff]', Icon: <Medal         size={18} className="text-[#4d9fff] mx-auto mb-1" /> },
+            ] as const).map(m => (
               <div key={m.label} className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
-                <div className="text-lg mb-1">{m.icon}</div>
+                {m.Icon}
                 <div className={`text-2xl font-bold ${m.color}`}>{m.num}</div>
                 <div className="text-xs text-gray-400 mt-1">{m.label}</div>
               </div>
@@ -416,9 +416,11 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
             <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">MI CUENTA</p>
             <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
               <button onClick={() => onTabChange('mis-predicciones')}
-                className="w-full flex items-center gap-3 p-4 transition hover:bg-white/[0.04]"
+                className="w-full flex items-center gap-3 p-4 transition cursor-pointer hover:bg-white/[0.04]"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm" style={{ background: 'rgba(77,159,255,0.15)' }}>📄</div>
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(77,159,255,0.15)' }}>
+                  <FileText size={15} className="text-[#4d9fff]" />
+                </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white">Mis Predicciones</p>
                   <p className="text-xs text-gray-400">Ver historial completo</p>
@@ -426,8 +428,10 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
                 <ChevronRight size={14} className="text-gray-600" />
               </button>
               <button onClick={() => onTabChange('especiales')}
-                className="w-full flex items-center gap-3 p-4 transition hover:bg-white/[0.04]">
-                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 text-sm" style={{ background: 'rgba(246,183,60,0.15)' }}>⭐</div>
+                className="w-full flex items-center gap-3 p-4 transition cursor-pointer hover:bg-white/[0.04]">
+                <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(246,183,60,0.15)' }}>
+                  <Star size={15} className="text-[#F6B73C]" />
+                </div>
                 <div className="flex-1 text-left">
                   <p className="text-sm font-medium text-white">Mis Especiales</p>
                   <p className="text-xs text-gray-400">Campeón, goleador y más</p>
@@ -442,20 +446,20 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
             <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">CONFIGURACIÓN</p>
             <div className="grid grid-cols-3 gap-3">
               <button onClick={() => onTabChange('reglas')}
-                className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                className="rounded-2xl p-4 text-center cursor-pointer transition hover:bg-white/[0.07]"
                 style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                 <BookOpen size={18} className="text-gray-400 mx-auto mb-2" />
                 <p className="text-xs text-gray-300">Reglas</p>
               </button>
               <a href="/privacidad" target="_blank" rel="noopener noreferrer"
-                className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                className="rounded-2xl p-4 text-center cursor-pointer transition hover:bg-white/[0.07]"
                 style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)', display: 'block' }}>
                 <Shield size={18} className="text-gray-400 mx-auto mb-2" />
                 <p className="text-xs text-gray-300">Privacidad</p>
               </a>
               {isAdmin && (
                 <button onClick={() => onTabChange('admin')}
-                  className="rounded-2xl p-4 text-center transition hover:bg-white/[0.07]"
+                  className="rounded-2xl p-4 text-center cursor-pointer transition hover:bg-white/[0.07]"
                   style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
                   <Settings2 size={18} className="text-gray-400 mx-auto mb-2" />
                   <p className="text-xs text-gray-300">Admin</p>
@@ -510,8 +514,14 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
           {/* RANKING */}
           <div className="rounded-2xl p-4 text-center" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}>
             <p className="text-xs text-gray-500 font-semibold mb-3 tracking-wider">TU RANKING</p>
-            <div className="text-3xl mb-2">
-              {myStats.rank === 1 ? '🥇' : myStats.rank === 2 ? '🥈' : myStats.rank === 3 ? '🥉' : '🏅'}
+            <div className="mb-2">
+              {myStats.rank === 1
+                ? <Trophy size={32} className="text-[#F6B73C] mx-auto" />
+                : myStats.rank === 2
+                ? <Trophy size={32} className="text-gray-400 mx-auto" />
+                : myStats.rank === 3
+                ? <Trophy size={32} className="text-amber-600 mx-auto" />
+                : <Medal  size={32} className="text-gray-400 mx-auto" />}
             </div>
             <p className="text-3xl font-bold text-[#F6B73C]">#{myStats.rank}</p>
             {totalUsers > 0 && <p className="text-xs text-gray-500 mt-1">de {totalUsers} participantes</p>}
@@ -530,15 +540,20 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
                   const text = encodeURIComponent(`Estoy #${myStats.rank} en Predique con ${profile.total_points} pts.\n¿Me podés superar?`)
                   window.open(`https://wa.me/?text=${text}`, '_blank')
                 }}
-                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-medium transition hover:bg-[rgba(37,211,102,0.18)]"
+                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs font-medium cursor-pointer transition hover:bg-[rgba(37,211,102,0.18)]"
                 style={{ background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.20)', color: '#25D366' }}>
-                💬 Compartir en WhatsApp
+                <svg viewBox="0 0 24 24" width="14" height="14" fill="#25D366">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                  <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.862L.054 23.8a.5.5 0 0 0 .609.61l6.079-1.519A11.942 11.942 0 0 0 12 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.88 0-3.634-.518-5.13-1.415l-.36-.216-3.733.933.998-3.642-.237-.376A9.956 9.956 0 0 1 2 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                </svg>
+                Compartir en WhatsApp
               </button>
               <button
                 onClick={() => navigator.clipboard.writeText(window.location.origin)}
-                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs text-gray-300 transition hover:bg-white/[0.08]"
+                className="flex items-center justify-center gap-2 p-2.5 rounded-xl text-xs text-gray-300 cursor-pointer transition hover:bg-white/[0.08]"
                 style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.10)' }}>
-                🔗 Copiar enlace
+                <Link size={14} className="text-gray-400" />
+                Copiar enlace
               </button>
             </div>
           </div>
