@@ -310,7 +310,12 @@ export async function getGroupPhases(groupId: string) {
     .order('created_at')
 
   if (error) return { data: null, error: error.message as string }
-  return { data: data as GroupPhase[], error: null }
+
+  const PHASE_ORDER = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
+  const sorted = (data as GroupPhase[]).sort(
+    (a, b) => PHASE_ORDER.indexOf(a.phase) - PHASE_ORDER.indexOf(b.phase)
+  )
+  return { data: sorted, error: null }
 }
 
 export async function getGroupPredictionsForMatch({
