@@ -180,7 +180,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
           >
             <ArrowLeft size={16} />
           </button>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0 }}>Editar perfil</h2>
+          <h2 className='cursor-pointer' style={{ fontSize: 18, fontWeight: 700, color: '#fff', margin: 0 }}>Editar perfil</h2>
         </div>
 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, marginBottom: 24, padding: 20, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20 }}>
@@ -344,7 +344,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
                 />
                 <button
                   onClick={openEdit}
-                  className="absolute bottom-0 right-0 w-6 h-6 rounded-full bg-[#006A33] flex items-center justify-center"
+                  className="absolute cursor-pointer bottom-0 right-0 w-6 h-6 rounded-full bg-[#006A33] flex items-center justify-center"
                 >
                   <Edit2 size={11} className="text-white" />
                 </button>
@@ -473,7 +473,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
             className="flex items-center gap-3 p-4 rounded-2xl transition hover:bg-[rgba(206,17,38,0.14)]"
             style={{ background: 'rgba(206,17,38,0.08)', border: '1px solid rgba(206,17,38,0.20)' }}>
             <LogOut size={16} className="text-[#CE1126]" />
-            <span className="text-sm text-[#CE1126] font-medium">Cerrar sesión</span>
+            <span className="text-sm cursor-pointer text-[#CE1126] font-medium">Cerrar sesión</span>
           </button>
 
         </div>
