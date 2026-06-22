@@ -9,7 +9,6 @@ import type { GroupTeam, StandingsByType } from '@/lib/grupos'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 type CalTab = 'resumen' | 'clasificacion' | 'eliminatoria'
-type TableFilter = 'todos' | 'local' | 'visitante'
 
 // WC_START is derived from predictions at runtime (see component)
 
@@ -412,7 +411,6 @@ export default function CalendarioView({
 }) {
   const [calTab,   setCalTab]   = useState<CalTab>('resumen')
   const [dayIdx,   setDayIdx]   = useState(0)
-  const [filter,   setFilter]   = useState<TableFilter>('todos')
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -462,17 +460,12 @@ export default function CalendarioView({
     setDayIdx(i === -1 ? matchdays.length - 1 : i)
   }, [matchdays])
 
-  // Pick the right standings set from the API based on the active filter
   const activeGroups = useMemo(() => {
     if (!wcStandings) return []
-    const src =
-      filter === 'local'     && wcStandings.home.length ? wcStandings.home :
-      filter === 'visitante' && wcStandings.away.length ? wcStandings.away :
-      wcStandings.total
-    return src
+    return wcStandings.total
       .map(s => ({ letter: s.group.replace('GROUP_', ''), table: s.table }))
       .sort((a, b) => a.letter.localeCompare(b.letter))
-  }, [wcStandings, filter])
+  }, [wcStandings])
 
   const CARD: React.CSSProperties = {
     background: 'var(--mundial-card-bg, rgba(255,255,255,0.04))',
@@ -607,29 +600,6 @@ export default function CalendarioView({
       ══════════════════════════════════════════════════════════════════════ */}
       {calTab === 'clasificacion' && (
         <div>
-          {/* Filter */}
-          <div className="flex gap-2 mb-5">
-            {(['todos', 'local', 'visitante'] as TableFilter[]).map(f => {
-              const labels: Record<TableFilter, string> = { todos: 'Todos', local: 'Local', visitante: 'Visitante' }
-              return (
-                <button
-                  key={f}
-                  onClick={() => setFilter(f)}
-                  className="px-4 py-1.5 rounded-full text-xs font-bold"
-                  style={{
-                    background: filter === f ? '#006A33' : 'rgba(255,255,255,0.06)',
-                    border: `1px solid ${filter === f ? '#006A33' : 'rgba(255,255,255,0.10)'}`,
-                    color: filter === f ? '#fff' : 'rgba(255,255,255,0.50)',
-                    cursor: 'pointer',
-                    transition: 'all 0.15s',
-                  }}
-                >
-                  {labels[f]}
-                </button>
-              )
-            })}
-          </div>
-
           {/* Legend */}
           <div className="flex items-center gap-4 mb-4 px-1">
             <div className="flex items-center gap-1.5">
