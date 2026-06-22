@@ -111,8 +111,10 @@ async function HomeData() {
           .eq('user_id', user.id),
         supabase
           .from('profiles')
-          .select('id, username, avatar_url, total_points, current_streak')
+          .select('id, username, avatar_url, total_points, current_streak, correct_predictions, created_at')
           .order('total_points', { ascending: false })
+          .order('correct_predictions', { ascending: false })
+          .order('created_at', { ascending: true })
           .limit(50),
         supabase
           .from('user_predictions')

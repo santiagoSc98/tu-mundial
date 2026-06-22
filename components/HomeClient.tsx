@@ -154,6 +154,25 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
           <p>Las predicciones cierran automáticamente al <strong style={{ color: 'var(--warning)' }}>inicio del partido</strong>. No podés cambiarlas después del cierre.</p>
         </div>
       </div>
+
+      <div style={RULE_CARD}>
+        <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+          <span className="flex items-center gap-2 text-sm font-black tracking-wider" style={{ color: '#a78bfa' }}><Trophy className="h-4 w-4" /> SISTEMA DE DESEMPATE</span>
+        </div>
+        <div className="px-5 py-4 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+          <p className="mb-3">En caso de igualdad de puntos, el ranking se determina en el siguiente orden:</p>
+          {[
+            ['1.', 'Mayor cantidad de aciertos totales'],
+            ['2.', 'Mayor cantidad de predicciones realizadas'],
+            ['3.', 'Registro más antiguo en la plataforma'],
+          ].map(([num, rule]) => (
+            <div key={rule} className="flex items-start gap-3 mb-2">
+              <span className="font-black text-xs mt-0.5 flex-shrink-0" style={{ color: '#a78bfa' }}>{num}</span>
+              <span>{rule}</span>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   )
 }

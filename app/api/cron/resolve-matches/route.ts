@@ -103,7 +103,7 @@ async function scoreUserPredictions(
 
     const { data: profile, error: profileErr } = await supabase
       .from('profiles')
-      .select('total_points')
+      .select('total_points, correct_predictions')
       .eq('id', up.user_id)
       .single()
 
@@ -114,7 +114,10 @@ async function scoreUserPredictions(
 
     const { error: profileUpErr } = await supabase
       .from('profiles')
-      .update({ total_points: profile.total_points + pointsEarned })
+      .update({
+        total_points: profile.total_points + pointsEarned,
+        correct_predictions: (profile.correct_predictions ?? 0) + (isCorrect ? 1 : 0),
+      })
       .eq('id', up.user_id)
 
     if (profileUpErr) {
@@ -371,18 +374,19 @@ export async function GET(request: Request) {
     pass3Fixed++
   }
 
-  // Recalculate total_points from scratch for Pass 3 affected users
+  // Recalculate total_points + correct_predictions from scratch for Pass 3 affected users
   for (const uid of pass3AffectedIds) {
     const { data: allVotes } = await supabase
       .from('user_predictions')
-      .select('points_earned')
+      .select('points_earned, is_correct')
       .eq('user_id', uid)
 
-    const total = (allVotes ?? []).reduce((sum, v) => sum + ((v.points_earned as number | null) ?? 0), 0)
+    const total   = (allVotes ?? []).reduce((sum, v) => sum + ((v.points_earned as number | null) ?? 0), 0)
+    const correct = (allVotes ?? []).filter(v => v.is_correct === true).length
 
     await supabase
       .from('profiles')
-      .update({ total_points: total })
+      .update({ total_points: total, correct_predictions: correct })
       .eq('id', uid)
 
     pass3AffectedIds.forEach(id => affectedUserIds.add(id))
