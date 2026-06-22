@@ -282,7 +282,7 @@ export default function HomeClient({
         style={{ background: '#07111F', borderRight: '1px solid rgba(255,255,255,0.06)', height: '100dvh' }}
       >
         {/* Logo */}
-        <div onClick={() => window.location.href = '/'} className="flex items-center gap-3 px-5 py-5 shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <div onClick={() => window.location.href = '/'} className="flex items-center gap-3 px-5 py-5 shrink-0" style={{ cursor: 'pointer', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           <img src="/logo-mundial.png" alt="Mundial 2026" style={{ width: 40, height: 40, objectFit: 'contain' }} />
           <div>
             <h1
