@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import {
-  getGroupPhases, setupGroupPhases, markPhasePaid, markPhaseUnpaid, setPhaseWinner,
+  getGroupPhases, getPhaseWinner, setupGroupPhases, markPhasePaid, markPhaseUnpaid,
   type GroupPhase,
 } from '@/app/actions/groups'
 import type { Group } from './MisGruposView'
@@ -19,6 +19,31 @@ const PHASE_LABELS: Record<string, string> = {
 const PHASE_ORDER = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
 const GOLD  = '#F6B73C'
 const GREEN = '#006A33'
+
+function PhaseLeader({ groupId, phase, isClosed }: { groupId: string; phase: string; isClosed: boolean }) {
+  const [leader, setLeader] = useState<{ winner: { id: string; username: string | null; avatar_url: string | null } | null; points: number } | null>(null)
+
+  useEffect(() => {
+    getPhaseWinner({ groupId, phase }).then(r => { if (r.data) setLeader(r.data) })
+  }, [groupId, phase])
+
+  if (!leader?.winner) return null
+
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginTop: 8, paddingTop: 8, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+      {leader.winner.avatar_url
+        ? <img src={leader.winner.avatar_url} alt="" style={{ width: 18, height: 18, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+        : <div style={{ width: 18, height: 18, borderRadius: '50%', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{(leader.winner.username ?? '?')[0].toUpperCase()}</div>
+      }
+      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>
+        {isClosed ? '🏆 Ganador:' : '🥇 Va ganando:'}
+      </span>
+      <span style={{ fontSize: 12, fontWeight: 700, color: GOLD }}>
+        {leader.winner.username?.split(' ')[0]} · {leader.points} pts
+      </span>
+    </div>
+  )
+}
 
 export interface GroupMember {
   user_id: string
@@ -147,9 +172,7 @@ export function GroupPhasesView({
   const [phases, setPhases] = useState<GroupPhase[]>([])
   const [loading, setLoading] = useState(true)
   const [showSetup, setShowSetup] = useState(false)
-  const [winnerSelect, setWinnerSelect] = useState<Record<string, string>>({})
-  const [actionLoading, setActionLoading] = useState<string | null>(null) // tracks phaseId + userId
-  const [confirmWinner, setConfirmWinner] = useState<{ phaseId: string; winnerId: string; winnerName: string } | null>(null)
+  const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   const loadPhases = useCallback(async () => {
     const result = await getGroupPhases(group.id)
@@ -181,21 +204,6 @@ export function GroupPhasesView({
         ? { ...p, payments: (p.payments ?? []).filter(pay => pay.user_id !== memberId) }
         : p
     ))
-    setActionLoading(null)
-  }
-
-  const handleSetWinner = async () => {
-    if (!confirmWinner) return
-    setActionLoading(`winner:${confirmWinner.phaseId}`)
-    const result = await setPhaseWinner({ phaseId: confirmWinner.phaseId, winnerId: confirmWinner.winnerId })
-    setConfirmWinner(null)
-    if (result.data) {
-      setPhases(prev => prev.map(p =>
-        p.id === confirmWinner.phaseId
-          ? { ...p, winner_id: confirmWinner.winnerId, status: 'closed' }
-          : p
-      ))
-    }
     setActionLoading(null)
   }
 
@@ -342,32 +350,9 @@ export function GroupPhasesView({
               })}
             </div>
 
-            {/* Declare winner — creator only, active phase */}
-            {isCreator && phase.status === 'active' && (
-              <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}>Declarar ganador:</span>
-                <select
-                  value={winnerSelect[phase.id] ?? ''}
-                  onChange={e => setWinnerSelect(prev => ({ ...prev, [phase.id]: e.target.value }))}
-                  style={{ flex: 1, padding: '7px 10px', borderRadius: 10, background: 'rgba(11,19,43)', border: '1px solid rgba(255,255,255,0.10)', color: winnerSelect[phase.id] ? '#fff' : 'rgba(255,255,255,0.35)', fontSize: 12, outline: 'none', cursor: 'pointer' }}
-                >
-                  <option value="" disabled>Elegir ganador...</option>
-                  {members.map(m => (
-                    <option key={m.user_id} value={m.user_id}>{m.username ?? 'Jugador'}</option>
-                  ))}
-                </select>
-                <button
-                  disabled={!winnerSelect[phase.id] || actionLoading === `winner:${phase.id}`}
-                  onClick={() => {
-                    const wId = winnerSelect[phase.id]
-                    const wName = members.find(m => m.user_id === wId)?.username ?? 'este jugador'
-                    if (wId) setConfirmWinner({ phaseId: phase.id, winnerId: wId, winnerName: wName })
-                  }}
-                  style={{ padding: '7px 13px', borderRadius: 10, background: winnerSelect[phase.id] ? GREEN : 'rgba(255,255,255,0.06)', border: 'none', cursor: winnerSelect[phase.id] ? 'pointer' : 'not-allowed', color: winnerSelect[phase.id] ? '#fff' : 'rgba(255,255,255,0.25)', fontSize: 12, fontWeight: 700, flexShrink: 0, transition: 'background 0.15s' }}
-                >
-                  Confirmar
-                </button>
-              </div>
+            {/* Auto leader / winner */}
+            {phase.status !== 'upcoming' && (
+              <PhaseLeader groupId={group.id} phase={phase.phase} isClosed={phase.status === 'closed'} />
             )}
           </div>
         )
@@ -405,40 +390,6 @@ export function GroupPhasesView({
         />
       )}
 
-      {/* Confirm winner modal */}
-      {confirmWinner && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16, background: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)' }}
-          onClick={e => { if (e.target === e.currentTarget) setConfirmWinner(null) }}
-        >
-          <div style={{ background: '#0E1A2B', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20, padding: 28, width: '100%', maxWidth: 360, textAlign: 'center' }}>
-            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(246,183,60,0.10)', border: '1px solid rgba(246,183,60,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 18px', fontSize: 26 }}>
-              🥇
-            </div>
-            <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#fff' }}>
-              ¿Declarar ganador?
-            </h3>
-            <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-              <strong style={{ color: '#fff' }}>{confirmWinner.winnerName}</strong> ganará la fase <strong style={{ color: '#fff' }}>{PHASE_LABELS[phases.find(p => p.id === confirmWinner.phaseId)?.phase ?? ''] ?? ''}</strong> y esta quedará cerrada.
-            </p>
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setConfirmWinner(null)}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={handleSetWinner}
-                disabled={actionLoading?.startsWith('winner:')}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, background: GOLD, border: 'none', cursor: 'pointer', color: '#000', fontSize: 14, fontWeight: 700 }}
-              >
-                {actionLoading?.startsWith('winner:') ? 'Guardando...' : 'Confirmar'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   )
 }

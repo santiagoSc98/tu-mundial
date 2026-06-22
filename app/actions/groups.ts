@@ -169,12 +169,22 @@ export async function setupGroupPhases({
   if (group?.created_by !== user.id) return { error: 'Solo el creador puede configurar fases' }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  await (supabase as any).from('group_phases').delete().eq('group_id', groupId)
+  const { error: deleteError } = await (supabase as any)
+    .from('group_phases').delete().eq('group_id', groupId)
+
+  if (deleteError) return { data: null, error: 'Error al limpiar fases: ' + deleteError.message }
+
+  await new Promise(resolve => setTimeout(resolve, 200))
+
+  const PHASE_ORDER_INSERT = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
+  const sorted = [...phases].sort(
+    (a, b) => PHASE_ORDER_INSERT.indexOf(a.phase) - PHASE_ORDER_INSERT.indexOf(b.phase)
+  )
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('group_phases')
-    .insert(phases.map(p => ({
+    .insert(sorted.map(p => ({
       group_id: groupId,
       phase: p.phase,
       entry_fee: p.entry_fee,
@@ -297,6 +307,69 @@ export type GroupPhase = {
   winner_id: string | null
   created_at: string
   payments: { user_id: string }[]
+}
+
+export async function getPhaseWinner({ groupId, phase }: { groupId: string; phase: string }) {
+  const supabase = await createClient()
+
+  const PHASE_STAGES: Record<string, string> = {
+    grupos:  'GROUP_STAGE',
+    octavos: 'LAST_16',
+    cuartos: 'QUARTER_FINALS',
+    semis:   'SEMI_FINALS',
+    final:   'FINAL',
+  }
+  const stageKey = PHASE_STAGES[phase]
+  if (!stageKey) return { data: null, error: 'Fase inválida' }
+
+  const { data: predictions } = await supabase
+    .from('predictions')
+    .select('id')
+    .ilike('description', `%${stageKey}%`)
+    .eq('status', 'resolved')
+
+  if (!predictions?.length) return { data: null, error: 'No hay partidos resueltos en esta fase' }
+
+  const predictionIds = predictions.map(p => p.id)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: members } = await (supabase as any)
+    .from('group_members')
+    .select('user_id, profiles(id, username, avatar_url)')
+    .eq('group_id', groupId)
+
+  if (!members?.length) return { data: null, error: 'No hay miembros' }
+
+  const userIds = (members as { user_id: string }[]).map(m => m.user_id)
+
+  const { data: votes } = await supabase
+    .from('user_predictions')
+    .select('user_id, points_earned')
+    .in('prediction_id', predictionIds)
+    .in('user_id', userIds)
+
+  const totals: Record<string, number> = {}
+  for (const vote of votes ?? []) {
+    totals[vote.user_id] = (totals[vote.user_id] ?? 0) + ((vote.points_earned as number | null) ?? 0)
+  }
+
+  let winnerId = ''
+  let maxPts = -1
+  for (const [uid, pts] of Object.entries(totals)) {
+    if (pts > maxPts) { maxPts = pts; winnerId = uid }
+  }
+
+  if (!winnerId) return { data: null, error: 'No hay predicciones en esta fase aún' }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const winnerMember = (members as any[]).find(m => m.user_id === winnerId)
+  return {
+    data: {
+      winner: winnerMember?.profiles as { id: string; username: string | null; avatar_url: string | null } | null,
+      points: maxPts,
+    },
+    error: null,
+  }
 }
 
 export async function getGroupPhases(groupId: string) {
