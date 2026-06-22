@@ -362,7 +362,7 @@ export default function PerfilView({ profile: initialProfile, myStats, currentSt
               </div>
               <button
                 onClick={openEdit}
-                className="rounded-xl px-4 py-2 text-xs text-white self-start flex-shrink-0 transition hover:bg-white/[0.12]"
+                className="rounded-xl px-4 py-2 text-xs cursor-pointer text-white self-start flex-shrink-0 transition hover:bg-white/[0.12]"
                 style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)' }}
               >
                 Editar perfil
