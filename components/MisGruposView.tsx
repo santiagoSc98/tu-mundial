@@ -237,6 +237,8 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
       setGroups(prev => [...prev, result.data!])
       setJoinCode('')
       setModal(null)
+      setToast(`¡Te uniste a ${result.data!.name}!`)
+      setTimeout(() => setToast(null), 3000)
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Error al unirse')
     } finally {
@@ -1090,30 +1092,40 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
               <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.30)' }}>Ingresá el código que te compartieron</p>
             </div>
             <div
-              style={{ display: 'flex', gap: 6, width: '100%', maxWidth: 200 }}
+              style={{ display: 'flex', flexDirection: 'column', gap: 6, width: '100%', maxWidth: 200 }}
               onClick={e => e.stopPropagation()}
             >
-              <input
-                type="text"
-                value={joinCode}
-                onChange={e => setJoinCode(e.target.value.toUpperCase())}
-                onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
-                placeholder="Código"
-                maxLength={10}
-                style={{ flex: 1, padding: '8px 10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12, color: '#fff', outline: 'none' }}
-              />
-              <button
-                onClick={handleJoin}
-                disabled={!joinCode.trim() || loading}
-                style={{ padding: '8px 12px', background: joinCode.trim() ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, color: '#fff', cursor: joinCode.trim() ? 'pointer' : 'not-allowed' }}
-              >
-                {loading ? '…' : 'Ir'}
-              </button>
+              <div style={{ display: 'flex', gap: 6 }}>
+                <input
+                  type="text"
+                  value={joinCode}
+                  onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                  onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
+                  placeholder="Código"
+                  maxLength={10}
+                  style={{ flex: 1, padding: '8px 10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12, color: '#fff', outline: 'none' }}
+                />
+                <button
+                  onClick={handleJoin}
+                  disabled={!joinCode.trim() || loading}
+                  style={{ padding: '8px 12px', background: joinCode.trim() ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, color: '#fff', cursor: joinCode.trim() ? 'pointer' : 'not-allowed' }}
+                >
+                  {loading ? '…' : 'Ir'}
+                </button>
+              </div>
+              {error && <p style={{ margin: 0, fontSize: 11, color: '#f87171', textAlign: 'center' }}>{error}</p>}
             </div>
           </div>
         </div>
       )}
     </div>
+
+    {/* ── Toast ── */}
+    {toast && (
+      <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+        ✓ {toast}
+      </div>
+    )}
 
     {/* ── Shared modals ── */}
     {(modal === 'create' || modal === 'share' || modal === 'join') && (
