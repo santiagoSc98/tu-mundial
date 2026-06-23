@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2 } from 'lucide-react'
-import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember } from '@/app/actions/groups'
+import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2, Trophy, Layers } from 'lucide-react'
+import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember, getGroupPhases, type GroupPhase } from '@/app/actions/groups'
 import { GroupPhasesView } from './GroupPhasesView'
 
 export interface Group {
@@ -42,6 +42,10 @@ const INPUT_STYLE: React.CSSProperties = {
 }
 
 const GOLD = '#F6B73C'
+
+const PHASE_SHORT: Record<string, string> = {
+  grupos: 'Grupos', octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semis', final: 'Final',
+}
 
 function formatMiles(val: string | number): string {
   if (!val && val !== 0) return ''
@@ -153,6 +157,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   const [confirmRemove, setConfirmRemove] = useState<{ memberId: string; memberName: string } | null>(null)
   const [removeLoading, setRemoveLoading] = useState(false)
   const [groupTab, setGroupTab] = useState<'ranking' | 'apuestas'>('ranking')
+  const [phases, setPhases] = useState<GroupPhase[]>([])
 
   useEffect(() => {
     if (autoJoinCode) {
@@ -244,10 +249,14 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   const openDetail = useCallback(async (group: Group) => {
     setViewingGroup(group)
     setGroupTab('ranking')
+    setPhases([])
     setMembersLoading(true)
     try {
-      const result = await getGroupMembers(group.id)
-      const rows: GroupMember[] = (result.data ?? []).map(r => ({
+      const [membersResult, phasesResult] = await Promise.all([
+        getGroupMembers(group.id),
+        getGroupPhases(group.id),
+      ])
+      const rows: GroupMember[] = (membersResult.data ?? []).map(r => ({
         user_id:      r.user_id,
         username:     r.profiles?.username ?? null,
         avatar_url:   r.profiles?.avatar_url ?? null,
@@ -255,6 +264,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
       })).sort((a, b) => b.total_points - a.total_points)
       setMembers(rows)
       setMemberCounts(prev => ({ ...prev, [group.id]: rows.length }))
+      setPhases(phasesResult.data ?? [])
     } finally {
       setMembersLoading(false)
     }
@@ -296,9 +306,15 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   if (viewingGroup) {
     const currency = viewingGroup.currency ?? 'Gs'
     const isCreator = viewingGroup.created_by === userId
+    const activePhase = phases.find(p => p.status === 'active') ?? null
+    const upcomingPhases = phases.filter(p => p.status === 'upcoming')
+    const totalPot = phases.reduce((sum, p) => sum + (p.payments?.length ?? 0) * Number(p.entry_fee), 0)
+    const paidCount = activePhase?.payments?.length ?? 0
 
     return (
-      <div>
+      <>
+      {/* ── MOBILE ── */}
+      <div className="md:hidden">
         {/* Header row */}
         <div style={{ marginBottom: 20, display: 'flex', alignItems: 'center', gap: 12 }}>
           <button
@@ -477,117 +493,288 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
           />
         )}
 
-        {/* Toast */}
-        {toast && (
-          <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
-            ✓ {toast}
-          </div>
-        )}
-
-        {/* Confirm remove modal */}
-        {confirmRemove && (
-          <ModalWrap onClose={() => setConfirmRemove(null)}>
-            <div style={{ textAlign: 'center', paddingTop: 8 }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(206,17,38,0.12)', border: '1px solid rgba(206,17,38,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="2">
-                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                  <circle cx="9" cy="7" r="4"/>
-                  <line x1="18" y1="8" x2="23" y2="13"/>
-                  <line x1="23" y1="8" x2="18" y2="13"/>
-                </svg>
-              </div>
-              <h2 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#fff' }}>
-                ¿Eliminar a {confirmRemove.memberName}?
-              </h2>
-              <p style={{ margin: '0 0 28px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
-                Esta persona ya no podrá ver ni participar en el grupo.
-              </p>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => setConfirmRemove(null)}
-                  style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
-                >
-                  Cancelar
-                </button>
-                <button
-                  onClick={doRemoveMember}
-                  disabled={removeLoading}
-                  style={{ flex: 1, padding: '13px', borderRadius: 12, background: removeLoading ? 'rgba(206,17,38,0.30)' : '#CE1126', border: 'none', cursor: removeLoading ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
-                >
-                  {removeLoading ? 'Eliminando...' : 'Sí, eliminar'}
-                </button>
-              </div>
-            </div>
-          </ModalWrap>
-        )}
-
-        {/* Edit modal (accessible from detail view) */}
-        {modal === 'edit' && (
-          <ModalWrap onClose={closeModal}>
-            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Editar grupo</h2>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Actualizá el nombre y el premio</p>
-
-            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
-            <input
-              type="text"
-              value={editName}
-              onChange={e => setEditName(e.target.value)}
-              maxLength={30}
-              autoFocus
-              style={{ ...INPUT_STYLE, marginBottom: 16 }}
-            />
-
-            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={editPrize ? formatMiles(editPrize) : ''}
-              onChange={e => setEditPrize(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-              placeholder="100.000"
-              style={{ ...INPUT_STYLE, marginBottom: 10 }}
-            />
-            <div style={{ marginBottom: 16 }}>
-              <CurrencySelector value={editCurrency} onChange={setEditCurrency} />
-            </div>
-
-            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={editEntry ? formatMiles(editEntry) : ''}
-              onChange={e => setEditEntry(e.target.value.replace(/\D/g, ''))}
-              onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-              placeholder="10.000"
-              style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 24 }}
-            />
-
-            {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
-
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button
-                onClick={() => setModal(null)}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={async () => {
-                  console.log('[EditGroup] Guardando...')
-                  console.log('[EditGroup] editName:', editName)
-                  console.log('[EditGroup] editPrize:', editPrize)
-                  console.log('[EditGroup] viewingGroup:', viewingGroup?.id)
-                  await handleUpdateGroup()
-                }}
-                disabled={!editName.trim() || loading}
-                style={{ flex: 1, padding: '13px', borderRadius: 12, background: editName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
-              >
-                {loading ? 'Guardando...' : 'Guardar'}
-              </button>
-            </div>
-          </ModalWrap>
-        )}
       </div>
+
+      {/* ── DESKTOP ─────────────────────────────────────────────────── */}
+      <div className="hidden md:flex flex-col" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 20, overflow: 'hidden' }}>
+
+        {/* Hero */}
+        <div style={{ position: 'relative', overflow: 'hidden', background: 'linear-gradient(135deg,#071A40,#0d2d6b 55%,#071A40)', borderBottom: '1px solid rgba(255,255,255,0.06)', padding: '24px 28px' }}>
+          <div style={{ position: 'absolute', top: -60, right: 80, width: 300, height: 300, borderRadius: '50%', background: 'rgba(0,106,51,0.15)', filter: 'blur(60px)', pointerEvents: 'none' }} />
+          <div style={{ position: 'relative', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20 }}>
+            <div>
+              <button
+                onClick={() => setViewingGroup(null)}
+                style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 9, padding: '5px 12px', cursor: 'pointer', color: 'rgba(255,255,255,0.55)', fontSize: 13, fontWeight: 600 }}
+              >
+                ← Mis Grupos
+              </button>
+              <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: '10px 0 3px', fontFamily: 'var(--font-montserrat, system-ui)' }}>{viewingGroup.name}</h2>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 10px' }}>
+                {membersLoading ? '…' : `${members.length} miembro${members.length !== 1 ? 's' : ''}`}
+                {' · '}Código <strong style={{ color: '#60a5fa', letterSpacing: '0.06em' }}>{viewingGroup.code}</strong>
+              </p>
+              {members[0] && (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(0,106,51,0.22)', border: '1px solid rgba(0,106,51,0.50)', borderRadius: 8, padding: '3px 9px', fontSize: 11, fontWeight: 700, color: '#4ade80' }}>
+                  <Trophy size={11} /> Líder: {members[0].username?.split(' ')[0]}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 8, flexShrink: 0, marginTop: 4 }}>
+              {isCreator && (
+                <button
+                  onClick={() => openEdit(viewingGroup)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: 'rgba(255,255,255,0.70)', fontSize: 13, fontWeight: 600 }}
+                >
+                  <Edit2 size={13} /> Editar
+                </button>
+              )}
+              <button
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(viewingGroup.code, viewingGroup.name))}`, '_blank')}
+                style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 16px', borderRadius: 11, background: '#006A33', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}
+              >
+                <WhatsAppIcon /> Invitar
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* KPIs */}
+        <div className="grid grid-cols-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          {([
+            { icon: <Trophy size={16} style={{ color: GOLD }} />, label: 'Pozo Total', value: totalPot > 0 ? `${currency} ${totalPot.toLocaleString('es-PY')}` : '—' },
+            { icon: <Users size={16} style={{ color: '#60a5fa' }} />, label: 'Miembros', value: String(members.length) },
+            { icon: <CheckCircle size={16} style={{ color: '#4ade80' }} />, label: 'Pagaron', value: activePhase ? `${paidCount}/${members.length}` : '—' },
+            { icon: <Layers size={16} style={{ color: 'rgba(255,255,255,0.45)' }} />, label: 'Fases', value: phases.length > 0 ? String(phases.length) : '—' },
+          ] as const).map((kpi, i) => (
+            <div key={i} style={{ padding: '16px 20px', borderRight: i < 3 ? '1px solid rgba(255,255,255,0.06)' : 'none', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, textAlign: 'center' }}>
+              {kpi.icon}
+              <span style={{ fontSize: 18, fontWeight: 800, color: '#fff', letterSpacing: '-0.01em' }}>{kpi.value}</span>
+              <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.35)' }}>{kpi.label}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Body */}
+        <div className="grid grid-cols-[1fr_300px] items-start">
+
+          {/* Left column: tabs + content */}
+          <div style={{ padding: '20px 24px', borderRight: '1px solid rgba(255,255,255,0.06)' }}>
+            {/* Tabs */}
+            <div style={{ display: 'flex', gap: 4, marginBottom: 16, background: 'rgba(255,255,255,0.05)', padding: 4, borderRadius: 14, width: 'fit-content' }}>
+              {(['ranking', 'apuestas'] as const).map(tab => (
+                <button
+                  key={tab}
+                  onClick={() => setGroupTab(tab)}
+                  style={{ padding: '7px 20px', borderRadius: 10, border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, transition: 'background 0.15s', background: groupTab === tab ? '#006A33' : 'transparent', color: groupTab === tab ? '#fff' : 'rgba(255,255,255,0.40)' }}
+                >
+                  {tab === 'ranking' ? 'Ranking' : 'Apuestas'}
+                </button>
+              ))}
+            </div>
+
+            {groupTab === 'ranking' && (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '32px 1fr 64px 80px', alignItems: 'center', padding: '4px 10px', marginBottom: 4 }}>
+                  {(['#', 'USUARIO', 'PRED.', 'PUNTOS'] as const).map((h, i) => (
+                    <span key={h} style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: 'rgba(255,255,255,0.30)', textAlign: i >= 2 ? 'right' : 'left' }}>{h}</span>
+                  ))}
+                </div>
+                {membersLoading ? (
+                  <div style={{ padding: '40px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>Cargando...</div>
+                ) : members.length === 0 ? (
+                  <div style={{ padding: '40px 10px', textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>Sin miembros aún</div>
+                ) : members.map((m, i) => {
+                  const isMe = m.user_id === userId
+                  const rankColor = i === 0 ? GOLD : i === 1 ? '#C0C0C0' : i === 2 ? '#CD7F32' : 'rgba(255,255,255,0.30)'
+                  return (
+                    <div
+                      key={m.user_id}
+                      style={{ display: 'grid', gridTemplateColumns: '32px 1fr 64px 80px', alignItems: 'center', padding: '10px 10px', borderRadius: 12, marginBottom: 4, background: isMe ? 'rgba(0,106,51,0.12)' : 'transparent' }}
+                    >
+                      <span style={{ fontSize: 13, fontWeight: 800, color: rankColor, textAlign: 'center' }}>{i + 1}</span>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                        {m.avatar_url
+                          ? <img src={m.avatar_url} alt="" style={{ width: 32, height: 32, borderRadius: '50%', objectFit: 'cover', flexShrink: 0, border: isMe ? '2px solid #4ade80' : '2px solid rgba(255,255,255,0.08)' }} />
+                          : <div style={{ width: 32, height: 32, borderRadius: '50%', background: isMe ? '#006A33' : 'rgba(255,255,255,0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{(m.username ?? '?')[0].toUpperCase()}</div>
+                        }
+                        <span style={{ fontSize: 14, fontWeight: isMe ? 700 : 500, color: isMe ? '#fff' : 'rgba(255,255,255,0.80)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.username ?? 'Jugador'}{isMe && <span style={{ marginLeft: 6, fontSize: 10, color: '#4ade80', fontWeight: 700 }}>(tú)</span>}
+                        </span>
+                      </div>
+                      <span style={{ textAlign: 'right', fontSize: 13, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>—</span>
+                      <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
+                        <span style={{ fontSize: 14, fontWeight: 700, color: isMe ? '#4ade80' : '#fff' }}>{m.total_points} pts</span>
+                        {isCreator && !isMe && (
+                          <button
+                            onClick={() => handleRemoveMember(m.user_id, m.username ?? 'Jugador')}
+                            style={{ width: 22, height: 22, borderRadius: 6, background: 'rgba(206,17,38,0.10)', border: '1px solid rgba(206,17,38,0.20)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                          >
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="2.5"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            )}
+
+            {groupTab === 'apuestas' && (
+              <GroupPhasesView group={viewingGroup} members={members} userId={userId} isCreator={isCreator} />
+            )}
+          </div>
+
+          {/* Right sidebar */}
+          <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 12, background: 'rgba(0,0,0,0.15)' }}>
+
+            {/* Card 1: Active phase */}
+            {activePhase ? (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.45)' }}>Fase Actual</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '3px 8px', borderRadius: 6, background: 'rgba(0,106,51,0.25)', border: '1px solid rgba(0,106,51,0.50)', color: '#4ade80' }}>
+                    {PHASE_SHORT[activePhase.phase] ?? activePhase.phase}
+                  </span>
+                </div>
+                {activePhase.entry_fee > 0 && (
+                  <>
+                    <p style={{ margin: '0 0 3px', fontSize: 24, fontWeight: 900, color: GOLD, letterSpacing: '-0.01em' }}>
+                      {currency} {(paidCount * Number(activePhase.entry_fee)).toLocaleString('es-PY')}
+                    </p>
+                    <p style={{ margin: '0 0 10px', fontSize: 12, color: 'rgba(255,255,255,0.40)' }}>
+                      {paidCount} de {members.length} pagaron · {currency} {Number(activePhase.entry_fee).toLocaleString('es-PY')} c/u
+                    </p>
+                    <div style={{ height: 4, background: 'rgba(255,255,255,0.08)', borderRadius: 4, marginBottom: 12, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${members.length > 0 ? (paidCount / members.length) * 100 : 0}%`, background: '#006A33', borderRadius: 4, transition: 'width 0.3s' }} />
+                    </div>
+                  </>
+                )}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  {members.slice(0, 6).map(m => {
+                    const paid = activePhase.payments.some(p => p.user_id === m.user_id)
+                    return (
+                      <div key={m.user_id} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {m.avatar_url
+                          ? <img src={m.avatar_url} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                          : <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{(m.username ?? '?')[0].toUpperCase()}</div>
+                        }
+                        <span style={{ flex: 1, fontSize: 12, color: paid ? '#fff' : 'rgba(255,255,255,0.35)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {m.username?.split(' ')[0] ?? 'Jugador'}
+                        </span>
+                        <span style={{ fontSize: 12, fontWeight: 700, color: paid ? '#4ade80' : 'rgba(255,255,255,0.25)' }}>{paid ? '✓' : '—'}</span>
+                      </div>
+                    )
+                  })}
+                  {members.length > 6 && (
+                    <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.25)' }}>+{members.length - 6} más</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
+                <p style={{ margin: 0, fontSize: 12, color: 'rgba(255,255,255,0.35)', textAlign: 'center' }}>Sin fase activa</p>
+              </div>
+            )}
+
+            {/* Card 2: Upcoming phases */}
+            {upcomingPhases.length > 0 && (
+              <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
+                <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)' }}>Próximas Fases</p>
+                {upcomingPhases.map((p, i) => (
+                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < upcomingPhases.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
+                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}>{PHASE_SHORT[p.phase] ?? p.phase}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {p.entry_fee > 0 && (
+                        <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>{currency} {Number(p.entry_fee).toLocaleString('es-PY')}</span>
+                      )}
+                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.40)' }}>Próx.</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Card 3: Invite */}
+            <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
+              <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)' }}>Invitar Miembros</p>
+              <button
+                onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(viewingGroup.code, viewingGroup.name))}`, '_blank')}
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', padding: '10px', borderRadius: 11, background: 'rgba(37,211,102,0.12)', border: '1px solid rgba(37,211,102,0.28)', cursor: 'pointer', color: '#4ade80', fontSize: 13, fontWeight: 700, marginBottom: 8 }}
+              >
+                <WhatsAppIcon /> Compartir por WhatsApp
+              </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 11, padding: '9px 12px' }}>
+                <Hash size={13} style={{ color: 'rgba(255,255,255,0.40)', flexShrink: 0 }} />
+                <span style={{ flex: 1, fontSize: 14, fontWeight: 800, color: '#60a5fa', letterSpacing: '0.10em', fontFamily: 'monospace' }}>{viewingGroup.code}</span>
+                <button
+                  onClick={() => copyCode(viewingGroup.code)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 5, background: 'transparent', border: 'none', cursor: 'pointer', color: copied ? '#4ade80' : 'rgba(255,255,255,0.50)', fontSize: 12, fontWeight: 600, padding: 0 }}
+                >
+                  {copied ? <CheckCircle size={13} /> : <Copy size={13} />}
+                  {copied ? '¡Copiado!' : 'Copiar'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ── Shared modals ── */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 28, left: '50%', transform: 'translateX(-50%)', background: '#006A33', color: '#fff', padding: '12px 24px', borderRadius: 12, fontSize: 14, fontWeight: 700, zIndex: 10000, boxShadow: '0 4px 20px rgba(0,0,0,0.4)', whiteSpace: 'nowrap' }}>
+          ✓ {toast}
+        </div>
+      )}
+
+      {confirmRemove && (
+        <ModalWrap onClose={() => setConfirmRemove(null)}>
+          <div style={{ textAlign: 'center', paddingTop: 8 }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(206,17,38,0.12)', border: '1px solid rgba(206,17,38,0.25)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#CE1126" strokeWidth="2">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                <circle cx="9" cy="7" r="4"/>
+                <line x1="18" y1="8" x2="23" y2="13"/>
+                <line x1="23" y1="8" x2="18" y2="13"/>
+              </svg>
+            </div>
+            <h2 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 700, color: '#fff' }}>
+              ¿Eliminar a {confirmRemove.memberName}?
+            </h2>
+            <p style={{ margin: '0 0 28px', fontSize: 13, color: 'rgba(255,255,255,0.45)', lineHeight: 1.5 }}>
+              Esta persona ya no podrá ver ni participar en el grupo.
+            </p>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => setConfirmRemove(null)} style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+              <button onClick={doRemoveMember} disabled={removeLoading} style={{ flex: 1, padding: '13px', borderRadius: 12, background: removeLoading ? 'rgba(206,17,38,0.30)' : '#CE1126', border: 'none', cursor: removeLoading ? 'not-allowed' : 'pointer', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}>
+                {removeLoading ? 'Eliminando...' : 'Sí, eliminar'}
+              </button>
+            </div>
+          </div>
+        </ModalWrap>
+      )}
+
+      {modal === 'edit' && (
+        <ModalWrap onClose={closeModal}>
+          <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Editar grupo</h2>
+          <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Actualizá el nombre y el premio</p>
+          <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
+          <input type="text" value={editName} onChange={e => setEditName(e.target.value)} maxLength={30} autoFocus style={{ ...INPUT_STYLE, marginBottom: 16 }} />
+          <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
+          <input type="text" inputMode="numeric" value={editPrize ? formatMiles(editPrize) : ''} onChange={e => setEditPrize(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} placeholder="100.000" style={{ ...INPUT_STYLE, marginBottom: 10 }} />
+          <div style={{ marginBottom: 16 }}><CurrencySelector value={editCurrency} onChange={setEditCurrency} /></div>
+          <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
+          <input type="text" inputMode="numeric" value={editEntry ? formatMiles(editEntry) : ''} onChange={e => setEditEntry(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} placeholder="10.000" style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 24 }} />
+          {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button onClick={() => setModal(null)} style={{ flex: 1, padding: '13px', borderRadius: 12, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.60)', fontSize: 14, fontWeight: 600 }}>Cancelar</button>
+            <button onClick={async () => { await handleUpdateGroup() }} disabled={!editName.trim() || loading} style={{ flex: 1, padding: '13px', borderRadius: 12, background: editName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: editName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}>
+              {loading ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </ModalWrap>
+      )}
+    </>
     )
   }
 
