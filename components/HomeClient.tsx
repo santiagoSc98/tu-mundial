@@ -468,7 +468,7 @@ export default function HomeClient({
             maxWidth: activeTab === 'inicio' ? 1200 : activeTab === 'calendario' ? 1200 : 1200,
             margin: '0 auto',
             padding: '32px 16px',
-            height:'100%'
+            height:activeTab === 'grupos' ? '100%' : 'auto'
           }}
         >
           
