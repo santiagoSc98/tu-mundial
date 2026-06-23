@@ -40,8 +40,8 @@ const STATUS_BADGE: Record<string, { label: string; color: string; bg: string; b
 }
 
 const STAGE_LABELS: Record<string, string> = {
-  GROUP_STAGE: 'Grupos', ROUND_OF_16: 'Octavos', QUARTER_FINALS: 'Cuartos',
-  SEMI_FINALS: 'Semis', THIRD_PLACE: '3er Puesto', FINAL: 'Final',
+  GROUP_STAGE: 'Grupos', LAST_16: 'Dieciseisavos', ROUND_OF_16: 'Octavos',
+  QUARTER_FINALS: 'Cuartos', SEMI_FINALS: 'Semis', THIRD_PLACE: '3er Puesto', FINAL: 'Final',
 }
 
 function parseStage(description: string | null): string {

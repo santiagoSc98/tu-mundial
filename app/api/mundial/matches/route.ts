@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 
 const STAGE_LABELS: Record<string, string> = {
-  GROUP_STAGE: 'Fase de Grupos',
-  ROUND_OF_16: 'Octavos de Final',
+  GROUP_STAGE:    'Fase de Grupos',
+  LAST_16:        'Dieciseisavos de Final',
+  ROUND_OF_16:    'Octavos de Final',
   QUARTER_FINALS: 'Cuartos de Final',
-  SEMI_FINALS: 'Semifinales',
-  THIRD_PLACE: 'Tercer Puesto',
-  FINAL: 'Final',
+  SEMI_FINALS:    'Semifinales',
+  THIRD_PLACE:    'Tercer Puesto',
+  FINAL:          'Final',
 }
 
 export async function GET(request: Request) {

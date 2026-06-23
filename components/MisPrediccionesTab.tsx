@@ -26,6 +26,7 @@ type Filter = 'todas' | 'acertadas' | 'falladas' | 'pendientes'
 
 const STAGE_LABELS: Record<string, string> = {
   GROUP_STAGE:    'Grupos',
+  LAST_16:        'Dieciseisavos',
   ROUND_OF_16:    'Octavos',
   QUARTER_FINALS: 'Cuartos',
   SEMI_FINALS:    'Semis',

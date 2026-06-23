@@ -16,11 +16,11 @@ type Prediction = Database['public']['Tables']['predictions']['Row']
 
 const STAGE_LABELS: Record<string, string> = {
   GROUP_STAGE:    'Grupos',
-  LAST_16:        'Octavos',
+  LAST_16:        'Dieciseisavos',
   ROUND_OF_16:    'Octavos',
   QUARTER_FINALS: 'Cuartos',
   SEMI_FINALS:    'Semifinal',
-  THIRD_PLACE:    '3er Puesto',
+  THIRD_PLACE:    'Tercer puesto',
   FINAL:          'Final',
 }
 

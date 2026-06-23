@@ -11,21 +11,23 @@ import type { Database } from '@/lib/database.types'
 type Prediction = Database['public']['Tables']['predictions']['Row']
 
 const STAGE_LABELS: Record<string, string> = {
-  GROUP_STAGE: 'Fase de Grupos',
-  ROUND_OF_16: 'Octavos de Final',
+  GROUP_STAGE:    'Fase de Grupos',
+  LAST_16:        'Dieciseisavos de Final',
+  ROUND_OF_16:    'Octavos de Final',
   QUARTER_FINALS: 'Cuartos de Final',
-  SEMI_FINALS: 'Semifinales',
-  THIRD_PLACE: 'Tercer Puesto',
-  FINAL: 'Final',
+  SEMI_FINALS:    'Semifinales',
+  THIRD_PLACE:    'Tercer Puesto',
+  FINAL:          'Final',
 }
 
 const STAGE_ORDER: Record<string, number> = {
-  GROUP_STAGE: 0,
-  ROUND_OF_16: 1,
-  QUARTER_FINALS: 2,
-  SEMI_FINALS: 3,
-  THIRD_PLACE: 4,
-  FINAL: 5,
+  GROUP_STAGE:    0,
+  LAST_16:        1,
+  ROUND_OF_16:    2,
+  QUARTER_FINALS: 3,
+  SEMI_FINALS:    4,
+  THIRD_PLACE:    5,
+  FINAL:          6,
 }
 
 function parseStage(description: string | null): string {
