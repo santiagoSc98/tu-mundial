@@ -176,7 +176,7 @@ export async function setupGroupPhases({
 
   await new Promise(resolve => setTimeout(resolve, 200))
 
-  const PHASE_ORDER_INSERT = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
+  const PHASE_ORDER_INSERT = ['grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final']
   const sorted = [...phases].sort(
     (a, b) => PHASE_ORDER_INSERT.indexOf(a.phase) - PHASE_ORDER_INSERT.indexOf(b.phase)
   )
@@ -313,11 +313,12 @@ export async function getPhaseWinner({ groupId, phase }: { groupId: string; phas
   const supabase = await createClient()
 
   const PHASE_STAGES: Record<string, string> = {
-    grupos:  'GROUP_STAGE',
-    octavos: 'LAST_16',
-    cuartos: 'QUARTER_FINALS',
-    semis:   'SEMI_FINALS',
-    final:   'FINAL',
+    grupos:         'GROUP_STAGE',
+    dieciseisavos: 'LAST_32',
+    octavos:        'LAST_16',
+    cuartos:        'QUARTER_FINALS',
+    semis:          'SEMI_FINALS',
+    final:          'FINAL',
   }
   const stageKey = PHASE_STAGES[phase]
   if (!stageKey) return { data: null, error: 'Fase inválida' }
@@ -384,7 +385,7 @@ export async function getGroupPhases(groupId: string) {
 
   if (error) return { data: null, error: error.message as string }
 
-  const PHASE_ORDER = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
+  const PHASE_ORDER = ['grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final']
   const sorted = (data as GroupPhase[]).sort(
     (a, b) => PHASE_ORDER.indexOf(a.phase) - PHASE_ORDER.indexOf(b.phase)
   )

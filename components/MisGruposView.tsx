@@ -45,7 +45,7 @@ const INPUT_STYLE: React.CSSProperties = {
 const GOLD = '#F6B73C'
 
 const PHASE_SHORT: Record<string, string> = {
-  grupos: 'Grupos', octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semis', final: 'Final',
+  grupos: 'Grupos', dieciseisavos: 'Dieciseisavos', octavos: 'Octavos', cuartos: 'Cuartos', semis: 'Semis', final: 'Final',
 }
 
 function formatMiles(val: string | number): string {
@@ -678,17 +678,26 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
             {upcomingPhases.length > 0 && (
               <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 16 }}>
                 <p style={{ margin: '0 0 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)' }}>Próximas Fases</p>
-                {upcomingPhases.map((p, i) => (
-                  <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < upcomingPhases.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none' }}>
-                    <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)' }}>{PHASE_SHORT[p.phase] ?? p.phase}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                      {p.entry_fee > 0 && (
-                        <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>{currency} {Number(p.entry_fee).toLocaleString('es-PY')}</span>
-                      )}
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.40)' }}>Próx.</span>
+                {upcomingPhases.map((p, i) => {
+                  const phasePot = (p.payments?.length ?? 0) * Number(p.entry_fee)
+                  const phasePaid = p.payments?.length ?? 0
+                  return (
+                    <div key={p.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '7px 0', borderBottom: i < upcomingPhases.length - 1 ? '1px solid rgba(255,255,255,0.04)' : 'none', gap: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.60)', display: 'block' }}>{PHASE_SHORT[p.phase] ?? p.phase}</span>
+                        {p.entry_fee > 0 && (
+                          <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.30)' }}>{phasePaid} de {members.length} pagaron</span>
+                        )}
+                      </div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                        {p.entry_fee > 0 && (
+                          <span style={{ fontSize: 12, color: GOLD, fontWeight: 700 }}>{currency} {phasePot.toLocaleString('es-PY')}</span>
+                        )}
+                        <span style={{ fontSize: 10, fontWeight: 700, padding: '2px 7px', borderRadius: 5, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.40)' }}>Próx.</span>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 

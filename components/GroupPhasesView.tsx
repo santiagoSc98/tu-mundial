@@ -9,14 +9,15 @@ import {
 import type { Group } from './MisGruposView'
 
 const PHASE_LABELS: Record<string, string> = {
-  grupos:  'Fase de Grupos',
-  octavos: 'Octavos de Final',
-  cuartos: 'Cuartos de Final',
-  semis:   'Semifinales',
-  final:   'Final',
+  grupos:         'Fase de Grupos',
+  dieciseisavos: 'Dieciseisavos de Final',
+  octavos:        'Octavos de Final',
+  cuartos:        'Cuartos de Final',
+  semis:          'Semifinales',
+  final:          'Final',
 }
 
-const PHASE_ORDER = ['grupos', 'octavos', 'cuartos', 'semis', 'final']
+const PHASE_ORDER = ['grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final']
 const GOLD  = '#F6B73C'
 const GREEN = '#006A33'
 
