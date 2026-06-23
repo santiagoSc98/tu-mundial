@@ -57,6 +57,7 @@ export interface Database {
           options: Json | null
           fixture_id: string | null
           auto_resolved: boolean
+          stage: string | null
           home_team_code: string | null
           away_team_code: string | null
           exact_score_home: number | null
@@ -75,6 +76,7 @@ export interface Database {
           options?: Json | null
           fixture_id?: string | null
           auto_resolved?: boolean
+          stage?: string | null
           home_team_code?: string | null
           away_team_code?: string | null
           exact_score_home?: number | null
@@ -93,6 +95,7 @@ export interface Database {
           options?: Json | null
           fixture_id?: string | null
           auto_resolved?: boolean
+          stage?: string | null
           home_team_code?: string | null
           away_team_code?: string | null
           exact_score_home?: number | null

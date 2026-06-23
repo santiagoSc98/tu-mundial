@@ -336,7 +336,7 @@ function FeaturedMatchPanel({
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
   const awayFlag = getFlagUrl(prediction.away_team_code)
-  const stage    = STAGE_LABELS[parseStage(prediction.description)] ?? 'Fase de Grupos'
+  const stage    = STAGE_LABELS[prediction.stage ?? parseStage(prediction.description)] ?? 'Fase de Grupos'
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
   const answered = !!existingAnswer

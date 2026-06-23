@@ -9,8 +9,8 @@ import type { StandingsByType } from '@/lib/grupos'
 
 const PRED_COLS = [
   'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
-  'difficulty_multiplier', 'status', 'options', 'home_team_code', 'away_team_code',
-  'exact_score_home', 'exact_score_away',
+  'difficulty_multiplier', 'status', 'options', 'stage',
+  'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
 ].join(', ')
 
 // ─── Timeout helper ──────────────────────────────────────────────────────────
