@@ -456,9 +456,35 @@ export async function getGroupMembers(groupId: string) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { data, error } = await (supabase as any)
     .from('group_members')
-    .select('user_id, profiles(id, username, avatar_url, total_points)')
+    .select('user_id, profiles(id, username, avatar_url, total_points, current_streak)')
     .eq('group_id', groupId)
 
   if (error) return { data: null, error: error.message as string }
-  return { data: data as { user_id: string; profiles: { id: string; username: string | null; avatar_url: string | null; total_points: number } | null }[], error: null }
+
+  const memberIds: string[] = (data ?? []).map((m: { user_id: string }) => m.user_id)
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: predRows } = await (supabase as any)
+    .from('user_predictions')
+    .select('user_id')
+    .in('user_id', memberIds.length > 0 ? memberIds : ['00000000-0000-0000-0000-000000000000'])
+
+  const predCountMap: Record<string, number> = {}
+  for (const row of (predRows ?? []) as { user_id: string }[]) {
+    predCountMap[row.user_id] = (predCountMap[row.user_id] ?? 0) + 1
+  }
+
+  type MemberRow = {
+    user_id: string
+    profiles: { id: string; username: string | null; avatar_url: string | null; total_points: number; current_streak: number } | null
+    totalPredictions: number
+  }
+
+  return {
+    data: ((data ?? []) as Omit<MemberRow, 'totalPredictions'>[]).map(m => ({
+      ...m,
+      totalPredictions: predCountMap[m.user_id] ?? 0,
+    })) as MemberRow[],
+    error: null,
+  }
 }

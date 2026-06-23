@@ -20,6 +20,7 @@ export interface GroupMember {
   username: string | null
   avatar_url: string | null
   total_points: number
+  totalPredictions?: number
 }
 
 interface Props {
@@ -257,10 +258,11 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
         getGroupPhases(group.id),
       ])
       const rows: GroupMember[] = (membersResult.data ?? []).map(r => ({
-        user_id:      r.user_id,
-        username:     r.profiles?.username ?? null,
-        avatar_url:   r.profiles?.avatar_url ?? null,
-        total_points: r.profiles?.total_points ?? 0,
+        user_id:          r.user_id,
+        username:         r.profiles?.username ?? null,
+        avatar_url:       r.profiles?.avatar_url ?? null,
+        total_points:     r.profiles?.total_points ?? 0,
+        totalPredictions: r.totalPredictions ?? 0,
       })).sort((a, b) => b.total_points - a.total_points)
       setMembers(rows)
       setMemberCounts(prev => ({ ...prev, [group.id]: rows.length }))
@@ -308,8 +310,12 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
     const isCreator = viewingGroup.created_by === userId
     const activePhase = phases.find(p => p.status === 'active') ?? null
     const upcomingPhases = phases.filter(p => p.status === 'upcoming')
-    const totalPot = phases.reduce((sum, p) => sum + (p.payments?.length ?? 0) * Number(p.entry_fee), 0)
     const paidCount = activePhase?.payments?.length ?? 0
+    const groupPrize = viewingGroup.prize_amount
+      ? `${currency} ${Number(viewingGroup.prize_amount).toLocaleString('es-PY')}`
+      : viewingGroup.entry_fee
+      ? `${currency} ${(Number(viewingGroup.entry_fee) * members.length).toLocaleString('es-PY')}`
+      : '—'
 
     return (
       <>
@@ -346,40 +352,23 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
         {/* Prize banner */}
         {(viewingGroup.prize_amount || viewingGroup.entry_fee) && (
           <div style={{ background: `rgba(246,183,60,0.08)`, border: `1px solid rgba(246,183,60,0.20)`, borderRadius: 16, padding: '16px 20px', marginBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              {viewingGroup.entry_fee && !viewingGroup.prize_amount ? (
-                <div>
-                  <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Pozo estimado</p>
-                  <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: '0 0 2px', letterSpacing: '-0.01em' }}>
-                    {currency} {(Number(viewingGroup.entry_fee) * members.length).toLocaleString('es-PY')}
-                  </p>
-                  <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                    {members.length} participante{members.length !== 1 ? 's' : ''} × {currency} {Number(viewingGroup.entry_fee).toLocaleString('es-PY')}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div>
-                    <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Premio del ganador</p>
-                    <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: 0, letterSpacing: '-0.01em' }}>
-                      {currency} {Number(viewingGroup.prize_amount).toLocaleString('es-PY')}
-                    </p>
-                  </div>
-                  {viewingGroup.entry_fee && (
-                    <div style={{ textAlign: 'right' }}>
-                      <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', margin: '0 0 4px' }}>Aporte</p>
-                      <p style={{ fontSize: 18, fontWeight: 800, color: '#fff', margin: '0 0 2px' }}>
-                        {currency} {Number(viewingGroup.entry_fee).toLocaleString('es-PY')}
-                      </p>
-                      <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: 0 }}>por persona</p>
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-            <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.25)', margin: '10px 0 0' }}>
-              * El pago se coordina entre los participantes
-            </p>
+            {viewingGroup.prize_amount ? (
+              <div>
+                <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+                  {currency} {Number(viewingGroup.prize_amount).toLocaleString('es-PY')}
+                </p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', margin: 0 }}>Premio al ganador del ranking final</p>
+              </div>
+            ) : viewingGroup.entry_fee ? (
+              <div>
+                <p style={{ fontSize: 26, fontWeight: 900, color: GOLD, margin: '0 0 4px', letterSpacing: '-0.01em' }}>
+                  {currency} {(Number(viewingGroup.entry_fee) * members.length).toLocaleString('es-PY')}
+                </p>
+                <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
+                  {members.length} participante{members.length !== 1 ? 's' : ''} × {currency} {Number(viewingGroup.entry_fee).toLocaleString('es-PY')}
+                </p>
+              </div>
+            ) : null}
           </div>
         )}
 
@@ -510,10 +499,18 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
                 ← Mis Grupos
               </button>
               <h2 style={{ fontSize: 22, fontWeight: 700, color: '#fff', margin: '10px 0 3px', fontFamily: 'var(--font-montserrat, system-ui)' }}>{viewingGroup.name}</h2>
-              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 10px' }}>
+              <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 6px' }}>
                 {membersLoading ? '…' : `${members.length} miembro${members.length !== 1 ? 's' : ''}`}
                 {' · '}Código <strong style={{ color: '#60a5fa', letterSpacing: '0.06em' }}>{viewingGroup.code}</strong>
               </p>
+              {(viewingGroup.prize_amount || viewingGroup.entry_fee) && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
+                  <Trophy size={12} style={{ color: GOLD, flexShrink: 0 }} />
+                  <span style={{ fontSize: 12, color: GOLD }}>
+                    Premio: {groupPrize} al ganador del ranking final
+                  </span>
+                </div>
+              )}
               {members[0] && (
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: 'rgba(0,106,51,0.22)', border: '1px solid rgba(0,106,51,0.50)', borderRadius: 8, padding: '3px 9px', fontSize: 11, fontWeight: 700, color: '#4ade80' }}>
                   <Trophy size={11} /> Líder: {members[0].username?.split(' ')[0]}
@@ -542,7 +539,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
         {/* KPIs */}
         <div className="grid grid-cols-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
           {([
-            { icon: <Trophy size={16} style={{ color: GOLD }} />, label: 'Pozo Total', value: totalPot > 0 ? `${currency} ${totalPot.toLocaleString('es-PY')}` : '—' },
+            { icon: <Trophy size={16} style={{ color: GOLD }} />, label: 'Premio Grupo', value: groupPrize },
             { icon: <Users size={16} style={{ color: '#60a5fa' }} />, label: 'Miembros', value: String(members.length) },
             { icon: <CheckCircle size={16} style={{ color: '#4ade80' }} />, label: 'Pagaron', value: activePhase ? `${paidCount}/${members.length}` : '—' },
             { icon: <Layers size={16} style={{ color: 'rgba(255,255,255,0.45)' }} />, label: 'Fases', value: phases.length > 0 ? String(phases.length) : '—' },
@@ -602,7 +599,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
                           {m.username ?? 'Jugador'}{isMe && <span style={{ marginLeft: 6, fontSize: 10, color: '#4ade80', fontWeight: 700 }}>(tú)</span>}
                         </span>
                       </div>
-                      <span style={{ textAlign: 'right', fontSize: 13, color: 'rgba(255,255,255,0.35)', fontWeight: 600 }}>—</span>
+                      <span style={{ textAlign: 'right', fontSize: 13, color: 'rgba(255,255,255,0.40)', fontWeight: 600 }}>{m.totalPredictions ?? '—'}</span>
                       <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 6 }}>
                         <span style={{ fontSize: 14, fontWeight: 700, color: isMe ? '#4ade80' : '#fff' }}>{m.total_points} pts</span>
                         {isCreator && !isMe && (
