@@ -336,6 +336,7 @@ function FeaturedMatchPanel({
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
   const awayFlag = getFlagUrl(prediction.away_team_code)
+  console.log('[stage]', prediction.fixture_id, prediction.stage, parseStage(prediction.description))
   const stage    = STAGE_LABELS[prediction.stage ?? parseStage(prediction.description)] ?? 'Fase de Grupos'
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
@@ -519,7 +520,8 @@ function MatchRow({
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
   const awayFlag = getFlagUrl(prediction.away_team_code)
-  const stage    = STAGE_LABELS[parseStage(prediction.description)] ?? 'Grupos'
+  console.log('[stage]', prediction.fixture_id, prediction.stage, parseStage(prediction.description))
+  const stage    = STAGE_LABELS[prediction.stage ?? parseStage(prediction.description)] ?? 'Grupos'
   const ko       = kickoff(prediction)
   const open     = isMatchOpen(prediction)
 
