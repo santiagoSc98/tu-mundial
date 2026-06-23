@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useEffect } from 'react'
-import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2, Trophy, Layers } from 'lucide-react'
+import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2, Trophy, Layers, UserPlus, LogIn } from 'lucide-react'
 import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember, getGroupPhases, type GroupPhase } from '@/app/actions/groups'
 import { GroupPhasesView } from './GroupPhasesView'
 
@@ -159,6 +159,8 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
   const [removeLoading, setRemoveLoading] = useState(false)
   const [groupTab, setGroupTab] = useState<'ranking' | 'apuestas'>('ranking')
   const [phases, setPhases] = useState<GroupPhase[]>([])
+  const [allGroupMembers, setAllGroupMembers] = useState<Record<string, GroupMember[]>>({})
+  const [allGroupPhases, setAllGroupPhases] = useState<Record<string, GroupPhase[]>>({})
 
   useEffect(() => {
     if (autoJoinCode) {
@@ -168,6 +170,29 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
       onAutoJoinConsumed?.()
     }
   }, [autoJoinCode, onAutoJoinConsumed])
+
+  // Load members + phases for all groups (used in desktop list cards)
+  useEffect(() => {
+    if (groups.length === 0) return
+    for (const g of groups) {
+      getGroupMembers(g.id).then(r => {
+        if (!r.data) return
+        const rows: GroupMember[] = r.data.map(m => ({
+          user_id:          m.user_id,
+          username:         m.profiles?.username ?? null,
+          avatar_url:       m.profiles?.avatar_url ?? null,
+          total_points:     m.profiles?.total_points ?? 0,
+          totalPredictions: m.totalPredictions ?? 0,
+        })).sort((a, b) => b.total_points - a.total_points)
+        setAllGroupMembers(prev => ({ ...prev, [g.id]: rows }))
+        setMemberCounts(prev => ({ ...prev, [g.id]: rows.length }))
+      })
+      getGroupPhases(g.id).then(r => {
+        if (r.data) setAllGroupPhases(prev => ({ ...prev, [g.id]: r.data ?? [] }))
+      })
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups.length])
 
   const copyCode = useCallback((code: string) => {
     navigator.clipboard.writeText(code)
@@ -786,7 +811,9 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
 
   // ── Groups list ──────────────────────────────────────────────────────────────
   return (
-    <div>
+    <>
+    {/* ── MOBILE ── */}
+    <div className="md:hidden">
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', margin: 0, marginBottom: 4, fontFamily: 'var(--font-montserrat, system-ui)', letterSpacing: '-0.01em' }}>
           Mis Grupos
@@ -864,115 +891,282 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
         </div>
       )}
 
-      {/* ── Create / share / join modals ────────────────────────────────────── */}
-      {(modal === 'create' || modal === 'share' || modal === 'join') && (
-        <ModalWrap onClose={closeModal}>
-          {modal === 'create' && (
-            <>
-              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Crear grupo</h2>
-              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre y configurá el premio (opcional)</p>
+    </div>
 
-              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
+    {/* ── DESKTOP ── */}
+    <div className="hidden md:block">
+
+      {/* Header */}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 22, fontWeight: 600, color: '#fff', margin: 0, fontFamily: 'var(--font-montserrat, system-ui)' }}>Mis Grupos</h1>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: '4px 0 0' }}>Competí con tus amigos en grupos privados</p>
+        </div>
+        <button
+          onClick={() => { setModal('create'); setError(null); setCreateName('') }}
+          style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: '#006A33', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
+        >
+          <Plus size={15} /> Crear grupo
+        </button>
+      </div>
+
+      {groups.length === 0 ? (
+        /* ── Empty state ── */
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '60px 24px', textAlign: 'center' }}>
+          <div style={{ width: 72, height: 72, borderRadius: 20, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 20 }}>
+            <Users size={32} style={{ color: 'rgba(255,255,255,0.25)' }} />
+          </div>
+          <h2 style={{ fontSize: 18, fontWeight: 600, color: '#fff', margin: '0 0 8px' }}>Todavía no estás en ningún grupo</h2>
+          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.45)', maxWidth: 360, lineHeight: 1.6, margin: '0 0 28px' }}>
+            Creá tu propio grupo o unite a uno con el código que te compartieron tus amigos
+          </p>
+          <div style={{ display: 'flex', gap: 10, marginBottom: 28 }}>
+            <button
+              onClick={() => { setModal('create'); setError(null); setCreateName('') }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: '#006A33', border: 'none', borderRadius: 12, fontSize: 13, fontWeight: 600, color: '#fff', cursor: 'pointer' }}
+            >
+              <Plus size={15} /> Crear un grupo
+            </button>
+            <button
+              onClick={() => { setModal('join'); setError(null); setJoinCode('') }}
+              style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '10px 18px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 12, fontSize: 13, color: 'rgba(255,255,255,0.70)', cursor: 'pointer' }}
+            >
+              <LogIn size={15} /> Unirme con código
+            </button>
+          </div>
+          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: 20, width: '100%', maxWidth: 360 }}>
+            <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)', margin: '0 0 10px', textAlign: 'left' }}>¿Tenés un código de grupo?</p>
+            <div style={{ display: 'flex', gap: 8 }}>
               <input
                 type="text"
-                placeholder="Ej: Los Cracks de la Ofi"
-                value={createName}
-                onChange={e => setCreateName(e.target.value)}
-                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-                maxLength={40}
-                autoFocus
-                style={{ ...INPUT_STYLE, marginBottom: 16 }}
-              />
-
-              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={createPrize ? formatMiles(createPrize) : ''}
-                onChange={e => setCreatePrize(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-                placeholder="100.000"
-                style={{ ...INPUT_STYLE, marginBottom: 10 }}
-              />
-              <div style={{ marginBottom: 16 }}>
-                <CurrencySelector value={createCurrency} onChange={setCreateCurrency} />
-              </div>
-
-              <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={createEntry ? formatMiles(createEntry) : ''}
-                onChange={e => setCreateEntry(e.target.value.replace(/\D/g, ''))}
-                onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }}
-                placeholder="10.000"
-                style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 20 }}
-              />
-
-              {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
-              <button
-                onClick={handleCreate}
-                disabled={!createName.trim() || loading}
-                style={{ width: '100%', padding: '13px', borderRadius: 12, background: createName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: createName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
-              >
-                {loading ? 'Creando...' : 'Crear grupo'}
-              </button>
-            </>
-          )}
-
-          {modal === 'share' && (
-            <>
-              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>¡Grupo creado!</h2>
-              <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Compartí este código con tus amigos</p>
-              <div style={{ background: 'rgba(0,106,51,0.12)', border: '1px solid rgba(0,106,51,0.30)', borderRadius: 16, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
-                <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>Código de grupo</p>
-                <p style={{ margin: 0, fontSize: 38, fontWeight: 900, color: '#4ade80', letterSpacing: '0.14em', fontFamily: 'monospace' }}>{createdCode}</p>
-              </div>
-              <div style={{ display: 'flex', gap: 8 }}>
-                <button
-                  onClick={() => copyCode(createdCode)}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: copied ? '#4ade80' : '#fff', fontSize: 14, fontWeight: 600, transition: 'all 0.15s' }}
-                >
-                  {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
-                  {copied ? '¡Copiado!' : 'Copiar'}
-                </button>
-                <button
-                  onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(createdCode, selectedGroup?.name ?? ''))}`, '_blank')}
-                  style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 600 }}
-                >
-                  <WhatsAppIcon />
-                  WhatsApp
-                </button>
-              </div>
-            </>
-          )}
-
-          {modal === 'join' && (
-            <>
-              <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Unirse a un grupo</h2>
-              <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Ingresá el código que te compartieron</p>
-              <input
-                type="text"
-                placeholder="Ej: AMIG7KX"
                 value={joinCode}
                 onChange={e => setJoinCode(e.target.value.toUpperCase())}
                 onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
+                placeholder="Ej: PARNXD8"
                 maxLength={10}
-                autoFocus
-                style={{ ...INPUT_STYLE, fontSize: 20, fontWeight: 700, letterSpacing: '0.16em', fontFamily: 'monospace', textTransform: 'uppercase', textAlign: 'center', marginBottom: error ? 8 : 20, padding: '13px 14px' }}
+                style={{ flex: 1, padding: '10px 12px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 11, fontSize: 13, color: '#fff', outline: 'none' }}
               />
-              {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
               <button
                 onClick={handleJoin}
                 disabled={!joinCode.trim() || loading}
-                style={{ width: '100%', padding: '13px', borderRadius: 12, background: joinCode.trim() && !loading ? '#0052A5' : 'rgba(255,255,255,0.06)', border: 'none', cursor: joinCode.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}
+                style={{ padding: '10px 16px', background: joinCode.trim() ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 11, fontSize: 13, fontWeight: 600, color: '#fff', cursor: joinCode.trim() ? 'pointer' : 'not-allowed' }}
               >
-                {loading ? 'Uniéndose...' : 'Unirse al grupo'}
+                {loading ? '…' : 'Unirse'}
               </button>
-            </>
-          )}
-        </ModalWrap>
+            </div>
+            {error && <p style={{ margin: '8px 0 0', fontSize: 12, color: '#f87171' }}>{error}</p>}
+          </div>
+        </div>
+
+      ) : (
+        /* ── Grid de grupos ── */
+        <div className="grid grid-cols-3 gap-4">
+          {groups.map(g => {
+            const gMembers = allGroupMembers[g.id] ?? []
+            const gPhases  = allGroupPhases[g.id]  ?? []
+            const leader   = gMembers[0] ?? null
+            const myIdx    = gMembers.findIndex(m => m.user_id === userId)
+            const myRank   = myIdx >= 0 ? myIdx + 1 : 0
+            const myMember = myIdx >= 0 ? gMembers[myIdx] : null
+            const activePhase = gPhases.find(p => p.status === 'active')
+            const cur = g.currency ?? 'Gs'
+            const prizeAmt = g.prize_amount
+              ? Number(g.prize_amount)
+              : g.entry_fee && gMembers.length > 0
+              ? Number(g.entry_fee) * gMembers.length
+              : null
+
+            return (
+              <div
+                key={g.id}
+                onClick={() => openDetail(g)}
+                style={{ background: 'rgba(255,255,255,0.04)', border: `1px solid ${g.created_by === userId ? 'rgba(0,106,51,0.30)' : 'rgba(255,255,255,0.08)'}`, borderRadius: 20, overflow: 'hidden', cursor: 'pointer', transition: 'background 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.07)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.04)')}
+              >
+                {/* Card hero */}
+                <div style={{ position: 'relative', padding: '16px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)', overflow: 'hidden' }}>
+                  <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(135deg,#071A40,#0A2460)' }} />
+                  <div style={{ position: 'absolute', top: -40, right: -20, width: 112, height: 112, borderRadius: '50%', background: '#006A33', opacity: 0.20, filter: 'blur(30px)' }} />
+                  <div style={{ position: 'relative', zIndex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{g.name}</p>
+                        <p style={{ margin: '2px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Código: {g.code}</p>
+                      </div>
+                      {g.created_by === userId && (
+                        <span style={{ fontSize: 10, background: 'rgba(0,106,51,0.20)', border: '1px solid rgba(0,106,51,0.30)', color: '#00C46A', padding: '2px 8px', borderRadius: 20, flexShrink: 0, marginLeft: 6 }}>Admin</span>
+                      )}
+                    </div>
+                    {prizeAmt != null && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                        <div style={{ width: 24, height: 24, borderRadius: 8, background: 'rgba(246,183,60,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <Trophy size={12} style={{ color: GOLD }} />
+                        </div>
+                        <div>
+                          <p style={{ margin: 0, fontSize: 13, fontWeight: 700, color: GOLD }}>{cur} {prizeAmt.toLocaleString('es-PY')}</p>
+                          <p style={{ margin: 0, fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>premio al ganador</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Card body */}
+                <div style={{ padding: 16 }}>
+                  {/* Avatares + count */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <div style={{ display: 'flex' }}>
+                      {gMembers.slice(0, 4).map((m, i) => (
+                        m.avatar_url
+                          ? <img key={m.user_id} src={m.avatar_url} alt="" style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid #050D24', objectFit: 'cover', marginLeft: i === 0 ? 0 : -6, zIndex: 4 - i, position: 'relative' }} />
+                          : <div key={m.user_id} style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid #050D24', background: 'rgba(255,255,255,0.12)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', marginLeft: i === 0 ? 0 : -6, zIndex: 4 - i, position: 'relative' }}>{(m.username ?? '?')[0].toUpperCase()}</div>
+                      ))}
+                      {gMembers.length > 4 && (
+                        <div style={{ width: 24, height: 24, borderRadius: '50%', border: '1.5px solid #050D24', background: 'rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'rgba(255,255,255,0.50)', marginLeft: -6, position: 'relative', zIndex: 0 }}>
+                          +{gMembers.length - 4}
+                        </div>
+                      )}
+                    </div>
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                      {gMembers.length > 0 ? `${gMembers.length} miembro${gMembers.length !== 1 ? 's' : ''}` : '…'}
+                    </span>
+                  </div>
+
+                  {/* Líder */}
+                  {leader && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(255,255,255,0.04)', borderRadius: 11, padding: '8px 10px', marginBottom: 6 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: GOLD, width: 14, flexShrink: 0 }}>1</span>
+                      {leader.avatar_url
+                        ? <img src={leader.avatar_url} alt="" style={{ width: 20, height: 20, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
+                        : <div style={{ width: 20, height: 20, borderRadius: '50%', background: 'rgba(255,255,255,0.10)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{(leader.username ?? '?')[0].toUpperCase()}</div>
+                      }
+                      <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.70)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {leader.username?.split(' ')[0] ?? 'Jugador'}
+                      </span>
+                      <span style={{ fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>{leader.total_points} pts</span>
+                    </div>
+                  )}
+
+                  {/* Tu posición */}
+                  {myRank > 0 && myMember && (
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '6px 10px', borderRadius: 11, background: myRank === 1 ? 'rgba(246,183,60,0.08)' : 'rgba(0,106,51,0.10)', border: `1px solid ${myRank === 1 ? 'rgba(246,183,60,0.20)' : 'rgba(0,106,51,0.20)'}` }}>
+                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.45)' }}>Tu posición</span>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: myRank === 1 ? GOLD : '#00C46A' }}>
+                        #{myRank} · {myMember.total_points} pts
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Card footer */}
+                <div style={{ padding: '10px 16px', borderTop: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <div style={{ width: 6, height: 6, borderRadius: '50%', background: activePhase ? '#00C46A' : 'rgba(255,255,255,0.20)', flexShrink: 0 }} />
+                    <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                      {activePhase ? (PHASE_SHORT[activePhase.phase] ?? activePhase.phase) + ' en curso' : 'Sin fase activa'}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+                    Entrar <ChevronRight size={12} />
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+
+          {/* Tarjeta unirse */}
+          <div
+            onClick={() => { setModal('join'); setError(null); setJoinCode('') }}
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1.5px dashed rgba(255,255,255,0.12)', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', minHeight: 220, transition: 'background 0.15s' }}
+            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.05)')}
+            onMouseLeave={e => (e.currentTarget.style.background = 'rgba(255,255,255,0.03)')}
+          >
+            <div style={{ width: 44, height: 44, borderRadius: 14, background: 'rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <UserPlus size={20} style={{ color: 'rgba(255,255,255,0.40)' }} />
+            </div>
+            <div style={{ textAlign: 'center' }}>
+              <p style={{ margin: 0, fontSize: 13, fontWeight: 600, color: 'rgba(255,255,255,0.55)' }}>Unirse a un grupo</p>
+              <p style={{ margin: '4px 0 0', fontSize: 11, color: 'rgba(255,255,255,0.30)' }}>Ingresá el código que te compartieron</p>
+            </div>
+            <div
+              style={{ display: 'flex', gap: 6, width: '100%', maxWidth: 200 }}
+              onClick={e => e.stopPropagation()}
+            >
+              <input
+                type="text"
+                value={joinCode}
+                onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                onKeyDown={e => { if (e.key === 'Enter') handleJoin() }}
+                placeholder="Código"
+                maxLength={10}
+                style={{ flex: 1, padding: '8px 10px', background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10, fontSize: 12, color: '#fff', outline: 'none' }}
+              />
+              <button
+                onClick={handleJoin}
+                disabled={!joinCode.trim() || loading}
+                style={{ padding: '8px 12px', background: joinCode.trim() ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', borderRadius: 10, fontSize: 12, fontWeight: 600, color: '#fff', cursor: joinCode.trim() ? 'pointer' : 'not-allowed' }}
+              >
+                {loading ? '…' : 'Ir'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
+
+    {/* ── Shared modals ── */}
+    {(modal === 'create' || modal === 'share' || modal === 'join') && (
+      <ModalWrap onClose={closeModal}>
+        {modal === 'create' && (
+          <>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Crear grupo</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Dale un nombre y configurá el premio (opcional)</p>
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Nombre del grupo</label>
+            <input type="text" placeholder="Ej: Los Cracks de la Ofi" value={createName} onChange={e => setCreateName(e.target.value)} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} maxLength={40} autoFocus style={{ ...INPUT_STYLE, marginBottom: 16 }} />
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Premio del ganador (opcional)</label>
+            <input type="text" inputMode="numeric" value={createPrize ? formatMiles(createPrize) : ''} onChange={e => setCreatePrize(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} placeholder="100.000" style={{ ...INPUT_STYLE, marginBottom: 10 }} />
+            <div style={{ marginBottom: 16 }}><CurrencySelector value={createCurrency} onChange={setCreateCurrency} /></div>
+            <label style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', display: 'block', marginBottom: 6 }}>Aporte por persona (opcional)</label>
+            <input type="text" inputMode="numeric" value={createEntry ? formatMiles(createEntry) : ''} onChange={e => setCreateEntry(e.target.value.replace(/\D/g, ''))} onKeyDown={e => { if (e.key === 'Enter') e.preventDefault() }} placeholder="10.000" style={{ ...INPUT_STYLE, marginBottom: error ? 8 : 20 }} />
+            {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+            <button onClick={handleCreate} disabled={!createName.trim() || loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: createName.trim() && !loading ? '#006A33' : 'rgba(255,255,255,0.06)', border: 'none', cursor: createName.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}>
+              {loading ? 'Creando...' : 'Crear grupo'}
+            </button>
+          </>
+        )}
+        {modal === 'share' && (
+          <>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>¡Grupo creado!</h2>
+            <p style={{ margin: '0 0 24px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Compartí este código con tus amigos</p>
+            <div style={{ background: 'rgba(0,106,51,0.12)', border: '1px solid rgba(0,106,51,0.30)', borderRadius: 16, padding: '24px 20px', textAlign: 'center', marginBottom: 20 }}>
+              <p style={{ margin: '0 0 8px', fontSize: 11, fontWeight: 700, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>Código de grupo</p>
+              <p style={{ margin: 0, fontSize: 38, fontWeight: 900, color: '#4ade80', letterSpacing: '0.14em', fontFamily: 'monospace' }}>{createdCode}</p>
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button onClick={() => copyCode(createdCode)} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: copied ? 'rgba(34,197,94,0.12)' : 'rgba(255,255,255,0.06)', border: `1px solid ${copied ? 'rgba(34,197,94,0.30)' : 'rgba(255,255,255,0.10)'}`, cursor: 'pointer', color: copied ? '#4ade80' : '#fff', fontSize: 14, fontWeight: 600, transition: 'all 0.15s' }}>
+                {copied ? <CheckCircle size={16} /> : <Copy size={16} />}
+                {copied ? '¡Copiado!' : 'Copiar'}
+              </button>
+              <button onClick={() => window.open(`https://wa.me/?text=${encodeURIComponent(shareText(createdCode, selectedGroup?.name ?? ''))}`, '_blank')} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px', borderRadius: 12, background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.25)', cursor: 'pointer', color: '#4ade80', fontSize: 14, fontWeight: 600 }}>
+                <WhatsAppIcon /> WhatsApp
+              </button>
+            </div>
+          </>
+        )}
+        {modal === 'join' && (
+          <>
+            <h2 style={{ margin: '0 0 6px', fontSize: 20, fontWeight: 700, color: '#fff' }}>Unirse a un grupo</h2>
+            <p style={{ margin: '0 0 20px', fontSize: 13, color: 'rgba(255,255,255,0.40)' }}>Ingresá el código que te compartieron</p>
+            <input type="text" placeholder="Ej: AMIG7KX" value={joinCode} onChange={e => setJoinCode(e.target.value.toUpperCase())} onKeyDown={e => { if (e.key === 'Enter') handleJoin() }} maxLength={10} autoFocus style={{ ...INPUT_STYLE, fontSize: 20, fontWeight: 700, letterSpacing: '0.16em', fontFamily: 'monospace', textTransform: 'uppercase', textAlign: 'center', marginBottom: error ? 8 : 20, padding: '13px 14px' }} />
+            {error && <p style={{ margin: '0 0 16px', fontSize: 13, color: '#f87171' }}>{error}</p>}
+            <button onClick={handleJoin} disabled={!joinCode.trim() || loading} style={{ width: '100%', padding: '13px', borderRadius: 12, background: joinCode.trim() && !loading ? '#0052A5' : 'rgba(255,255,255,0.06)', border: 'none', cursor: joinCode.trim() && !loading ? 'pointer' : 'not-allowed', color: '#fff', fontSize: 14, fontWeight: 700, transition: 'background 0.15s' }}>
+              {loading ? 'Uniéndose...' : 'Unirse al grupo'}
+            </button>
+          </>
+        )}
+      </ModalWrap>
+    )}
+    </>
   )
 }
