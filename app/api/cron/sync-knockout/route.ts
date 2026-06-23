@@ -10,17 +10,12 @@ function getSupabase() {
 }
 
 const MULTIPLIERS: Record<string, number> = {
-  LAST_16:       1.5,
+  LAST_16:        1.5,
+  ROUND_OF_16:    2,
   QUARTER_FINALS: 2,
   SEMI_FINALS:    3,
+  THIRD_PLACE:    2,
   FINAL:          5,
-}
-
-const PLACEHOLDER_PATTERNS = ['Winner', 'Loser', 'TBD', 'Match', 'Winner of', 'Loser of']
-
-function isPlaceholder(name: string | null | undefined): boolean {
-  if (!name) return true
-  return PLACEHOLDER_PATTERNS.some(p => name.includes(p))
 }
 
 export async function GET(request: Request) {
@@ -31,7 +26,7 @@ export async function GET(request: Request) {
 
   const supabase = getSupabase()
 
-  const stages = 'LAST_16,QUARTER_FINALS,SEMI_FINALS,FINAL'
+  const stages = 'LAST_16,QUARTER_FINALS,SEMI_FINALS,THIRD_PLACE,FINAL'
   const res = await fetch(
     `https://api.football-data.org/v4/competitions/2000/matches?stage=${stages}`,
     {
@@ -50,66 +45,83 @@ export async function GET(request: Request) {
   const matches = data.matches ?? []
 
   let created = 0
+  let updated = 0
   let skipped = 0
 
   for (const match of matches) {
-    const homeTeamRaw: string | undefined = match.homeTeam?.name
-    const awayTeamRaw: string | undefined = match.awayTeam?.name
+    const homeRaw: string | undefined = match.homeTeam?.name
+    const awayRaw: string | undefined = match.awayTeam?.name
 
-    // Skip placeholder matchups not yet determined
-    if (isPlaceholder(homeTeamRaw) || isPlaceholder(awayTeamRaw)) {
-      skipped++
-      continue
-    }
+    const homeName = homeRaw ? getTeamNameES(homeRaw) : 'Por definir'
+    const awayName = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
+    const homeTla  = match.homeTeam?.tla ?? 'TBD'
+    const awayTla  = match.awayTeam?.tla ?? 'TBD'
 
     const fixtureId = String(match.id)
+    const stage: string = match.stage
+    const multiplier = MULTIPLIERS[stage] ?? 1.5
+    const deadline = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
 
     // Check if prediction already exists for this fixture
     const { data: existing } = await supabase
       .from('predictions')
-      .select('id')
+      .select('id, options, home_team_code, away_team_code')
       .eq('fixture_id', fixtureId)
       .maybeSingle()
 
     if (existing) {
-      skipped++
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const opts = existing.options as any[]
+      const needsUpdate =
+        (opts[0] === 'Por definir' && homeName !== 'Por definir') ||
+        (opts[opts.length - 1] === 'Por definir' && awayName !== 'Por definir')
+
+      if (needsUpdate) {
+        const { error } = await supabase
+          .from('predictions')
+          .update({
+            title:          `${homeName} vs ${awayName} - Mundial 2026`,
+            options:        [homeName, awayName],
+            home_team_code: homeTla,
+            away_team_code: awayTla,
+          })
+          .eq('id', existing.id)
+
+        if (error) {
+          console.error(`[sync-knockout] update failed for fixture ${fixtureId}:`, error)
+        } else {
+          console.log(`[sync-knockout] updated placeholder: ${homeName} vs ${awayName} (${stage})`)
+          updated++
+        }
+      } else {
+        skipped++
+      }
       continue
     }
 
-    const stage: string = match.stage
-    const multiplier = MULTIPLIERS[stage] ?? 1
-
-    // Deadline: kick-off - 10 min
-    const deadline = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
-
-    const homeTeam = homeTeamRaw!
-    const awayTeam = awayTeamRaw!
-    const homeES   = getTeamNameES(homeTeam)
-    const awayES   = getTeamNameES(awayTeam)
-
-    // No draw in knockout — options has 2 elements
+    // Create new prediction (with real teams or placeholder)
     const { error } = await supabase
       .from('predictions')
       .insert({
-        title:                `${homeES} vs ${awayES} - Mundial 2026`,
+        title:                `${homeName} vs ${awayName} - Mundial 2026`,
         description:          `Fase: ${stage}`,
         category:             'eliminatoria',
         deadline,
-        options:              [homeES, awayES],
+        options:              [homeName, awayName],
         fixture_id:           fixtureId,
         status:               'open',
         difficulty_multiplier: multiplier,
-        home_team_code:       match.homeTeam?.tla ?? null,
-        away_team_code:       match.awayTeam?.tla ?? null,
+        home_team_code:       homeTla,
+        away_team_code:       awayTla,
       })
 
     if (error) {
       console.error(`[sync-knockout] insert failed for fixture ${fixtureId}:`, error)
     } else {
-      console.log(`[sync-knockout] created: ${homeES} vs ${awayES} (${stage})`)
+      console.log(`[sync-knockout] created: ${homeName} vs ${awayName} (${stage})`)
       created++
     }
   }
 
-  return NextResponse.json({ checked: matches.length, created, skipped })
+  return NextResponse.json({ checked: matches.length, created, updated, skipped })
 }
