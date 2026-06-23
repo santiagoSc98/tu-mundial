@@ -100,7 +100,14 @@ export async function GET(request: Request) {
     }
 
     // Create new prediction (with real teams or placeholder)
-    const { error } = await supabase
+    console.log('[sync-knockout] insertando:', {
+      fixture_id: match.id,
+      stage: match.stage,
+      home: homeName,
+      away: awayName,
+    })
+
+    const { error: insertError } = await supabase
       .from('predictions')
       .insert({
         title:                `${homeName} vs ${awayName} - Mundial 2026`,
@@ -110,13 +117,14 @@ export async function GET(request: Request) {
         options:              [homeName, awayName],
         fixture_id:           fixtureId,
         status:               'open',
+        stage,
         difficulty_multiplier: multiplier,
         home_team_code:       homeTla,
         away_team_code:       awayTla,
       })
 
-    if (error) {
-      console.error(`[sync-knockout] insert failed for fixture ${fixtureId}:`, error)
+    if (insertError) {
+      console.error('[sync-knockout] error INSERT:', insertError)
     } else {
       console.log(`[sync-knockout] created: ${homeName} vs ${awayName} (${stage})`)
       created++
