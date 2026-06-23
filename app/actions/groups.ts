@@ -168,33 +168,61 @@ export async function setupGroupPhases({
 
   if (group?.created_by !== user.id) return { error: 'Solo el creador puede configurar fases' }
 
+  // Upsert cada fase individualmente para preservar pagos existentes
+  for (const phase of phases) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: existing } = await (supabase as any)
+      .from('group_phases')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('phase', phase.phase)
+      .maybeSingle()
+
+    if (existing) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('group_phases')
+        .update({ entry_fee: phase.entry_fee, currency: phase.currency })
+        .eq('id', existing.id)
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any)
+        .from('group_phases')
+        .insert({
+          group_id: groupId,
+          phase: phase.phase,
+          entry_fee: phase.entry_fee,
+          currency: phase.currency,
+          status: phase.phase === 'grupos' ? 'active' : 'upcoming',
+        })
+    }
+  }
+
+  // Borrar fases removidas del config, solo si no tienen pagos
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { error: deleteError } = await (supabase as any)
-    .from('group_phases').delete().eq('group_id', groupId)
-
-  if (deleteError) return { data: null, error: 'Error al limpiar fases: ' + deleteError.message }
-
-  await new Promise(resolve => setTimeout(resolve, 200))
-
-  const PHASE_ORDER_INSERT = ['grupos', 'dieciseisavos', 'octavos', 'cuartos', 'semis', 'final']
-  const sorted = [...phases].sort(
-    (a, b) => PHASE_ORDER_INSERT.indexOf(a.phase) - PHASE_ORDER_INSERT.indexOf(b.phase)
-  )
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data, error } = await (supabase as any)
+  const { data: existingPhases } = await (supabase as any)
     .from('group_phases')
-    .insert(sorted.map(p => ({
-      group_id: groupId,
-      phase: p.phase,
-      entry_fee: p.entry_fee,
-      currency: p.currency,
-      status: p.phase === 'grupos' ? 'active' : 'upcoming',
-    })))
-    .select()
+    .select('id, phase')
+    .eq('group_id', groupId)
 
-  if (error) return { data: null, error: error.message as string }
-  return { data, error: null }
+  const newPhaseKeys = phases.map(p => p.phase)
+
+  for (const ep of (existingPhases ?? []) as { id: string; phase: string }[]) {
+    if (newPhaseKeys.includes(ep.phase)) continue
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: payments } = await (supabase as any)
+      .from('group_phase_payments')
+      .select('id')
+      .eq('phase_id', ep.id)
+      .limit(1)
+
+    if (!payments?.length) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      await (supabase as any).from('group_phases').delete().eq('id', ep.id)
+    }
+  }
+
+  return { data: null, error: null }
 }
 
 export async function markPhasePaid({
