@@ -9,7 +9,7 @@ import type { StandingsByType } from '@/lib/grupos'
 
 const PRED_COLS = [
   'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
-  'difficulty_multiplier', 'status', 'options', 'stage',
+  'difficulty_multiplier', 'status', 'options', 'stage', 'fixture_id',
   'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
 ].join(', ')
 
@@ -151,6 +151,15 @@ async function HomeData() {
     )
   )
   console.log(`[home] parallel fetch: ${Date.now() - t1}ms`)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  console.log('[home] predsRes error:', (predsRes as any).error)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  console.log('[home] predictions count:', (predsRes.data as any[])?.length)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  console.log('[home] LAST_32 count:', (predsRes.data as any[])?.filter((p: any) => p.stage === 'LAST_32').length)
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  console.log('[home] sample LAST_32:', (predsRes.data as any[])?.find((p: any) => p.stage === 'LAST_32'))
+  console.log('[home] PRED_COLS includes stage:', PRED_COLS.includes('stage'))
 
   const special     = specialRes.data
   const profileData = profileRes.data
