@@ -294,20 +294,27 @@ interface KOMatch {
   deadline: string | null
 }
 
-function TeamRow({ flag, name, score, winner }: {
-  flag: string | null; name: string; score: number | null; winner: boolean
+function TeamRow({ flag, name, score, winner, tbd = false }: {
+  flag: string | null; name: string; score: number | null; winner: boolean; tbd?: boolean
 }) {
   return (
-    <div className={`flex items-center gap-2 px-2.5 py-1.5 ${winner ? 'bg-[rgba(0,196,106,0.08)]' : ''}`}>
+    <div style={{
+      display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px',
+      background: winner ? 'rgba(0,196,106,0.08)' : 'transparent',
+      opacity: tbd ? 0.38 : 1,
+    }}>
       {flag
-        ? <img src={flag} alt={name} className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
-        : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
+        ? <img src={flag} alt={name} style={{ width: 16, height: 11, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+        : <div style={{ width: 16, height: 11, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
       }
-      <span className={`text-xs flex-1 truncate ${winner ? 'text-white font-semibold' : 'text-gray-400'}`}>
-        {name || 'Por definir'}
-      </span>
+      <span style={{
+        fontSize: 10, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        color: winner ? '#fff' : 'rgba(255,255,255,0.50)',
+        fontWeight: winner ? 600 : 400,
+        fontStyle: tbd ? 'italic' : 'normal',
+      }}>{name}</span>
       {score !== null && (
-        <span className={`text-xs font-bold flex-shrink-0 ${winner ? 'text-[#00C46A]' : 'text-gray-500'}`}>
+        <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(255,255,255,0.35)' }}>
           {score}
         </span>
       )}
@@ -315,28 +322,89 @@ function TeamRow({ flag, name, score, winner }: {
   )
 }
 
-function KOMatchCard({ match }: { match: KOMatch }) {
-  const homeFlag  = getFlagUrl(match.homeCode)
-  const awayFlag  = getFlagUrl(match.awayCode)
+function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }: {
+  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean
+}) {
+  const homeFlag   = getFlagUrl(match.homeCode)
+  const awayFlag   = getFlagUrl(match.awayCode)
   const isResolved = match.status === 'resolved'
-  const homeWins  = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
-  const awayWins  = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
-  const ko = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60 * 1000) : null
+  const homeWins   = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const awayWins   = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+  const ko     = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60 * 1000) : null
   const koValid = ko && !isNaN(ko.getTime())
+  const isTBD  = match.homeName === 'TBD' && match.awayName === 'TBD'
+
+  const w           = isNext ? 110 : 160
+  const borderColor = isFinal  ? 'rgba(255,215,0,0.30)'
+    : isThird  ? 'rgba(205,127,50,0.25)'
+    : isNext   ? 'rgba(246,183,60,0.15)'
+    : isResolved ? 'rgba(0,196,106,0.30)'
+    : 'rgba(255,255,255,0.10)'
+  const bgColor = isFinal  ? 'rgba(255,215,0,0.04)'
+    : isThird  ? 'rgba(205,127,50,0.04)'
+    : isNext   ? 'rgba(246,183,60,0.03)'
+    : isResolved ? 'rgba(0,196,106,0.03)'
+    : 'rgba(255,255,255,0.04)'
 
   return (
-    <div className={`border rounded-xl overflow-hidden flex-shrink-0 ${
-      isResolved
-        ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.03)]'
-        : 'border-white/[0.08] bg-white/[0.04]'
-    }`} style={{ width: 168 }}>
-      <TeamRow flag={homeFlag} name={match.homeName} score={match.homeScore} winner={homeWins} />
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
-      <TeamRow flag={awayFlag} name={match.awayName} score={match.awayScore} winner={awayWins} />
-      {koValid && (
-        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textAlign: 'center', padding: '3px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor }}>
+      <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
+      <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
+      {!isNext && koValid && (
+        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.22)', textAlign: 'center', padding: '2px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
           {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
         </div>
+      )}
+    </div>
+  )
+}
+
+function SectionLabel({ label, gold = false }: { label: string; gold?: boolean }) {
+  return (
+    <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+      <span style={{
+        fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', whiteSpace: 'nowrap',
+        padding: '2px 10px', borderRadius: 9999,
+        color: gold ? '#FFD700' : 'rgba(255,255,255,0.50)',
+        background: gold ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.05)',
+        border: `1px solid ${gold ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.10)'}`,
+      }}>{label}</span>
+    </div>
+  )
+}
+
+function VSep() {
+  return <div style={{ width: 1, background: 'rgba(255,255,255,0.05)', alignSelf: 'stretch', flexShrink: 0, margin: '0 6px' }} />
+}
+
+function BracketConnector() {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', width: 20, flexShrink: 0, alignSelf: 'stretch' }}>
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.14)', borderTop: '1px solid rgba(255,255,255,0.14)', borderTopRightRadius: 6, marginTop: 22 }} />
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.14)', borderBottom: '1px solid rgba(255,255,255,0.14)', borderBottomRightRadius: 6, marginBottom: 22 }} />
+    </div>
+  )
+}
+
+function BracketPair({ m1, m2, nextMatch }: { m1: KOMatch; m2: KOMatch | null; nextMatch?: KOMatch | null }) {
+  return (
+    <div style={{ display: 'flex', alignItems: 'stretch' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <KOMatchCard match={m1} />
+        {m2 && <KOMatchCard match={m2} />}
+      </div>
+      {m2 && (
+        <>
+          <BracketConnector />
+          <div style={{ width: 10, borderTop: '1px solid rgba(255,255,255,0.12)', alignSelf: 'center', flexShrink: 0 }} />
+          {nextMatch
+            ? <KOMatchCard match={nextMatch} isNext />
+            : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minHeight: 50 }}>
+                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', fontStyle: 'italic' }}>TBD</span>
+              </div>
+          }
+        </>
       )}
     </div>
   )
@@ -474,6 +542,11 @@ export default function CalendarioView({
   const [dayIdx,        setDayIdx]        = useState(0)
   const [selectedPhase, setSelectedPhase] = useState('LAST_32')
   const bracketRef = useRef<HTMLDivElement>(null)
+  const r32Ref  = useRef<HTMLDivElement>(null)
+  const r16Ref  = useRef<HTMLDivElement>(null)
+  const qfRef   = useRef<HTMLDivElement>(null)
+  const sfRef   = useRef<HTMLDivElement>(null)
+  const finRef  = useRef<HTMLDivElement>(null)
 
   const PHASES = [
     { key: 'grupos',         label: 'GRUPOS',   dates: '11-26 JUN'     },
@@ -484,10 +557,43 @@ export default function CalendarioView({
     { key: 'FINAL',          label: 'FINAL',    dates: '19 JUL'        },
   ]
 
+  const sectionRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
+    LAST_32: r32Ref, LAST_16: r16Ref, QUARTER_FINALS: qfRef, SEMI_FINALS: sfRef, FINAL: finRef,
+  }
+
   function scrollToPhase(phaseKey: string) {
     if (phaseKey === 'grupos') { setCalTab('resumen'); return }
     setSelectedPhase(phaseKey)
+    const section   = sectionRefs[phaseKey]?.current
+    const container = bracketRef.current
+    if (section && container) {
+      const left = container.scrollLeft + section.getBoundingClientRect().left - container.getBoundingClientRect().left - 16
+      container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' })
+    }
   }
+
+  useEffect(() => {
+    const el = bracketRef.current
+    if (!el) return
+    let isDown = false, startX = 0, scrollLeft = 0
+    const onDown = (e: MouseEvent) => { isDown = true; startX = e.pageX - el.offsetLeft; scrollLeft = el.scrollLeft; el.style.cursor = 'grabbing' }
+    const onUp   = () => { isDown = false; el.style.cursor = 'grab' }
+    const onMove = (e: MouseEvent) => {
+      if (!isDown) return
+      e.preventDefault()
+      el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX) * 1.5
+    }
+    el.addEventListener('mousedown', onDown)
+    el.addEventListener('mouseup',   onUp)
+    el.addEventListener('mouseleave', onUp)
+    el.addEventListener('mousemove', onMove, { passive: false })
+    return () => {
+      el.removeEventListener('mousedown', onDown)
+      el.removeEventListener('mouseup',   onUp)
+      el.removeEventListener('mouseleave', onUp)
+      el.removeEventListener('mousemove', onMove)
+    }
+  }, [])
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -733,88 +839,119 @@ export default function CalendarioView({
             ))}
           </div>
 
-          {/* Dynamic bracket — filtered by selectedPhase */}
+          {/* Horizontal bracket — all phases, scroll to phase on click */}
           {(() => {
-            const stagesToShow = selectedPhase === 'FINAL'
-              ? ['FINAL', 'THIRD_PLACE']
-              : [selectedPhase]
-
-            const koMatches: KOMatch[] = predictions
-              .filter(p => stagesToShow.includes(p.stage ?? '') && p.home_team_code && p.away_team_code)
-              .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
-              .map(p => {
-                const opts = Array.isArray(p.options) ? (p.options as string[]) : []
-                const raw0 = opts[0] ?? ''
-                const rawN = opts[opts.length - 1] ?? ''
-                const home = getTeamNameES(raw0)
-                const away = getTeamNameES(rawN)
-                return {
-                  id:        p.id,
-                  homeName:  home === 'Por definir' ? 'TBD' : home,
-                  awayName:  away === 'Por definir' ? 'TBD' : away,
-                  homeCode:  p.home_team_code,
-                  awayCode:  p.away_team_code,
-                  homeScore: p.exact_score_home ?? null,
-                  awayScore: p.exact_score_away ?? null,
-                  status:    p.status,
-                  deadline:  p.deadline ?? null,
-                }
-              })
-
-            if (koMatches.length === 0) {
-              return (
-                <div className="text-center py-12">
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-                    Los partidos de esta fase se confirman más adelante.
-                  </p>
-                </div>
-              )
+            const toPred = (p: Prediction): KOMatch => {
+              const opts = Array.isArray(p.options) ? (p.options as string[]) : []
+              const h = getTeamNameES(opts[0] ?? '')
+              const a = getTeamNameES(opts[opts.length - 1] ?? '')
+              return {
+                id:        p.id,
+                homeName:  (h === 'Por definir' || !h) ? 'TBD' : h,
+                awayName:  (a === 'Por definir' || !a) ? 'TBD' : a,
+                homeCode:  p.home_team_code,
+                awayCode:  p.away_team_code,
+                homeScore: p.exact_score_home ?? null,
+                awayScore: p.exact_score_away ?? null,
+                status:    p.status,
+                deadline:  p.deadline ?? null,
+              }
             }
-
-            // FINAL / THIRD_PLACE: just list, no bracket connectors
-            if (selectedPhase === 'FINAL') {
-              return (
-                <div className="flex flex-col items-center gap-4">
-                  {koMatches.map(m => <KOMatchCard key={m.id} match={m} />)}
-                </div>
-              )
+            const toPairs = (arr: KOMatch[]): [KOMatch, KOMatch | null][] => {
+              const out: [KOMatch, KOMatch | null][] = []
+              for (let i = 0; i < arr.length; i += 2) out.push([arr[i], arr[i + 1] ?? null])
+              return out
             }
-
-            // Group into pairs of 2
-            const pairs: [KOMatch, KOMatch | null][] = []
-            for (let i = 0; i < koMatches.length; i += 2) {
-              pairs.push([koMatches[i], koMatches[i + 1] ?? null])
+            const byStage: Record<string, KOMatch[]> = {}
+            for (const s of ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL', 'THIRD_PLACE']) {
+              byStage[s] = predictions
+                .filter(p => (p.stage ?? '') === s && p.home_team_code && p.away_team_code)
+                .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+                .map(toPred)
             }
-
-            const gridCols = (selectedPhase === 'LAST_32' || selectedPhase === 'LAST_16') ? 2 : 1
+            const p32 = toPairs(byStage.LAST_32)
+            const p16 = toPairs(byStage.LAST_16)
+            const pQF = toPairs(byStage.QUARTER_FINALS)
+            const pSF = toPairs(byStage.SEMI_FINALS)
 
             return (
-              <div style={{ overflowX: 'auto' }}>
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: `repeat(${gridCols}, max-content)`,
-                  gap: 12,
-                }}>
-                  {pairs.map(([m1, m2], i) => (
-                    <div key={i} className="flex items-stretch">
-                      {/* Two match cards stacked */}
-                      <div className="flex flex-col gap-2">
-                        <KOMatchCard match={m1} />
-                        {m2 && <KOMatchCard match={m2} />}
-                      </div>
+              <div ref={bracketRef} style={{ overflowX: 'auto', cursor: 'grab', paddingBottom: 16, WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', padding: '0 4px', minWidth: 'max-content' }}>
 
-                      {/* Bracket connector lines */}
-                      {m2 && (
-                        <>
-                          <div className="flex flex-col w-5 flex-shrink-0">
-                            <div className="flex-1 border-r border-t border-white/10 rounded-tr-md" />
-                            <div className="flex-1 border-r border-b border-white/10 rounded-br-md" />
+                  {/* ── 32AVOS ─────────────────────────────────────────── */}
+                  <div ref={r32Ref} style={{ flexShrink: 0 }}>
+                    <SectionLabel label="32AVOS DE FINAL" />
+                    <div style={{ display: 'grid', gridTemplateColumns: 'max-content max-content', gap: 12 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {p32.slice(0, 4).map(([m1, m2], i) => (
+                          <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} />
+                        ))}
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                        {p32.slice(4).map(([m1, m2], i) => (
+                          <BracketPair key={i + 4} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i + 4]} />
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <VSep />
+
+                  {/* ── OCTAVOS ────────────────────────────────────────── */}
+                  <div ref={r16Ref} style={{ flexShrink: 0 }}>
+                    <SectionLabel label="OCTAVOS DE FINAL" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {p16.map(([m1, m2], i) => (
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.QUARTER_FINALS[i]} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <VSep />
+
+                  {/* ── CUARTOS ────────────────────────────────────────── */}
+                  <div ref={qfRef} style={{ flexShrink: 0 }}>
+                    <SectionLabel label="CUARTOS DE FINAL" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {pQF.map(([m1, m2], i) => (
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.SEMI_FINALS[i]} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <VSep />
+
+                  {/* ── SEMIS ──────────────────────────────────────────── */}
+                  <div ref={sfRef} style={{ flexShrink: 0 }}>
+                    <SectionLabel label="SEMIFINALES" />
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {pSF.map(([m1, m2], i) => (
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.FINAL[0]} />
+                      ))}
+                    </div>
+                  </div>
+
+                  <VSep />
+
+                  {/* ── FINAL ──────────────────────────────────────────── */}
+                  <div ref={finRef} style={{ flexShrink: 0 }}>
+                    <SectionLabel label="FINAL" gold />
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                      {byStage.FINAL.length > 0
+                        ? byStage.FINAL.map(m => <KOMatchCard key={m.id} match={m} isFinal />)
+                        : <div style={{ width: 160, height: 56, border: '1px dashed rgba(255,215,0,0.15)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <span style={{ fontSize: 9, color: 'rgba(255,215,0,0.30)', fontStyle: 'italic' }}>TBD</span>
                           </div>
-                          <div className="w-3 border-t border-white/10 self-center flex-shrink-0" />
+                      }
+                      {byStage.THIRD_PLACE.length > 0 && (
+                        <>
+                          <span style={{ fontSize: 9, fontWeight: 700, color: '#CD7F32', letterSpacing: '0.05em' }}>3° LUGAR</span>
+                          {byStage.THIRD_PLACE.map(m => <KOMatchCard key={m.id} match={m} isThird />)}
                         </>
                       )}
                     </div>
-                  ))}
+                  </div>
+
                 </div>
               </div>
             )
