@@ -408,6 +408,74 @@ function BracketColumn({ matches, side = 'left' }: { matches: KOMatch[]; side?: 
   )
 }
 
+// ─── Mobile bracket components ───────────────────────────────────────────────
+function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal?: boolean }) {
+  const isResolved = match.status === 'resolved'
+  const homeWins   = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const awayWins   = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+  const isTBD      = match.homeName === 'TBD' && match.awayName === 'TBD'
+  const homeFlag   = getFlagUrl(match.homeCode)
+  const awayFlag   = getFlagUrl(match.awayCode)
+  const ko         = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60000) : null
+  const koValid    = ko && !isNaN(ko.getTime())
+
+  return (
+    <div style={{
+      width: 110, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+      border: `1px solid ${isFinal ? 'rgba(255,215,0,0.35)' : isResolved ? 'rgba(0,196,106,0.30)' : isTBD ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.12)'}`,
+      background: isFinal ? 'rgba(255,215,0,0.05)' : isResolved ? 'rgba(0,196,106,0.06)' : isTBD ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
+      opacity: isTBD ? 0.5 : 1,
+    }}>
+      {koValid && (
+        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', padding: '2px 6px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
+          {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
+        </div>
+      )}
+      {([
+        { name: match.homeName, flag: homeFlag, code: match.homeCode, score: match.homeScore, wins: homeWins },
+        { name: match.awayName, flag: awayFlag, code: match.awayCode, score: match.awayScore, wins: awayWins },
+      ] as const).map((team, i) => (
+        <div key={i} style={{
+          display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px',
+          borderTop: i > 0 ? '0.5px solid rgba(255,255,255,0.07)' : 'none',
+          background: team.wins ? 'rgba(0,196,106,0.07)' : 'transparent',
+        }}>
+          {team.flag && team.code
+            ? <img src={team.flag} alt="" style={{ width: 14, height: 10, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+            : <div style={{ width: 14, height: 10, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+          }
+          <span style={{
+            fontSize: 10, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            color: isTBD ? 'rgba(255,255,255,0.2)' : team.wins ? '#fff' : 'rgba(255,255,255,0.6)',
+            fontWeight: team.wins ? 600 : 400,
+            fontStyle: isTBD ? 'italic' : 'normal',
+          }}>{team.name === 'TBD' ? '-' : team.name}</span>
+          {isResolved && team.score != null && (
+            <span style={{ fontSize: 10, fontWeight: 700, flexShrink: 0, color: team.wins ? '#00C46A' : 'rgba(255,255,255,0.3)' }}>
+              {team.score}
+            </span>
+          )}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function MobileConnectors({ count }: { count: number }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{ flex: 1 }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.20)', borderTop: '1px solid rgba(255,255,255,0.20)', borderTopRightRadius: 4 }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.20)', borderBottom: '1px solid rgba(255,255,255,0.20)', borderBottomRightRadius: 4 }} />
+          <div style={{ flex: 1 }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Matchday panel ───────────────────────────────────────────────────────────
 interface Matchday {
   date: string
@@ -538,7 +606,33 @@ export default function CalendarioView({
 }) {
   const [calTab,        setCalTab]        = useState<CalTab>('resumen')
   const [dayIdx,        setDayIdx]        = useState(0)
-  const bracketRef = useRef<HTMLDivElement>(null)
+  const bracketRef       = useRef<HTMLDivElement>(null)
+  const mobileBracketRef = useRef<HTMLDivElement>(null)
+  const mobileR32Ref     = useRef<HTMLDivElement>(null)
+  const mobileR16Ref     = useRef<HTMLDivElement>(null)
+  const mobileQfRef      = useRef<HTMLDivElement>(null)
+  const mobileSfRef      = useRef<HTMLDivElement>(null)
+  const mobileFinRef     = useRef<HTMLDivElement>(null)
+  const [mobilePhase, setMobilePhase] = useState('LAST_32')
+
+  const MOBILE_PHASES = [
+    { key: 'LAST_32',        label: '32AVOS',  dates: '28 JUN'    },
+    { key: 'LAST_16',        label: 'OCTAVOS', dates: '4-7 JUL'   },
+    { key: 'QUARTER_FINALS', label: 'CUARTOS', dates: '9-12 JUL'  },
+    { key: 'SEMI_FINALS',    label: 'SEMIS',   dates: '14-15 JUL' },
+    { key: 'FINAL',          label: 'FINAL',   dates: '19 JUL'    },
+  ]
+
+  function scrollToMobilePhase(phase: string) {
+    const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
+      LAST_32: mobileR32Ref, LAST_16: mobileR16Ref,
+      QUARTER_FINALS: mobileQfRef, SEMI_FINALS: mobileSfRef, FINAL: mobileFinRef,
+    }
+    const section   = refs[phase]?.current
+    const container = mobileBracketRef.current
+    if (section && container) container.scrollTo({ left: section.offsetLeft - 8, behavior: 'smooth' })
+    setMobilePhase(phase)
+  }
 
   useEffect(() => {
     const el = bracketRef.current
@@ -563,6 +657,55 @@ export default function CalendarioView({
     }
   }, [])
 
+  useEffect(() => {
+    const container = mobileBracketRef.current
+    if (!container) return
+    const phases = ['FINAL', 'SEMI_FINALS', 'QUARTER_FINALS', 'LAST_16', 'LAST_32']
+    const refs   = [mobileFinRef, mobileSfRef, mobileQfRef, mobileR16Ref, mobileR32Ref]
+    const handleScroll = () => {
+      const sl = container.scrollLeft
+      for (let i = 0; i < refs.length; i++) {
+        const el = refs[i].current
+        if (el && el.offsetLeft <= sl + 60) { setMobilePhase(phases[i]); return }
+      }
+    }
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
+  }, [])
+
+  useEffect(() => {
+    const el = mobileBracketRef.current
+    if (!el) return
+    let down = false, sx = 0, sl = 0
+    const md = (e: MouseEvent | TouchEvent) => {
+      down = true
+      sx = (e instanceof TouchEvent ? e.touches[0].pageX : e.pageX)
+      sl = el.scrollLeft
+      if (!(e instanceof TouchEvent)) el.style.cursor = 'grabbing'
+    }
+    const mu = () => { down = false; el.style.cursor = 'grab' }
+    const mm = (e: MouseEvent | TouchEvent) => {
+      if (!down) return
+      const x = (e instanceof TouchEvent ? e.touches[0].pageX : e.pageX)
+      el.scrollLeft = sl - (x - sx)
+    }
+    el.addEventListener('mousedown',  md as EventListener)
+    el.addEventListener('mouseup',    mu)
+    el.addEventListener('mouseleave', mu)
+    el.addEventListener('mousemove',  mm as EventListener)
+    el.addEventListener('touchstart', md as EventListener, { passive: true })
+    el.addEventListener('touchend',   mu)
+    el.addEventListener('touchmove',  mm as EventListener, { passive: true })
+    return () => {
+      el.removeEventListener('mousedown',  md as EventListener)
+      el.removeEventListener('mouseup',    mu)
+      el.removeEventListener('mouseleave', mu)
+      el.removeEventListener('mousemove',  mm as EventListener)
+      el.removeEventListener('touchstart', md as EventListener)
+      el.removeEventListener('touchend',   mu)
+      el.removeEventListener('touchmove',  mm as EventListener)
+    }
+  }, [])
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -818,43 +961,114 @@ export default function CalendarioView({
             const thirdPlace  = byStage.THIRD_PLACE[0] ?? null
 
             return (
-              <div ref={bracketRef} style={{ overflowX: 'auto', overflowY: 'hidden', cursor: 'grab' }}>
-                <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 700, padding: '16px 8px', width: 'max-content', margin: '0 auto' }}>
-
-                  {/* ── LADO IZQUIERDO ── */}
-                  <BracketColumn matches={last32Left} side="left" />
-                  <BracketConnectorGroup count={4} side="left" />
-                  <BracketColumn matches={last16Left} side="left" />
-                  <BracketConnectorGroup count={2} side="left" />
-                  <BracketColumn matches={qfLeft} side="left" />
-                  <BracketConnectorGroup count={1} side="left" />
-                  <BracketColumn matches={sfLeft} side="left" />
-                  <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
-
-                  {/* ── CENTRO ── */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 0, padding: '4px 0' }}>
-                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.08em' }}>FINAL</span>
-                    <BracketMatchCard match={finalMatch} highlight />
-                    {thirdPlace && (
-                      <>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', letterSpacing: '0.08em', marginTop: 6 }}>3° LUGAR</span>
-                        <BracketMatchCard match={thirdPlace} />
-                      </>
-                    )}
+              <>
+                {/* ── MOBILE (md:hidden) ── */}
+                <div className="md:hidden">
+                  {/* Barra de fases */}
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: 'none' }}>
+                    {MOBILE_PHASES.map((phase, i) => (
+                      <div key={phase.key} className="flex items-center gap-1.5 flex-shrink-0">
+                        {i > 0 && <div className="w-2 h-px bg-white/15 flex-shrink-0" />}
+                        <button
+                          onClick={() => scrollToMobilePhase(phase.key)}
+                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border flex-shrink-0 transition-all text-center ${
+                            mobilePhase === phase.key
+                              ? 'bg-[rgba(0,106,51,0.25)] border-[rgba(0,106,51,0.5)]'
+                              : 'bg-white/[0.04] border-white/10'
+                          }`}
+                        >
+                          <span className={`text-[10px] font-semibold tracking-wide ${mobilePhase === phase.key ? 'text-[#00C46A]' : 'text-gray-400'}`}>{phase.label}</span>
+                          <span className="text-[8px] text-gray-600">{phase.dates}</span>
+                        </button>
+                      </div>
+                    ))}
                   </div>
 
-                  {/* ── LADO DERECHO ── */}
-                  <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
-                  <BracketColumn matches={sfRight} side="right" />
-                  <BracketConnectorGroup count={1} side="right" />
-                  <BracketColumn matches={qfRight} side="right" />
-                  <BracketConnectorGroup count={2} side="right" />
-                  <BracketColumn matches={last16Right} side="right" />
-                  <BracketConnectorGroup count={4} side="right" />
-                  <BracketColumn matches={last32Right} side="right" />
+                  {/* Bracket scroll horizontal */}
+                  <div ref={mobileBracketRef} className="overflow-x-auto cursor-grab select-none">
+                    <div className="flex items-stretch px-2 py-3" style={{ width: 'max-content', minHeight: 400 }}>
 
+                      <div ref={mobileR32Ref} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">32AVOS</p>
+                        {byStage.LAST_32.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                      </div>
+
+                      <MobileConnectors count={8} />
+
+                      <div ref={mobileR16Ref} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">OCTAVOS</p>
+                        {byStage.LAST_16.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                      </div>
+
+                      <MobileConnectors count={4} />
+
+                      <div ref={mobileQfRef} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">CUARTOS</p>
+                        {byStage.QUARTER_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                      </div>
+
+                      <MobileConnectors count={2} />
+
+                      <div ref={mobileSfRef} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">SEMIS</p>
+                        {byStage.SEMI_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                      </div>
+
+                      <MobileConnectors count={1} />
+
+                      <div ref={mobileFinRef} className="flex flex-col justify-center flex-shrink-0 px-2" style={{ gap: 10 }}>
+                        <p className="text-[9px] text-gray-600 tracking-widest text-center">FINAL</p>
+                        {byStage.FINAL[0] && <MobileBracketCard match={byStage.FINAL[0]} isFinal />}
+                        {byStage.THIRD_PLACE[0] && (
+                          <>
+                            <p className="text-[9px] text-gray-600 tracking-widest text-center mt-2">3° LUGAR</p>
+                            <MobileBracketCard match={byStage.THIRD_PLACE[0]} />
+                          </>
+                        )}
+                      </div>
+
+                    </div>
+                  </div>
                 </div>
-              </div>
+
+                {/* ── DESKTOP (hidden md:block) ── */}
+                <div className="hidden md:block">
+                  <div ref={bracketRef} style={{ overflowX: 'auto', overflowY: 'hidden', cursor: 'grab' }}>
+                    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 700, padding: '16px 8px', width: 'max-content', margin: '0 auto' }}>
+
+                      <BracketColumn matches={last32Left} side="left" />
+                      <BracketConnectorGroup count={4} side="left" />
+                      <BracketColumn matches={last16Left} side="left" />
+                      <BracketConnectorGroup count={2} side="left" />
+                      <BracketColumn matches={qfLeft} side="left" />
+                      <BracketConnectorGroup count={1} side="left" />
+                      <BracketColumn matches={sfLeft} side="left" />
+                      <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
+
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 0, padding: '4px 0' }}>
+                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.08em' }}>FINAL</span>
+                        <BracketMatchCard match={finalMatch} highlight />
+                        {thirdPlace && (
+                          <>
+                            <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', letterSpacing: '0.08em', marginTop: 6 }}>3° LUGAR</span>
+                            <BracketMatchCard match={thirdPlace} />
+                          </>
+                        )}
+                      </div>
+
+                      <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
+                      <BracketColumn matches={sfRight} side="right" />
+                      <BracketConnectorGroup count={1} side="right" />
+                      <BracketColumn matches={qfRight} side="right" />
+                      <BracketConnectorGroup count={2} side="right" />
+                      <BracketColumn matches={last16Right} side="right" />
+                      <BracketConnectorGroup count={4} side="right" />
+                      <BracketColumn matches={last32Right} side="right" />
+
+                    </div>
+                  </div>
+                </div>
+              </>
             )
           })()}
         </div>
