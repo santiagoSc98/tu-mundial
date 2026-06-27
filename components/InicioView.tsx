@@ -675,7 +675,7 @@ function MatchRow({
       <div className={`hidden md:flex items-center gap-3 rounded-2xl border px-3.5 py-3 mb-2 ${cardClass}`}>
 
         {/* Hora + fase */}
-        <div className="w-11 flex-shrink-0">
+        <div className="w-15 flex-shrink-0">
           <p className="text-xs font-semibold text-white leading-tight">{pyTime(ko)}</p>
           <p className="text-[10px] text-white/30 leading-tight">{stage}</p>
         </div>

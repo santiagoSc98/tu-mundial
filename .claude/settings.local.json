@@ -46,7 +46,10 @@
       "Bash(awk -F: '$2 > 700 && $2 < 780 {print}')",
       "Bash(awk -F: '$2 >= 344 && $2 <= 510')",
       "Bash(python3 -)",
-      "Bash(grep -n \"^\\\\s*<\\\\/>\\\\|^\\\\s*\\)\\\\s*$\\\\|^\\\\s*}\\\\s*$\" /Users/santiagocampuzano/Downloads/predique/components/MisGruposView.tsx)"
+      "Bash(grep -n \"^\\\\s*<\\\\/>\\\\|^\\\\s*\\)\\\\s*$\\\\|^\\\\s*}\\\\s*$\" /Users/santiagocampuzano/Downloads/predique/components/MisGruposView.tsx)",
+      "Bash(git add *)",
+      "Bash(git commit *)",
+      "Bash(git push *)"
     ],
     "additionalDirectories": [
       "/Users/santiagocampuzano/Downloads/predique/app/auth",
