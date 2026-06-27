@@ -10,9 +10,9 @@ function getSupabase() {
 }
 
 const MULTIPLIERS: Record<string, number> = {
-  LAST_16:        1.5,
-  ROUND_OF_16:    2,
-  QUARTER_FINALS: 2,
+  LAST_32:        1.5,
+  LAST_16:        2,
+  QUARTER_FINALS: 2.5,
   SEMI_FINALS:    3,
   THIRD_PLACE:    2,
   FINAL:          5,
@@ -26,7 +26,7 @@ export async function GET(request: Request) {
 
   const supabase = getSupabase()
 
-  const stages = 'LAST_16,QUARTER_FINALS,SEMI_FINALS,THIRD_PLACE,FINAL'
+  const stages = 'LAST_32,LAST_16,QUARTER_FINALS,SEMI_FINALS,THIRD_PLACE,FINAL'
   const res = await fetch(
     `https://api.football-data.org/v4/competitions/2000/matches?stage=${stages}`,
     {

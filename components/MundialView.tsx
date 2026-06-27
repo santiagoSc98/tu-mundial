@@ -12,7 +12,8 @@ type Prediction = Database['public']['Tables']['predictions']['Row']
 
 const STAGE_LABELS: Record<string, string> = {
   GROUP_STAGE:    'Fase de Grupos',
-  LAST_16:        'Dieciseisavos de Final',
+  LAST_32:        'Dieciseisavos de Final',
+  LAST_16:        'Octavos de Final',
   ROUND_OF_16:    'Octavos de Final',
   QUARTER_FINALS: 'Cuartos de Final',
   SEMI_FINALS:    'Semifinales',
@@ -22,12 +23,13 @@ const STAGE_LABELS: Record<string, string> = {
 
 const STAGE_ORDER: Record<string, number> = {
   GROUP_STAGE:    0,
-  LAST_16:        1,
-  ROUND_OF_16:    2,
-  QUARTER_FINALS: 3,
-  SEMI_FINALS:    4,
-  THIRD_PLACE:    5,
-  FINAL:          6,
+  LAST_32:        1,
+  LAST_16:        2,
+  ROUND_OF_16:    3,
+  QUARTER_FINALS: 4,
+  SEMI_FINALS:    5,
+  THIRD_PLACE:    6,
+  FINAL:          7,
 }
 
 function parseStage(description: string | null): string {

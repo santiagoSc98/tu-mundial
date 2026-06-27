@@ -32,7 +32,8 @@ const DEFAULT_CAT: CatConfig = {
 
 const STAGE_LABELS: Record<string, string> = {
   GROUP_STAGE:    'Fase de Grupos',
-  LAST_16:        'Dieciseisavos de Final',
+  LAST_32:        'Dieciseisavos de Final',
+  LAST_16:        'Octavos de Final',
   ROUND_OF_16:    'Octavos de Final',
   QUARTER_FINALS: 'Cuartos de Final',
   SEMI_FINALS:    'Semifinales',
