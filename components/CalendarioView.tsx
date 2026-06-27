@@ -299,7 +299,7 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
 }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 6, padding: '5px 8px',
+      display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
       background: winner ? 'rgba(0,196,106,0.08)' : 'transparent',
       opacity: tbd ? 0.38 : 1,
     }}>
@@ -308,7 +308,7 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
         : <div style={{ width: 16, height: 11, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
       }
       <span style={{
-        fontSize: 10, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         color: winner ? '#fff' : 'rgba(255,255,255,0.50)',
         fontWeight: winner ? 600 : 400,
         fontStyle: tbd ? 'italic' : 'normal',
@@ -334,7 +334,7 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
   const koValid = ko && !isNaN(ko.getTime())
   const isTBD  = match.homeName === 'TBD' && match.awayName === 'TBD'
 
-  const w           = isNext ? 110 : 160
+  const w           = isNext ? 160 : 192
   const borderColor = isFinal  ? 'rgba(255,215,0,0.30)'
     : isThird  ? 'rgba(205,127,50,0.25)'
     : isNext   ? 'rgba(246,183,60,0.15)'
@@ -875,30 +875,23 @@ export default function CalendarioView({
             const pSF = toPairs(byStage.SEMI_FINALS)
 
             return (
-              <div ref={bracketRef} style={{ overflowX: 'auto', cursor: 'grab', paddingBottom: 16, WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
+              <div ref={bracketRef} style={{ overflowX: 'auto', cursor: 'grab', paddingBottom: 16, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', padding: '0 4px', minWidth: 'max-content' }}>
 
                   {/* ── 32AVOS ─────────────────────────────────────────── */}
-                  <div ref={r32Ref} style={{ flexShrink: 0 }}>
+                  <div ref={r32Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="32AVOS DE FINAL" />
-                    <div style={{ display: 'grid', gridTemplateColumns: 'max-content max-content', gap: 12 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {p32.slice(0, 4).map(([m1, m2], i) => (
-                          <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} />
-                        ))}
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                        {p32.slice(4).map(([m1, m2], i) => (
-                          <BracketPair key={i + 4} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i + 4]} />
-                        ))}
-                      </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                      {p32.map(([m1, m2], i) => (
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} />
+                      ))}
                     </div>
                   </div>
 
                   <VSep />
 
                   {/* ── OCTAVOS ────────────────────────────────────────── */}
-                  <div ref={r16Ref} style={{ flexShrink: 0 }}>
+                  <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="OCTAVOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {p16.map(([m1, m2], i) => (
@@ -910,7 +903,7 @@ export default function CalendarioView({
                   <VSep />
 
                   {/* ── CUARTOS ────────────────────────────────────────── */}
-                  <div ref={qfRef} style={{ flexShrink: 0 }}>
+                  <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="CUARTOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pQF.map(([m1, m2], i) => (
@@ -922,7 +915,7 @@ export default function CalendarioView({
                   <VSep />
 
                   {/* ── SEMIS ──────────────────────────────────────────── */}
-                  <div ref={sfRef} style={{ flexShrink: 0 }}>
+                  <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="SEMIFINALES" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pSF.map(([m1, m2], i) => (
@@ -934,7 +927,7 @@ export default function CalendarioView({
                   <VSep />
 
                   {/* ── FINAL ──────────────────────────────────────────── */}
-                  <div ref={finRef} style={{ flexShrink: 0 }}>
+                  <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="FINAL" gold />
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
                       {byStage.FINAL.length > 0
