@@ -102,7 +102,8 @@ async function HomeData() {
         supabase
           .from('predictions')
           .select(PRED_COLS)
-          .order('deadline', { ascending: true }),
+          .order('deadline', { ascending: true })
+          .limit(500),
         // Current user's predictions — for existingAnswers + existingScores + existingVotes
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
