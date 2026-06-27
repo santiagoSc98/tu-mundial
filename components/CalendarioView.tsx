@@ -282,10 +282,6 @@ function BConns({ pairCount, pairH, side }: { pairCount: number; pairH: number; 
 }
 
 // ─── Knockout bracket components ─────────────────────────────────────────────
-const NEXT_PHASE_LABEL: Record<string, string> = {
-  LAST_32: 'OCTAVOS', LAST_16: 'CUARTOS', QUARTER_FINALS: 'SEMIS', SEMI_FINALS: 'FINAL',
-}
-
 interface KOMatch {
   id: string
   homeName: string
@@ -326,8 +322,8 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
   )
 }
 
-function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false, nextPhaseLabel }: {
-  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean; nextPhaseLabel?: string
+function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }: {
+  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean
 }) {
   const homeFlag   = getFlagUrl(match.homeCode)
   const awayFlag   = getFlagUrl(match.awayCode)
@@ -390,30 +386,14 @@ function BracketConnector() {
   )
 }
 
-function BracketPair({ m1, m2, nextMatch, phase }: {
-  m1: KOMatch; m2: KOMatch | null; nextMatch?: KOMatch | null; phase?: string
-}) {
-  const nextLabel = phase ? NEXT_PHASE_LABEL[phase] : undefined
+function BracketPair({ m1, m2 }: { m1: KOMatch; m2: KOMatch | null }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <KOMatchCard match={m1} />
         {m2 && <KOMatchCard match={m2} />}
       </div>
-      {m2 && (
-        <>
-          <BracketConnector />
-          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
-          <div style={{ flexShrink: 0 }}>
-            {nextMatch
-              ? <KOMatchCard match={nextMatch} isNext nextPhaseLabel={nextLabel} />
-              : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.10)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', fontStyle: 'italic' }}>TBD</span>
-                </div>
-            }
-          </div>
-        </>
-      )}
+      {m2 && <BracketConnector />}
     </div>
   )
 }
@@ -591,27 +571,40 @@ export default function CalendarioView({
       e.preventDefault()
       el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX) * 1.5
     }
-    const sections = [r32Ref, r16Ref, qfRef, sfRef, finRef]
-    const phases   = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
-    const onScroll = () => {
-      const scrollL = el.scrollLeft
-      for (let i = sections.length - 1; i >= 0; i--) {
-        const s = sections[i].current
-        if (s && s.offsetLeft <= scrollL + 100) { setSelectedPhase(phases[i]); break }
-      }
-    }
     el.addEventListener('mousedown', onDown)
     el.addEventListener('mouseup',   onUp)
     el.addEventListener('mouseleave', onUp)
     el.addEventListener('mousemove', onMove, { passive: false })
-    el.addEventListener('scroll',    onScroll, { passive: true })
     return () => {
       el.removeEventListener('mousedown', onDown)
       el.removeEventListener('mouseup',   onUp)
       el.removeEventListener('mouseleave', onUp)
       el.removeEventListener('mousemove', onMove)
-      el.removeEventListener('scroll',    onScroll)
     }
+  }, [])
+
+  useEffect(() => {
+    const container = bracketRef.current
+    if (!container) return
+    const refs = [
+      { phase: 'LAST_32',        ref: r32Ref },
+      { phase: 'LAST_16',        ref: r16Ref },
+      { phase: 'QUARTER_FINALS', ref: qfRef  },
+      { phase: 'SEMI_FINALS',    ref: sfRef  },
+      { phase: 'FINAL',          ref: finRef },
+    ]
+    const handleScroll = () => {
+      const scrollLeft = container.scrollLeft
+      for (let i = refs.length - 1; i >= 0; i--) {
+        const el = refs[i].ref.current
+        if (el && el.offsetLeft <= scrollLeft + container.offsetWidth / 2) {
+          setSelectedPhase(refs[i].phase)
+          break
+        }
+      }
+    }
+    container.addEventListener('scroll', handleScroll, { passive: true })
+    return () => container.removeEventListener('scroll', handleScroll)
   }, [])
 
   const wcStart = useMemo(() => {
@@ -902,48 +895,48 @@ export default function CalendarioView({
                     <SectionLabel label="32AVOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {p32.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} phase="LAST_32" />
+                        <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
                     </div>
                   </div>
 
-                  <VSep />
+                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── OCTAVOS ────────────────────────────────────────── */}
                   <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="OCTAVOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {p16.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.QUARTER_FINALS[i]} phase="LAST_16" />
+                        <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
                     </div>
                   </div>
 
-                  <VSep />
+                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── CUARTOS ────────────────────────────────────────── */}
                   <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="CUARTOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pQF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.SEMI_FINALS[i]} phase="QUARTER_FINALS" />
+                        <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
                     </div>
                   </div>
 
-                  <VSep />
+                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── SEMIS ──────────────────────────────────────────── */}
                   <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
                     <SectionLabel label="SEMIFINALES" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pSF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.FINAL[0]} phase="SEMI_FINALS" />
+                        <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
                     </div>
                   </div>
 
-                  <VSep />
+                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── FINAL ──────────────────────────────────────────── */}
                   <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
