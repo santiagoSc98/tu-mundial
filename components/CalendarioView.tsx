@@ -421,13 +421,13 @@ function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal
 
   return (
     <div style={{
-      width: 110, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
+      width: 150, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
       border: `1px solid ${isFinal ? 'rgba(255,215,0,0.35)' : isResolved ? 'rgba(0,196,106,0.30)' : isTBD ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.12)'}`,
       background: isFinal ? 'rgba(255,215,0,0.05)' : isResolved ? 'rgba(0,196,106,0.06)' : isTBD ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
       opacity: isTBD ? 0.5 : 1,
     }}>
       {koValid && (
-        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.35)', padding: '2px 6px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
+        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '2px 8px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
           {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
         </div>
       )}
@@ -436,22 +436,22 @@ function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal
         { name: match.awayName, flag: awayFlag, code: match.awayCode, score: match.awayScore, wins: awayWins },
       ] as const).map((team, i) => (
         <div key={i} style={{
-          display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px',
+          display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px',
           borderTop: i > 0 ? '0.5px solid rgba(255,255,255,0.07)' : 'none',
           background: team.wins ? 'rgba(0,196,106,0.07)' : 'transparent',
         }}>
           {team.flag && team.code
-            ? <img src={team.flag} alt="" style={{ width: 14, height: 10, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{ width: 14, height: 10, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
+            ? <img src={team.flag} alt="" style={{ width: 18, height: 12, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+            : <div style={{ width: 18, height: 12, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
           }
           <span style={{
-            fontSize: 10, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+            fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
             color: isTBD ? 'rgba(255,255,255,0.2)' : team.wins ? '#fff' : 'rgba(255,255,255,0.6)',
             fontWeight: team.wins ? 600 : 400,
             fontStyle: isTBD ? 'italic' : 'normal',
           }}>{team.name === 'TBD' ? '-' : team.name}</span>
           {isResolved && team.score != null && (
-            <span style={{ fontSize: 10, fontWeight: 700, flexShrink: 0, color: team.wins ? '#00C46A' : 'rgba(255,255,255,0.3)' }}>
+            <span style={{ fontSize: 12, fontWeight: 700, flexShrink: 0, color: team.wins ? '#00C46A' : 'rgba(255,255,255,0.3)' }}>
               {team.score}
             </span>
           )}
@@ -463,13 +463,11 @@ function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal
 
 function MobileConnectors({ count }: { count: number }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0, paddingTop: 20 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1 }} />
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.20)', borderTop: '1px solid rgba(255,255,255,0.20)', borderTopRightRadius: 4 }} />
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.20)', borderBottom: '1px solid rgba(255,255,255,0.20)', borderBottomRightRadius: 4 }} />
-          <div style={{ flex: 1 }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, minHeight: 20 }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, minHeight: 20 }} />
         </div>
       ))}
     </div>
@@ -988,28 +986,28 @@ export default function CalendarioView({
                   <div ref={mobileBracketRef} className="overflow-x-auto cursor-grab select-none">
                     <div className="flex items-stretch px-2 py-3" style={{ width: 'max-content', minHeight: 400 }}>
 
-                      <div ref={mobileR32Ref} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                      <div ref={mobileR32Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
                         <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">32AVOS</p>
                         {byStage.LAST_32.map((m, i) => <MobileBracketCard key={i} match={m} />)}
                       </div>
 
                       <MobileConnectors count={8} />
 
-                      <div ref={mobileR16Ref} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                      <div ref={mobileR16Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
                         <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">OCTAVOS</p>
                         {byStage.LAST_16.map((m, i) => <MobileBracketCard key={i} match={m} />)}
                       </div>
 
                       <MobileConnectors count={4} />
 
-                      <div ref={mobileQfRef} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                      <div ref={mobileQfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
                         <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">CUARTOS</p>
                         {byStage.QUARTER_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
                       </div>
 
                       <MobileConnectors count={2} />
 
-                      <div ref={mobileSfRef} className="flex flex-col justify-around flex-shrink-0" style={{ gap: 6 }}>
+                      <div ref={mobileSfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
                         <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">SEMIS</p>
                         {byStage.SEMI_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
                       </div>
