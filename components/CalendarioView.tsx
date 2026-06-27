@@ -380,9 +380,9 @@ function VSep() {
 
 function BracketConnector() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: 20, flexShrink: 0, alignSelf: 'stretch' }}>
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.14)', borderTop: '1px solid rgba(255,255,255,0.14)', borderTopRightRadius: 6, marginTop: 22 }} />
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.14)', borderBottom: '1px solid rgba(255,255,255,0.14)', borderBottomRightRadius: 6, marginBottom: 22 }} />
+    <div style={{ display: 'flex', flexDirection: 'column', width: 24, flexShrink: 0, alignSelf: 'stretch' }}>
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.22)', borderTop: '1px solid rgba(255,255,255,0.22)', borderTopRightRadius: 8, marginTop: 40 }} />
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.22)', borderBottom: '1px solid rgba(255,255,255,0.22)', borderBottomRightRadius: 8, marginBottom: 40 }} />
     </div>
   )
 }
@@ -390,20 +390,22 @@ function BracketConnector() {
 function BracketPair({ m1, m2, nextMatch }: { m1: KOMatch; m2: KOMatch | null; nextMatch?: KOMatch | null }) {
   return (
     <div style={{ display: 'flex', alignItems: 'stretch' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <KOMatchCard match={m1} />
         {m2 && <KOMatchCard match={m2} />}
       </div>
       {m2 && (
         <>
           <BracketConnector />
-          <div style={{ width: 10, borderTop: '1px solid rgba(255,255,255,0.12)', alignSelf: 'center', flexShrink: 0 }} />
-          {nextMatch
-            ? <KOMatchCard match={nextMatch} isNext />
-            : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.07)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, minHeight: 50 }}>
-                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.18)', fontStyle: 'italic' }}>TBD</span>
-              </div>
-          }
+          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.22)', alignSelf: 'center', flexShrink: 0 }} />
+          <div style={{ alignSelf: 'center', flexShrink: 0 }}>
+            {nextMatch
+              ? <KOMatchCard match={nextMatch} isNext />
+              : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.10)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', fontStyle: 'italic' }}>TBD</span>
+                </div>
+            }
+          </div>
         </>
       )}
     </div>
