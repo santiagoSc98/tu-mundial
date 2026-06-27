@@ -282,6 +282,10 @@ function BConns({ pairCount, pairH, side }: { pairCount: number; pairH: number; 
 }
 
 // ─── Knockout bracket components ─────────────────────────────────────────────
+const NEXT_PHASE_LABEL: Record<string, string> = {
+  LAST_32: 'OCTAVOS', LAST_16: 'CUARTOS', QUARTER_FINALS: 'SEMIS', SEMI_FINALS: 'FINAL',
+}
+
 interface KOMatch {
   id: string
   homeName: string
@@ -301,20 +305,20 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
     <div style={{
       display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
       background: winner ? 'rgba(0,196,106,0.08)' : 'transparent',
-      opacity: tbd ? 0.38 : 1,
     }}>
       {flag
-        ? <img src={flag} alt={name} style={{ width: 16, height: 11, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-        : <div style={{ width: 16, height: 11, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
+        ? <img src={flag} alt={name} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+        : <div style={{ width: 20, height: 14, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
       }
       <span style={{
-        fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        color: winner ? '#fff' : 'rgba(255,255,255,0.50)',
-        fontWeight: winner ? 600 : 400,
+        fontSize: tbd ? 11 : 12,
+        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        color: tbd ? 'rgba(75,85,99,1)' : '#fff',
+        fontWeight: tbd ? 400 : 500,
         fontStyle: tbd ? 'italic' : 'normal',
       }}>{name}</span>
       {score !== null && (
-        <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(255,255,255,0.35)' }}>
+        <span style={{ fontSize: 14, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(107,114,128,1)' }}>
           {score}
         </span>
       )}
@@ -335,24 +339,26 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
   const isTBD  = match.homeName === 'TBD' && match.awayName === 'TBD'
 
   const w           = isNext ? 160 : 192
-  const borderColor = isFinal  ? 'rgba(255,215,0,0.30)'
-    : isThird  ? 'rgba(205,127,50,0.25)'
-    : isNext   ? 'rgba(246,183,60,0.15)'
-    : isResolved ? 'rgba(0,196,106,0.30)'
-    : 'rgba(255,255,255,0.10)'
-  const bgColor = isFinal  ? 'rgba(255,215,0,0.04)'
-    : isThird  ? 'rgba(205,127,50,0.04)'
-    : isNext   ? 'rgba(246,183,60,0.03)'
-    : isResolved ? 'rgba(0,196,106,0.03)'
-    : 'rgba(255,255,255,0.04)'
+  const borderColor = isFinal    ? 'rgba(255,215,0,0.30)'
+    : isThird    ? 'rgba(205,127,50,0.25)'
+    : isNext     ? 'rgba(255,255,255,0.10)'
+    : isResolved ? 'rgba(0,196,106,0.35)'
+    : isTBD      ? 'rgba(255,255,255,0.06)'
+    : 'rgba(255,255,255,0.12)'
+  const bgColor = isFinal    ? 'rgba(255,215,0,0.04)'
+    : isThird    ? 'rgba(205,127,50,0.04)'
+    : isNext     ? 'rgba(255,255,255,0.04)'
+    : isResolved ? 'rgba(0,196,106,0.07)'
+    : isTBD      ? 'rgba(255,255,255,0.02)'
+    : 'rgba(255,255,255,0.05)'
 
   return (
-    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor }}>
+    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
       <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.04)' }} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
       <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
       {!isNext && koValid && (
-        <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.22)', textAlign: 'center', padding: '2px 0', borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+        <div style={{ fontSize: 10, color: 'rgba(156,163,175,1)', textAlign: 'center', padding: '4px 8px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}>
           {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
         </div>
       )}
@@ -362,13 +368,10 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
 
 function SectionLabel({ label, gold = false }: { label: string; gold?: boolean }) {
   return (
-    <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
       <span style={{
-        fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', whiteSpace: 'nowrap',
-        padding: '2px 10px', borderRadius: 9999,
-        color: gold ? '#FFD700' : 'rgba(255,255,255,0.50)',
-        background: gold ? 'rgba(255,215,0,0.08)' : 'rgba(255,255,255,0.05)',
-        border: `1px solid ${gold ? 'rgba(255,215,0,0.25)' : 'rgba(255,255,255,0.10)'}`,
+        fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', whiteSpace: 'nowrap',
+        color: gold ? '#FFD700' : 'rgba(156,163,175,1)',
       }}>{label}</span>
     </div>
   )
@@ -381,13 +384,16 @@ function VSep() {
 function BracketConnector() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', width: 24, flexShrink: 0, alignSelf: 'stretch' }}>
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.22)', borderTop: '1px solid rgba(255,255,255,0.22)', borderTopRightRadius: 8, marginTop: 40 }} />
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.22)', borderBottom: '1px solid rgba(255,255,255,0.22)', borderBottomRightRadius: 8, marginBottom: 40 }} />
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 8, marginTop: 40 }} />
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 8, marginBottom: 40 }} />
     </div>
   )
 }
 
-function BracketPair({ m1, m2, nextMatch }: { m1: KOMatch; m2: KOMatch | null; nextMatch?: KOMatch | null }) {
+function BracketPair({ m1, m2, nextMatch, phase }: {
+  m1: KOMatch; m2: KOMatch | null; nextMatch?: KOMatch | null; phase?: string
+}) {
+  const nextLabel = phase ? NEXT_PHASE_LABEL[phase] : undefined
   return (
     <div style={{ display: 'flex', alignItems: 'stretch' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -397,8 +403,13 @@ function BracketPair({ m1, m2, nextMatch }: { m1: KOMatch; m2: KOMatch | null; n
       {m2 && (
         <>
           <BracketConnector />
-          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.22)', alignSelf: 'center', flexShrink: 0 }} />
+          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
           <div style={{ alignSelf: 'center', flexShrink: 0 }}>
+            {nextLabel && (
+              <div style={{ fontSize: 8, color: 'rgba(156,163,175,0.7)', textAlign: 'center', paddingTop: 6, paddingBottom: 2, letterSpacing: '0.08em' }}>
+                {nextLabel}
+              </div>
+            )}
             {nextMatch
               ? <KOMatchCard match={nextMatch} isNext />
               : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.10)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
@@ -885,7 +896,7 @@ export default function CalendarioView({
                     <SectionLabel label="32AVOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {p32.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} />
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.LAST_16[i]} phase="LAST_32" />
                       ))}
                     </div>
                   </div>
@@ -897,7 +908,7 @@ export default function CalendarioView({
                     <SectionLabel label="OCTAVOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {p16.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.QUARTER_FINALS[i]} />
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.QUARTER_FINALS[i]} phase="LAST_16" />
                       ))}
                     </div>
                   </div>
@@ -909,7 +920,7 @@ export default function CalendarioView({
                     <SectionLabel label="CUARTOS DE FINAL" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pQF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.SEMI_FINALS[i]} />
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.SEMI_FINALS[i]} phase="QUARTER_FINALS" />
                       ))}
                     </div>
                   </div>
@@ -921,7 +932,7 @@ export default function CalendarioView({
                     <SectionLabel label="SEMIFINALES" />
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                       {pSF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.FINAL[0]} />
+                        <BracketPair key={i} m1={m1} m2={m2} nextMatch={byStage.FINAL[0]} phase="SEMI_FINALS" />
                       ))}
                     </div>
                   </div>
