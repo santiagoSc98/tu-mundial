@@ -424,11 +424,20 @@ export default function CalendarioView({
   ]
 
   function scrollToPhase(phaseKey: string) {
+    setSelectedPhase(phaseKey)
     if (phaseKey === 'grupos') {
       setCalTab('resumen')
       return
     }
-    setSelectedPhase(phaseKey)
+    const container = bracketRef.current
+    if (!container) return
+    if (phaseKey === 'FINAL') {
+      container.scrollTo({ left: (container.scrollWidth - container.clientWidth) / 2, behavior: 'smooth' })
+      return
+    }
+    const target = container.querySelector(`[data-phase="${phaseKey}"]`) as HTMLElement | null
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
   }
 
   const wcStart = useMemo(() => {
@@ -675,99 +684,74 @@ export default function CalendarioView({
             ))}
           </div>
 
-          {/* Filtered match grid for selected phase */}
-          {(() => {
-            const stagesToShow = selectedPhase === 'FINAL'
-              ? ['FINAL', 'THIRD_PLACE']
-              : [selectedPhase]
+          {/* Bracket — symmetric, horizontally scrollable */}
+          <div ref={bracketRef} style={{ overflowX: 'auto', paddingBottom: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 4px', minWidth: 'max-content' }}>
 
-            const phasePreds = predictions
-              .filter(p => stagesToShow.includes(p.stage ?? '') && p.home_team_code && p.away_team_code)
-              .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
-
-            if (phasePreds.length === 0) {
-              return (
-                <div className="text-center py-12">
-                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-                    Los partidos de esta fase se confirman más adelante.
-                  </p>
-                </div>
-              )
-            }
-
-            const cols = (selectedPhase === 'SEMI_FINALS' || selectedPhase === 'FINAL') ? 1 : 2
-            const isCentered = selectedPhase === 'FINAL'
-
-            return (
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: `repeat(${cols}, 1fr)`,
-                gap: 8,
-                ...(isCentered ? { maxWidth: 320, margin: '0 auto' } : {}),
-              }}>
-                {phasePreds.map(p => {
-                  const opts = Array.isArray(p.options) ? (p.options as string[]) : []
-                  const homeName = getTeamNameES(opts[0] ?? p.home_team_code ?? '')
-                  const awayName = getTeamNameES(opts[opts.length - 1] ?? p.away_team_code ?? '')
-                  const ko = p.deadline ? new Date(new Date(p.deadline).getTime() + 10 * 60 * 1000) : null
-                  const koValid = ko && !isNaN(ko.getTime())
-                  const isResolved = p.status === 'resolved'
-                  const isThird = p.stage === 'THIRD_PLACE'
-
-                  return (
-                    <div key={p.id} style={{
-                      background: isThird ? 'rgba(205,127,50,0.06)' : 'rgba(255,255,255,0.04)',
-                      border: `1px solid ${isThird ? 'rgba(205,127,50,0.20)' : 'rgba(255,255,255,0.08)'}`,
-                      borderRadius: 12, padding: '10px 12px',
-                    }}>
-                      {/* Date / time row */}
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', textTransform: 'capitalize' }}>
-                          {koValid ? pyDateLabel(pyISODate(ko!)) : '--'}
-                        </span>
-                        {isThird
-                          ? <span style={{ fontSize: 9, fontWeight: 700, color: '#CD7F32', letterSpacing: '0.05em' }}>3° LUGAR</span>
-                          : <span style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,0.40)' }}>
-                              {koValid ? pyTime(ko!) : '--:--'}
-                            </span>
-                        }
-                      </div>
-
-                      {/* Teams */}
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                        {/* Home */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <Flag tla={p.home_team_code} w={26} h={17} />
-                          <span style={{ fontSize: 10, fontWeight: 600, color: p.home_team_code === 'TBD' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 1.2 }}>
-                            {homeName === 'Por definir' ? 'TBD' : homeName}
-                          </span>
-                        </div>
-
-                        {/* Score or VS */}
-                        <div style={{ flexShrink: 0, textAlign: 'center', minWidth: 36 }}>
-                          {isResolved && p.exact_score_home != null && p.exact_score_away != null ? (
-                            <span style={{ fontSize: 15, fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>
-                              {p.exact_score_home}–{p.exact_score_away}
-                            </span>
-                          ) : (
-                            <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.20)', fontWeight: 700 }}>VS</span>
-                          )}
-                        </div>
-
-                        {/* Away */}
-                        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
-                          <Flag tla={p.away_team_code} w={26} h={17} />
-                          <span style={{ fontSize: 10, fontWeight: 600, color: p.away_team_code === 'TBD' ? 'rgba(255,255,255,0.25)' : 'rgba(255,255,255,0.85)', textAlign: 'center', lineHeight: 1.2 }}>
-                            {awayName === 'Por definir' ? 'TBD' : awayName}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+              {/* ── LEFT SIDE ──────────────────────────────────────── */}
+              <RoundCol phaseKey="LAST_32"        slots={L_R32}   slotH={SLOT_H}       label="32AVOS"  />
+              <BConns pairCount={4}               pairH={SLOT_H * 2}   side="right" />
+              <RoundCol phaseKey="LAST_16"        slots={L_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
+              <BConns pairCount={2}               pairH={SLOT_H * 4}   side="right" />
+              <RoundCol phaseKey="QUARTER_FINALS" slots={L_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
+              <BConns pairCount={1}               pairH={SLOT_H * 8}   side="right" />
+              <RoundCol phaseKey="SEMI_FINALS"    slots={[L_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
+              {/* Stub L_SF → FINAL */}
+              <div style={{ flexShrink: 0, width: B_CONN_W, marginTop: 32, height: SLOT_H * 8, display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '100%', height: 1, background: B_LINE }} />
               </div>
-            )
-          })()}
+
+              {/* ── CENTER: FINAL + 3° LUGAR ───────────────────────── */}
+              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div className="px-3 py-1 rounded-full" style={{ background: 'rgba(255,215,0,0.10)', border: '1px solid rgba(255,215,0,0.30)', whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#FFD700' }}>🏆 FINAL</span>
+                  </div>
+                </div>
+                <div style={{ height: SLOT_H * 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
+                  <BCard slot={FINAL_M} isFinal />
+                  <div style={{ width: B_CARD_W, height: 1, background: 'rgba(255,255,255,0.10)', margin: '6px 0' }} />
+                  <span style={{ fontSize: 9, fontWeight: 700, color: '#CD7F32', letterSpacing: '0.06em' }}>3° LUGAR · 18 JUL</span>
+                  <BCard slot={THIRD_M} isThird />
+                </div>
+              </div>
+
+              {/* Stub FINAL → R_SF */}
+              <div style={{ flexShrink: 0, width: B_CONN_W, marginTop: 32, height: SLOT_H * 8, display: 'flex', alignItems: 'center' }}>
+                <div style={{ width: '100%', height: 1, background: B_LINE }} />
+              </div>
+
+              {/* ── RIGHT SIDE ─────────────────────────────────────── */}
+              <RoundCol slots={[R_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
+              <BConns pairCount={1}     pairH={SLOT_H * 8}   side="left" />
+              <RoundCol slots={R_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
+              <BConns pairCount={2}     pairH={SLOT_H * 4}   side="left" />
+              <RoundCol slots={R_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
+              <BConns pairCount={4}     pairH={SLOT_H * 2}   side="left" />
+              <RoundCol slots={R_R32}   slotH={SLOT_H}       label="32AVOS"  />
+            </div>
+          </div>
+
+          {/* Date reference */}
+          <div className="mt-4 flex flex-wrap gap-3">
+            {[
+              ['32avos', '27 jun – 2 jul'],
+              ['Octavos', '4 – 8 jul'],
+              ['Cuartos', '9 – 12 jul'],
+              ['Semis', '15 – 16 jul'],
+              ['3° Lugar', '18 jul'],
+              ['Final', '19 jul'],
+            ].map(([round, dates]) => (
+              <div
+                key={round}
+                className="px-3 py-1.5 rounded-lg"
+                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
+              >
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)', fontWeight: 700 }}>{round} </span>
+                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)' }}>{dates}</span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
