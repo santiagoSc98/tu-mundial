@@ -370,6 +370,8 @@ function BracketConnectorGroup({ count, side = 'left' }: { count: number; side?:
     <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 20, flexShrink: 0 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          {/* spacer = 1/4 of connector height = center of top card */}
+          <div style={{ flex: 1 }} />
           <div style={{
             flex: 1,
             borderRight: isLeft ? '1px solid rgba(255,255,255,0.20)' : 'none',
@@ -386,6 +388,8 @@ function BracketConnectorGroup({ count, side = 'left' }: { count: number; side?:
             borderBottomRightRadius: isLeft ? 4 : 0,
             borderBottomLeftRadius: isLeft ? 0 : 4,
           }} />
+          {/* spacer = 1/4 of connector height = center of bottom card */}
+          <div style={{ flex: 1 }} />
         </div>
       ))}
     </div>
