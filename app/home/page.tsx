@@ -1,6 +1,8 @@
 import { Suspense } from 'react'
 import { redirect } from 'next/navigation'
 import { cookies } from 'next/headers'
+
+export const dynamic = 'force-dynamic'
 import { createClient } from '@/lib/supabase/server'
 import HomeClient from '@/components/HomeClient'
 import { ErrorBoundary } from '@/components/ErrorBoundary'
