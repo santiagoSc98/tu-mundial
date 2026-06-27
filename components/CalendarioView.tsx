@@ -354,11 +354,6 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false, 
 
   return (
     <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
-      {isNext && nextPhaseLabel && (
-        <div style={{ fontSize: 8, color: 'rgba(107,114,128,1)', textAlign: 'center', paddingTop: 6, paddingBottom: 2, letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          {nextPhaseLabel}
-        </div>
-      )}
       <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
       <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
       <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
@@ -400,7 +395,7 @@ function BracketPair({ m1, m2, nextMatch, phase }: {
 }) {
   const nextLabel = phase ? NEXT_PHASE_LABEL[phase] : undefined
   return (
-    <div style={{ display: 'flex', alignItems: 'stretch' }}>
+    <div style={{ display: 'flex', alignItems: 'center' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <KOMatchCard match={m1} />
         {m2 && <KOMatchCard match={m2} />}
@@ -408,8 +403,8 @@ function BracketPair({ m1, m2, nextMatch, phase }: {
       {m2 && (
         <>
           <BracketConnector />
-          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
-          <div style={{ alignSelf: 'center', flexShrink: 0 }}>
+          <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.25)', flexShrink: 0 }} />
+          <div style={{ flexShrink: 0 }}>
             {nextMatch
               ? <KOMatchCard match={nextMatch} isNext nextPhaseLabel={nextLabel} />
               : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.10)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
@@ -596,15 +591,26 @@ export default function CalendarioView({
       e.preventDefault()
       el.scrollLeft = scrollLeft - (e.pageX - el.offsetLeft - startX) * 1.5
     }
+    const sections = [r32Ref, r16Ref, qfRef, sfRef, finRef]
+    const phases   = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
+    const onScroll = () => {
+      const scrollL = el.scrollLeft
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const s = sections[i].current
+        if (s && s.offsetLeft <= scrollL + 100) { setSelectedPhase(phases[i]); break }
+      }
+    }
     el.addEventListener('mousedown', onDown)
     el.addEventListener('mouseup',   onUp)
     el.addEventListener('mouseleave', onUp)
     el.addEventListener('mousemove', onMove, { passive: false })
+    el.addEventListener('scroll',    onScroll, { passive: true })
     return () => {
       el.removeEventListener('mousedown', onDown)
       el.removeEventListener('mouseup',   onUp)
       el.removeEventListener('mouseleave', onUp)
       el.removeEventListener('mousemove', onMove)
+      el.removeEventListener('scroll',    onScroll)
     }
   }, [])
 
