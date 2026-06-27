@@ -61,79 +61,82 @@ export function PredictionsModal({ prediction, userGroups, matchTitle, onClose }
       style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0 }}
       onClick={e => { if (e.target === e.currentTarget) onClose() }}
     >
-      <div className="bg-[#0f1a2e] border border-white/10 rounded-2xl p-5 w-full max-w-sm max-h-[85vh] overflow-y-auto">
+      <div className="bg-[#0f1a2e] border border-white/10 rounded-2xl w-full max-w-sm max-h-[85vh] flex flex-col">
 
-        {/* Header */}
-        <div className="flex items-center justify-between mb-1">
-          <h3 className="text-base font-bold text-white">Predicciones</h3>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors p-1"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path d="M18 6L6 18M6 6l12 12"/>
-            </svg>
-          </button>
-        </div>
-        <p className="text-xs text-gray-400 mb-3">
-          {matchTitle} · Resultado:{' '}
-          <span className="font-bold text-white">
-            {prediction.exact_score_home ?? '?'}–{prediction.exact_score_away ?? '?'}
-          </span>
-        </p>
+        {/* ── Fixed header ─────────────────────────────────────────── */}
+        <div className="flex-shrink-0 px-5 pt-5">
 
-        {/* Tabs — only when user belongs to at least one group */}
-        {userGroups.length > 0 && (
-          <div className="flex gap-1 mb-3 bg-white/[0.05] p-1 rounded-xl">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="text-base font-bold text-white">Predicciones</h3>
             <button
-              onClick={() => setTab('all')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                tab === 'all' ? 'bg-[#006A33] text-white' : 'text-gray-400 hover:text-gray-200'
-              }`}
+              onClick={onClose}
+              className="text-gray-400 hover:text-white transition-colors p-1"
             >
-              Todos
-            </button>
-            <button
-              onClick={() => setTab('groups')}
-              className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                tab === 'groups' ? 'bg-[#006A33] text-white' : 'text-gray-400 hover:text-gray-200'
-              }`}
-            >
-              Mi grupo
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <path d="M18 6L6 18M6 6l12 12"/>
+              </svg>
             </button>
           </div>
-        )}
+          <p className="text-xs text-gray-400 mb-3">
+            {matchTitle} · Resultado:{' '}
+            <span className="font-bold text-white">
+              {prediction.exact_score_home ?? '?'}–{prediction.exact_score_away ?? '?'}
+            </span>
+          </p>
 
-        {/* Group selector when user has multiple groups */}
-        {tab === 'groups' && userGroups.length > 1 && (
-          <select
-            value={selectedGroup}
-            onChange={e => setSelectedGroup(e.target.value)}
-            className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white mb-3 appearance-none"
-          >
-            {userGroups.map(g => (
-              <option key={g.id} value={g.id} className="bg-[#0f1a2e]">{g.name}</option>
-            ))}
-          </select>
-        )}
+          {/* Tabs — only when user belongs to at least one group */}
+          {userGroups.length > 0 && (
+            <div className="flex gap-1 mb-3 bg-white/[0.05] p-1 rounded-xl">
+              <button
+                onClick={() => setTab('all')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  tab === 'all' ? 'bg-[#006A33] text-white' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Todos
+              </button>
+              <button
+                onClick={() => setTab('groups')}
+                className={`flex-1 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                  tab === 'groups' ? 'bg-[#006A33] text-white' : 'text-gray-400 hover:text-gray-200'
+                }`}
+              >
+                Mi grupo
+              </button>
+            </div>
+          )}
 
-        {loading ? (
-          <p className="text-center text-gray-500 py-8 text-sm">Cargando...</p>
-        ) : (
-          <>
-            {/* Stats bar */}
-            {stats && stats.totalWithPrediction > 0 && (
-              <div className="flex justify-between bg-white/[0.04] rounded-xl px-3 py-2.5 mb-3 text-xs text-gray-300">
-                <span>{stats.totalCorrect} de {stats.totalWithPrediction} acertaron</span>
-                <span className="font-bold text-[#00C46A]">{stats.accuracy}% efectividad</span>
-              </div>
-            )}
+          {/* Group selector when user has multiple groups */}
+          {tab === 'groups' && userGroups.length > 1 && (
+            <select
+              value={selectedGroup}
+              onChange={e => setSelectedGroup(e.target.value)}
+              className="w-full bg-white/[0.06] border border-white/10 rounded-lg px-3 py-2 text-sm text-white mb-3 appearance-none"
+            >
+              {userGroups.map(g => (
+                <option key={g.id} value={g.id} className="bg-[#0f1a2e]">{g.name}</option>
+              ))}
+            </select>
+          )}
 
-            {data.length === 0 ? (
-              <p className="text-center text-gray-500 py-8 text-sm">Sin predicciones</p>
-            ) : (
-              <div className="space-y-2">
-                {data.map(item => (
+          {/* Stats bar */}
+          {!loading && stats && stats.totalWithPrediction > 0 && (
+            <div className="flex justify-between bg-white/[0.04] rounded-xl px-3 py-2.5 mb-3 text-xs text-gray-300">
+              <span>{stats.totalCorrect} de {stats.totalWithPrediction} acertaron</span>
+              <span className="font-bold text-[#00C46A]">{stats.accuracy}% efectividad</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Scrollable list ───────────────────────────────────────── */}
+        <div className="overflow-y-auto flex-1 px-5 pb-5">
+          {loading ? (
+            <p className="text-center text-gray-500 py-8 text-sm">Cargando...</p>
+          ) : data.length === 0 ? (
+            <p className="text-center text-gray-500 py-8 text-sm">Sin predicciones</p>
+          ) : (
+            <div className="space-y-2">
+              {data.map(item => (
                   <div
                     key={item.user.id}
                     className={`flex items-center justify-between p-2.5 rounded-xl border ${
@@ -206,9 +209,8 @@ export function PredictionsModal({ prediction, userGroups, matchTitle, onClose }
                   </div>
                 ))}
               </div>
-            )}
-          </>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
