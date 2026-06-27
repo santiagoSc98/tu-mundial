@@ -281,6 +281,67 @@ function BConns({ pairCount, pairH, side }: { pairCount: number; pairH: number; 
   )
 }
 
+// ─── Knockout bracket components ─────────────────────────────────────────────
+interface KOMatch {
+  id: string
+  homeName: string
+  awayName: string
+  homeCode: string | null
+  awayCode: string | null
+  homeScore: number | null
+  awayScore: number | null
+  status: string | null
+  deadline: string | null
+}
+
+function TeamRow({ flag, name, score, winner }: {
+  flag: string | null; name: string; score: number | null; winner: boolean
+}) {
+  return (
+    <div className={`flex items-center gap-2 px-2.5 py-1.5 ${winner ? 'bg-[rgba(0,196,106,0.08)]' : ''}`}>
+      {flag
+        ? <img src={flag} alt={name} className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
+        : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
+      }
+      <span className={`text-xs flex-1 truncate ${winner ? 'text-white font-semibold' : 'text-gray-400'}`}>
+        {name || 'Por definir'}
+      </span>
+      {score !== null && (
+        <span className={`text-xs font-bold flex-shrink-0 ${winner ? 'text-[#00C46A]' : 'text-gray-500'}`}>
+          {score}
+        </span>
+      )}
+    </div>
+  )
+}
+
+function KOMatchCard({ match }: { match: KOMatch }) {
+  const homeFlag  = getFlagUrl(match.homeCode)
+  const awayFlag  = getFlagUrl(match.awayCode)
+  const isResolved = match.status === 'resolved'
+  const homeWins  = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const awayWins  = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+  const ko = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60 * 1000) : null
+  const koValid = ko && !isNaN(ko.getTime())
+
+  return (
+    <div className={`border rounded-xl overflow-hidden flex-shrink-0 ${
+      isResolved
+        ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.03)]'
+        : 'border-white/[0.08] bg-white/[0.04]'
+    }`} style={{ width: 168 }}>
+      <TeamRow flag={homeFlag} name={match.homeName} score={match.homeScore} winner={homeWins} />
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.05)' }} />
+      <TeamRow flag={awayFlag} name={match.awayName} score={match.awayScore} winner={awayWins} />
+      {koValid && (
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', textAlign: 'center', padding: '3px 0', borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+          {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Matchday panel ───────────────────────────────────────────────────────────
 interface Matchday {
   date: string
@@ -424,20 +485,8 @@ export default function CalendarioView({
   ]
 
   function scrollToPhase(phaseKey: string) {
+    if (phaseKey === 'grupos') { setCalTab('resumen'); return }
     setSelectedPhase(phaseKey)
-    if (phaseKey === 'grupos') {
-      setCalTab('resumen')
-      return
-    }
-    const container = bracketRef.current
-    if (!container) return
-    if (phaseKey === 'FINAL') {
-      container.scrollTo({ left: (container.scrollWidth - container.clientWidth) / 2, behavior: 'smooth' })
-      return
-    }
-    const target = container.querySelector(`[data-phase="${phaseKey}"]`) as HTMLElement | null
-    if (!target) return
-    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
   }
 
   const wcStart = useMemo(() => {
@@ -684,74 +733,92 @@ export default function CalendarioView({
             ))}
           </div>
 
-          {/* Bracket — symmetric, horizontally scrollable */}
-          <div ref={bracketRef} style={{ overflowX: 'auto', paddingBottom: 16 }}>
-            <div style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 4px', minWidth: 'max-content' }}>
+          {/* Dynamic bracket — filtered by selectedPhase */}
+          {(() => {
+            const stagesToShow = selectedPhase === 'FINAL'
+              ? ['FINAL', 'THIRD_PLACE']
+              : [selectedPhase]
 
-              {/* ── LEFT SIDE ──────────────────────────────────────── */}
-              <RoundCol phaseKey="LAST_32"        slots={L_R32}   slotH={SLOT_H}       label="32AVOS"  />
-              <BConns pairCount={4}               pairH={SLOT_H * 2}   side="right" />
-              <RoundCol phaseKey="LAST_16"        slots={L_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
-              <BConns pairCount={2}               pairH={SLOT_H * 4}   side="right" />
-              <RoundCol phaseKey="QUARTER_FINALS" slots={L_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
-              <BConns pairCount={1}               pairH={SLOT_H * 8}   side="right" />
-              <RoundCol phaseKey="SEMI_FINALS"    slots={[L_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
-              {/* Stub L_SF → FINAL */}
-              <div style={{ flexShrink: 0, width: B_CONN_W, marginTop: 32, height: SLOT_H * 8, display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: '100%', height: 1, background: B_LINE }} />
-              </div>
+            const koMatches: KOMatch[] = predictions
+              .filter(p => stagesToShow.includes(p.stage ?? '') && p.home_team_code && p.away_team_code)
+              .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+              .map(p => {
+                const opts = Array.isArray(p.options) ? (p.options as string[]) : []
+                const raw0 = opts[0] ?? ''
+                const rawN = opts[opts.length - 1] ?? ''
+                const home = getTeamNameES(raw0)
+                const away = getTeamNameES(rawN)
+                return {
+                  id:        p.id,
+                  homeName:  home === 'Por definir' ? 'TBD' : home,
+                  awayName:  away === 'Por definir' ? 'TBD' : away,
+                  homeCode:  p.home_team_code,
+                  awayCode:  p.away_team_code,
+                  homeScore: p.exact_score_home ?? null,
+                  awayScore: p.exact_score_away ?? null,
+                  status:    p.status,
+                  deadline:  p.deadline ?? null,
+                }
+              })
 
-              {/* ── CENTER: FINAL + 3° LUGAR ───────────────────────── */}
-              <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <div style={{ height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <div className="px-3 py-1 rounded-full" style={{ background: 'rgba(255,215,0,0.10)', border: '1px solid rgba(255,215,0,0.30)', whiteSpace: 'nowrap' }}>
-                    <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: '#FFD700' }}>🏆 FINAL</span>
-                  </div>
+            if (koMatches.length === 0) {
+              return (
+                <div className="text-center py-12">
+                  <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
+                    Los partidos de esta fase se confirman más adelante.
+                  </p>
                 </div>
-                <div style={{ height: SLOT_H * 8, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 10 }}>
-                  <BCard slot={FINAL_M} isFinal />
-                  <div style={{ width: B_CARD_W, height: 1, background: 'rgba(255,255,255,0.10)', margin: '6px 0' }} />
-                  <span style={{ fontSize: 9, fontWeight: 700, color: '#CD7F32', letterSpacing: '0.06em' }}>3° LUGAR · 18 JUL</span>
-                  <BCard slot={THIRD_M} isThird />
+              )
+            }
+
+            // FINAL / THIRD_PLACE: just list, no bracket connectors
+            if (selectedPhase === 'FINAL') {
+              return (
+                <div className="flex flex-col items-center gap-4">
+                  {koMatches.map(m => <KOMatchCard key={m.id} match={m} />)}
+                </div>
+              )
+            }
+
+            // Group into pairs of 2
+            const pairs: [KOMatch, KOMatch | null][] = []
+            for (let i = 0; i < koMatches.length; i += 2) {
+              pairs.push([koMatches[i], koMatches[i + 1] ?? null])
+            }
+
+            const gridCols = (selectedPhase === 'LAST_32' || selectedPhase === 'LAST_16') ? 2 : 1
+
+            return (
+              <div style={{ overflowX: 'auto' }}>
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${gridCols}, max-content)`,
+                  gap: 12,
+                }}>
+                  {pairs.map(([m1, m2], i) => (
+                    <div key={i} className="flex items-stretch">
+                      {/* Two match cards stacked */}
+                      <div className="flex flex-col gap-2">
+                        <KOMatchCard match={m1} />
+                        {m2 && <KOMatchCard match={m2} />}
+                      </div>
+
+                      {/* Bracket connector lines */}
+                      {m2 && (
+                        <>
+                          <div className="flex flex-col w-5 flex-shrink-0">
+                            <div className="flex-1 border-r border-t border-white/10 rounded-tr-md" />
+                            <div className="flex-1 border-r border-b border-white/10 rounded-br-md" />
+                          </div>
+                          <div className="w-3 border-t border-white/10 self-center flex-shrink-0" />
+                        </>
+                      )}
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {/* Stub FINAL → R_SF */}
-              <div style={{ flexShrink: 0, width: B_CONN_W, marginTop: 32, height: SLOT_H * 8, display: 'flex', alignItems: 'center' }}>
-                <div style={{ width: '100%', height: 1, background: B_LINE }} />
-              </div>
-
-              {/* ── RIGHT SIDE ─────────────────────────────────────── */}
-              <RoundCol slots={[R_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
-              <BConns pairCount={1}     pairH={SLOT_H * 8}   side="left" />
-              <RoundCol slots={R_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
-              <BConns pairCount={2}     pairH={SLOT_H * 4}   side="left" />
-              <RoundCol slots={R_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
-              <BConns pairCount={4}     pairH={SLOT_H * 2}   side="left" />
-              <RoundCol slots={R_R32}   slotH={SLOT_H}       label="32AVOS"  />
-            </div>
-          </div>
-
-          {/* Date reference */}
-          <div className="mt-4 flex flex-wrap gap-3">
-            {[
-              ['32avos', '27 jun – 2 jul'],
-              ['Octavos', '4 – 8 jul'],
-              ['Cuartos', '9 – 12 jul'],
-              ['Semis', '15 – 16 jul'],
-              ['3° Lugar', '18 jul'],
-              ['Final', '19 jul'],
-            ].map(([round, dates]) => (
-              <div
-                key={round}
-                className="px-3 py-1.5 rounded-lg"
-                style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}
-              >
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.50)', fontWeight: 700 }}>{round} </span>
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)' }}>{dates}</span>
-              </div>
-            ))}
-          </div>
+            )
+          })()}
         </div>
       )}
     </div>
