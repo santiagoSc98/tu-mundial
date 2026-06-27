@@ -294,106 +294,112 @@ interface KOMatch {
   deadline: string | null
 }
 
-function TeamRow({ flag, name, score, winner, tbd = false }: {
-  flag: string | null; name: string; score: number | null; winner: boolean; tbd?: boolean
+function BracketMatchCard({ match, side = 'left', highlight = false }: {
+  match: KOMatch | null; side?: 'left' | 'right'; highlight?: boolean
 }) {
-  return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
-      background: winner ? 'rgba(0,196,106,0.08)' : 'transparent',
-    }}>
-      {flag
-        ? <img src={flag} alt={name} style={{ width: 16, height: 11, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-        : <div style={{ width: 16, height: 11, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
-      }
-      <span style={{
-        fontSize: tbd ? 9 : 10,
-        flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-        color: tbd ? 'rgba(75,85,99,1)' : '#fff',
-        fontWeight: tbd ? 400 : 500,
-        fontStyle: tbd ? 'italic' : 'normal',
-      }}>{name}</span>
-      {score !== null && (
-        <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(107,114,128,1)' }}>
-          {score}
-        </span>
-      )}
-    </div>
-  )
-}
-
-function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }: {
-  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean
-}) {
-  const homeFlag   = getFlagUrl(match.homeCode)
-  const awayFlag   = getFlagUrl(match.awayCode)
+  if (!match) {
+    return (
+      <div style={{ width: 110, minHeight: 48, border: '1px dashed rgba(255,255,255,0.08)', borderRadius: 6, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.15)', fontStyle: 'italic' }}>TBD</span>
+      </div>
+    )
+  }
   const isResolved = match.status === 'resolved'
   const homeWins   = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
   const awayWins   = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
-  const ko     = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60 * 1000) : null
-  const koValid = ko && !isNaN(ko.getTime())
-  const isTBD  = match.homeName === 'TBD' && match.awayName === 'TBD'
+  const isTBD      = match.homeName === 'TBD' && match.awayName === 'TBD'
+  const homeFlag   = getFlagUrl(match.homeCode)
+  const awayFlag   = getFlagUrl(match.awayCode)
+  const ko         = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60 * 1000) : null
+  const koValid    = ko && !isNaN(ko.getTime())
 
-  const w           = isNext ? 110 : 140
-  const borderColor = isFinal    ? 'rgba(255,215,0,0.30)'
-    : isThird    ? 'rgba(205,127,50,0.25)'
-    : isNext     ? 'rgba(255,255,255,0.10)'
-    : isResolved ? 'rgba(0,196,106,0.35)'
+  const borderColor = highlight   ? 'rgba(255,215,0,0.40)'
     : isTBD      ? 'rgba(255,255,255,0.06)'
-    : 'rgba(255,255,255,0.12)'
-  const bgColor = isFinal    ? 'rgba(255,215,0,0.04)'
-    : isThird    ? 'rgba(205,127,50,0.04)'
-    : isNext     ? 'rgba(255,255,255,0.04)'
-    : isResolved ? 'rgba(0,196,106,0.07)'
+    : isResolved ? 'rgba(0,196,106,0.30)'
+    : 'rgba(255,255,255,0.15)'
+  const bgColor = highlight   ? 'rgba(255,215,0,0.06)'
     : isTBD      ? 'rgba(255,255,255,0.02)'
-    : 'rgba(255,255,255,0.05)'
+    : isResolved ? 'rgba(0,196,106,0.06)'
+    : 'rgba(255,255,255,0.04)'
+
+  const rowStyle = (wins: boolean): React.CSSProperties => ({
+    display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px',
+    flexDirection: side === 'right' ? 'row-reverse' : 'row',
+    background: wins ? 'rgba(0,196,106,0.08)' : 'transparent',
+  })
+  const nameStyle = (wins: boolean): React.CSSProperties => ({
+    fontSize: 10, flex: 1,
+    textAlign: side === 'right' ? 'right' : 'left',
+    overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+    color: isTBD ? 'rgba(255,255,255,0.25)' : '#fff',
+    fontWeight: wins ? 600 : 400,
+  })
+  const scoreStyle = (wins: boolean): React.CSSProperties => ({
+    fontSize: 10, fontWeight: 700, flexShrink: 0,
+    color: wins ? '#00C46A' : 'rgba(255,255,255,0.30)',
+  })
+  const flagEl = (flag: string | null) => flag
+    ? <img src={flag} alt="" style={{ width: 16, height: 11, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
+    : <div style={{ width: 16, height: 11, borderRadius: 2, background: 'rgba(255,255,255,0.10)', flexShrink: 0 }} />
 
   return (
-    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
-      <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
-      <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
-      <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
-      {!isNext && koValid && (
-        <div style={{ fontSize: 9, color: 'rgba(156,163,175,1)', textAlign: 'center', padding: '3px 6px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}>
+    <div style={{ width: 110, border: `1px solid ${borderColor}`, borderRadius: 6, overflow: 'hidden', background: bgColor, opacity: isTBD ? 0.5 : 1, flexShrink: 0 }}>
+      {koValid && (
+        <div style={{ fontSize: 9, color: 'rgba(255,255,255,0.35)', padding: '2px 6px', borderBottom: '1px solid rgba(255,255,255,0.06)', textAlign: side === 'right' ? 'right' : 'left' }}>
           {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
         </div>
       )}
-    </div>
-  )
-}
-
-function SectionLabel({ label, gold = false }: { label: string; gold?: boolean }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 12 }}>
-      <span style={{
-        fontSize: 11, fontWeight: 600, letterSpacing: '0.08em', whiteSpace: 'nowrap',
-        color: gold ? '#FFD700' : 'rgba(156,163,175,1)',
-      }}>{label}</span>
-    </div>
-  )
-}
-
-function VSep() {
-  return <div style={{ width: 1, background: 'rgba(255,255,255,0.05)', alignSelf: 'stretch', flexShrink: 0, margin: '0 6px' }} />
-}
-
-function BracketConnector() {
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: 16, flexShrink: 0, alignSelf: 'stretch' }}>
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, marginTop: 27 }} />
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, marginBottom: 27 }} />
-    </div>
-  )
-}
-
-function BracketPair({ m1, m2 }: { m1: KOMatch; m2: KOMatch | null }) {
-  return (
-    <div style={{ display: 'flex', alignItems: 'center' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <KOMatchCard match={m1} />
-        {m2 && <KOMatchCard match={m2} />}
+      <div style={rowStyle(homeWins)}>
+        {flagEl(homeFlag)}
+        <span style={nameStyle(homeWins)}>{match.homeName === 'TBD' ? '-' : match.homeName}</span>
+        {isResolved && <span style={scoreStyle(homeWins)}>{match.homeScore}</span>}
       </div>
-      {m2 && <BracketConnector />}
+      <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
+      <div style={rowStyle(awayWins)}>
+        {flagEl(awayFlag)}
+        <span style={nameStyle(awayWins)}>{match.awayName === 'TBD' ? '-' : match.awayName}</span>
+        {isResolved && <span style={scoreStyle(awayWins)}>{match.awayScore}</span>}
+      </div>
+    </div>
+  )
+}
+
+function BracketConnectorGroup({ count, side = 'left' }: { count: number; side?: 'left' | 'right' }) {
+  const isLeft = side === 'left'
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 20, flexShrink: 0 }}>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+          <div style={{
+            flex: 1,
+            borderRight: isLeft ? '1px solid rgba(255,255,255,0.20)' : 'none',
+            borderLeft: isLeft ? 'none' : '1px solid rgba(255,255,255,0.20)',
+            borderTop: '1px solid rgba(255,255,255,0.20)',
+            borderTopRightRadius: isLeft ? 4 : 0,
+            borderTopLeftRadius: isLeft ? 0 : 4,
+          }} />
+          <div style={{
+            flex: 1,
+            borderRight: isLeft ? '1px solid rgba(255,255,255,0.20)' : 'none',
+            borderLeft: isLeft ? 'none' : '1px solid rgba(255,255,255,0.20)',
+            borderBottom: '1px solid rgba(255,255,255,0.20)',
+            borderBottomRightRadius: isLeft ? 4 : 0,
+            borderBottomLeftRadius: isLeft ? 0 : 4,
+          }} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function BracketColumn({ matches, side = 'left' }: { matches: KOMatch[]; side?: 'left' | 'right' }) {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', flexShrink: 0 }}>
+      {matches.map((match, i) => (
+        <div key={match.id || i} style={{ display: 'flex', alignItems: 'center', flex: 1, justifyContent: 'center', padding: '4px 0' }}>
+          <BracketMatchCard match={match} side={side} />
+        </div>
+      ))}
     </div>
   )
 }
@@ -528,37 +534,7 @@ export default function CalendarioView({
 }) {
   const [calTab,        setCalTab]        = useState<CalTab>('resumen')
   const [dayIdx,        setDayIdx]        = useState(0)
-  const [selectedPhase, setSelectedPhase] = useState('LAST_32')
   const bracketRef = useRef<HTMLDivElement>(null)
-  const r32Ref  = useRef<HTMLDivElement>(null)
-  const r16Ref  = useRef<HTMLDivElement>(null)
-  const qfRef   = useRef<HTMLDivElement>(null)
-  const sfRef   = useRef<HTMLDivElement>(null)
-  const finRef  = useRef<HTMLDivElement>(null)
-
-  const PHASES = [
-    { key: 'grupos',         label: 'GRUPOS',   dates: '11-26 JUN'     },
-    { key: 'LAST_32',        label: '32AVOS',   dates: '28 JUN - 3 JUL' },
-    { key: 'LAST_16',        label: 'OCTAVOS',  dates: '4-7 JUL'       },
-    { key: 'QUARTER_FINALS', label: 'CUARTOS',  dates: '9-12 JUL'      },
-    { key: 'SEMI_FINALS',    label: 'SEMIS',    dates: '14-15 JUL'     },
-    { key: 'FINAL',          label: 'FINAL',    dates: '19 JUL'        },
-  ]
-
-  const sectionRefs: Record<string, React.RefObject<HTMLDivElement | null>> = {
-    LAST_32: r32Ref, LAST_16: r16Ref, QUARTER_FINALS: qfRef, SEMI_FINALS: sfRef, FINAL: finRef,
-  }
-
-  function scrollToPhase(phaseKey: string) {
-    if (phaseKey === 'grupos') { setCalTab('resumen'); return }
-    setSelectedPhase(phaseKey)
-    const section   = sectionRefs[phaseKey]?.current
-    const container = bracketRef.current
-    if (section && container) {
-      const left = container.scrollLeft + section.getBoundingClientRect().left - container.getBoundingClientRect().left - 16
-      container.scrollTo({ left: Math.max(0, left), behavior: 'smooth' })
-    }
-  }
 
   useEffect(() => {
     const el = bracketRef.current
@@ -583,29 +559,6 @@ export default function CalendarioView({
     }
   }, [])
 
-  useEffect(() => {
-    const container = bracketRef.current
-    if (!container) return
-    const refs = [
-      { phase: 'LAST_32',        ref: r32Ref },
-      { phase: 'LAST_16',        ref: r16Ref },
-      { phase: 'QUARTER_FINALS', ref: qfRef  },
-      { phase: 'SEMI_FINALS',    ref: sfRef  },
-      { phase: 'FINAL',          ref: finRef },
-    ]
-    const handleScroll = () => {
-      const scrollLeft = container.scrollLeft
-      for (let i = refs.length - 1; i >= 0; i--) {
-        const el = refs[i].ref.current
-        if (el && el.offsetLeft <= scrollLeft + container.offsetWidth / 2) {
-          setSelectedPhase(refs[i].phase)
-          break
-        }
-      }
-    }
-    container.addEventListener('scroll', handleScroll, { passive: true })
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [])
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -825,33 +778,6 @@ export default function CalendarioView({
             Los cruces definitivos se confirman al final de la fase de grupos.
           </p>
 
-          {/* Phase navigation bar */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-            {PHASES.map((phase, i) => (
-              <div key={phase.key} className="flex items-center gap-2 flex-shrink-0">
-                {i > 0 && <div style={{ width: 16, height: 1, background: 'rgba(255,255,255,0.10)' }} />}
-                <button
-                  onClick={() => scrollToPhase(phase.key)}
-                  style={{
-                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-                    padding: '8px 14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
-                    background: selectedPhase === phase.key ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.04)',
-                    border: `1px solid ${selectedPhase === phase.key ? 'rgba(0,106,51,0.40)' : 'rgba(255,255,255,0.08)'}`,
-                  }}
-                >
-                  <span style={{
-                    fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
-                    color: selectedPhase === phase.key ? '#00C46A' : 'rgba(255,255,255,0.45)',
-                  }}>
-                    {phase.label}
-                  </span>
-                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>{phase.dates}</span>
-                </button>
-              </div>
-            ))}
-          </div>
-
-          {/* Horizontal bracket — all phases, scroll to phase on click */}
           {(() => {
             const toPred = (p: Prediction): KOMatch => {
               const opts = Array.isArray(p.options) ? (p.options as string[]) : []
@@ -869,11 +795,6 @@ export default function CalendarioView({
                 deadline:  p.deadline ?? null,
               }
             }
-            const toPairs = (arr: KOMatch[]): [KOMatch, KOMatch | null][] => {
-              const out: [KOMatch, KOMatch | null][] = []
-              for (let i = 0; i < arr.length; i += 2) out.push([arr[i], arr[i + 1] ?? null])
-              return out
-            }
             const byStage: Record<string, KOMatch[]> = {}
             for (const s of ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL', 'THIRD_PLACE']) {
               byStage[s] = predictions
@@ -881,81 +802,52 @@ export default function CalendarioView({
                 .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
                 .map(toPred)
             }
-            const p32 = toPairs(byStage.LAST_32)
-            const p16 = toPairs(byStage.LAST_16)
-            const pQF = toPairs(byStage.QUARTER_FINALS)
-            const pSF = toPairs(byStage.SEMI_FINALS)
+            const last32Left  = byStage.LAST_32.slice(0, 8)
+            const last32Right = byStage.LAST_32.slice(8, 16)
+            const last16Left  = byStage.LAST_16.slice(0, 4)
+            const last16Right = byStage.LAST_16.slice(4, 8)
+            const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
+            const qfRight     = byStage.QUARTER_FINALS.slice(2, 4)
+            const sfLeft      = byStage.SEMI_FINALS.slice(0, 1)
+            const sfRight     = byStage.SEMI_FINALS.slice(1, 2)
+            const finalMatch  = byStage.FINAL[0] ?? null
+            const thirdPlace  = byStage.THIRD_PLACE[0] ?? null
 
             return (
-              <div ref={bracketRef} style={{ overflowX: 'auto', cursor: 'grab', paddingBottom: 16, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
-                <div style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px', minWidth: 'max-content' }}>
+              <div ref={bracketRef} style={{ overflowX: 'auto', overflowY: 'hidden', cursor: 'grab' }}>
+                <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 700, padding: '16px 8px', width: 'max-content', margin: '0 auto' }}>
 
-                  {/* ── 32AVOS ─────────────────────────────────────────── */}
-                  <div ref={r32Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-                    <SectionLabel label="32AVOS DE FINAL" />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                      {p32.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} />
-                      ))}
-                    </div>
+                  {/* ── LADO IZQUIERDO ── */}
+                  <BracketColumn matches={last32Left} side="left" />
+                  <BracketConnectorGroup count={4} side="left" />
+                  <BracketColumn matches={last16Left} side="left" />
+                  <BracketConnectorGroup count={2} side="left" />
+                  <BracketColumn matches={qfLeft} side="left" />
+                  <BracketConnectorGroup count={1} side="left" />
+                  <BracketColumn matches={sfLeft} side="left" />
+                  <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
+
+                  {/* ── CENTRO ── */}
+                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, flexShrink: 0, padding: '4px 0' }}>
+                    <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.08em' }}>FINAL</span>
+                    <BracketMatchCard match={finalMatch} highlight />
+                    {thirdPlace && (
+                      <>
+                        <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', letterSpacing: '0.08em', marginTop: 6 }}>3° LUGAR</span>
+                        <BracketMatchCard match={thirdPlace} />
+                      </>
+                    )}
                   </div>
 
-                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
-
-                  {/* ── OCTAVOS ────────────────────────────────────────── */}
-                  <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-                    <SectionLabel label="OCTAVOS DE FINAL" />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                      {p16.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
-
-                  {/* ── CUARTOS ────────────────────────────────────────── */}
-                  <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-                    <SectionLabel label="CUARTOS DE FINAL" />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                      {pQF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
-
-                  {/* ── SEMIS ──────────────────────────────────────────── */}
-                  <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-                    <SectionLabel label="SEMIFINALES" />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
-                      {pSF.map(([m1, m2], i) => (
-                        <BracketPair key={i} m1={m1} m2={m2} />
-                      ))}
-                    </div>
-                  </div>
-
-                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
-
-                  {/* ── FINAL ──────────────────────────────────────────── */}
-                  <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
-                    <SectionLabel label="FINAL" gold />
-                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
-                      {byStage.FINAL.length > 0
-                        ? byStage.FINAL.map(m => <KOMatchCard key={m.id} match={m} isFinal />)
-                        : <div style={{ width: 160, height: 56, border: '1px dashed rgba(255,215,0,0.15)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                            <span style={{ fontSize: 9, color: 'rgba(255,215,0,0.30)', fontStyle: 'italic' }}>TBD</span>
-                          </div>
-                      }
-                      {byStage.THIRD_PLACE.length > 0 && (
-                        <>
-                          <span style={{ fontSize: 9, fontWeight: 700, color: '#CD7F32', letterSpacing: '0.05em' }}>3° LUGAR</span>
-                          {byStage.THIRD_PLACE.map(m => <KOMatchCard key={m.id} match={m} isThird />)}
-                        </>
-                      )}
-                    </div>
-                  </div>
+                  {/* ── LADO DERECHO ── */}
+                  <div style={{ width: 16, alignSelf: 'center', borderTop: '1px solid rgba(255,255,255,0.20)', flexShrink: 0 }} />
+                  <BracketColumn matches={sfRight} side="right" />
+                  <BracketConnectorGroup count={1} side="right" />
+                  <BracketColumn matches={qfRight} side="right" />
+                  <BracketConnectorGroup count={2} side="right" />
+                  <BracketColumn matches={last16Right} side="right" />
+                  <BracketConnectorGroup count={4} side="right" />
+                  <BracketColumn matches={last32Right} side="right" />
 
                 </div>
               </div>
