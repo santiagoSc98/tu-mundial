@@ -799,12 +799,21 @@ export default function InicioView({
       if (!map[key]) map[key] = []
       map[key].push(p)
     }
-    return Object.entries(map)
+    const result = Object.entries(map)
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, preds]) => ({
         date,
         preds: preds.sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()),
       }))
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('[matchdays] total predictions in:', predictions.length, '— days:', result.length)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('[matchdays] stages present:', [...new Set(predictions.map((p: any) => p.stage))])
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('[matchdays] LAST_32 in predictions:', predictions.filter((p: any) => p.stage === 'LAST_32').length)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    console.log('[matchdays] LAST_32 deadlines:', predictions.filter((p: any) => p.stage === 'LAST_32').map((p: any) => p.deadline))
+    return result
   }, [predictions])
 
   const [dayIdx, setDayIdx] = useState(0)
