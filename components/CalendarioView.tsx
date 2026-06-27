@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
@@ -230,9 +230,9 @@ function BCard({ slot, isFinal = false, isThird = false }: { slot: BSlot; isFina
 }
 
 // Each card sits centered in a fixed-height slot so columns stay aligned
-function RoundCol({ slots, slotH, label }: { slots: BSlot[]; slotH: number; label: string }) {
+function RoundCol({ slots, slotH, label, phaseKey }: { slots: BSlot[]; slotH: number; label: string; phaseKey?: string }) {
   return (
-    <div style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
+    <div data-phase={phaseKey} style={{ flexShrink: 0, display: 'flex', flexDirection: 'column' }}>
       <div style={{ height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: 4 }}>
         <span style={{ fontSize: 9, fontWeight: 800, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.50)', whiteSpace: 'nowrap', padding: '2px 8px', background: 'rgba(255,255,255,0.06)', borderRadius: 9999, border: '1px solid rgba(255,255,255,0.10)' }}>
           {label}
@@ -409,8 +409,36 @@ export default function CalendarioView({
   predictions: Prediction[]
   wcStandings: StandingsByType | null
 }) {
-  const [calTab,   setCalTab]   = useState<CalTab>('resumen')
-  const [dayIdx,   setDayIdx]   = useState(0)
+  const [calTab,        setCalTab]        = useState<CalTab>('resumen')
+  const [dayIdx,        setDayIdx]        = useState(0)
+  const [selectedPhase, setSelectedPhase] = useState('LAST_32')
+  const bracketRef = useRef<HTMLDivElement>(null)
+
+  const PHASES = [
+    { key: 'grupos',         label: 'GRUPOS',   dates: '11-26 JUN'     },
+    { key: 'LAST_32',        label: '32AVOS',   dates: '28 JUN - 3 JUL' },
+    { key: 'LAST_16',        label: 'OCTAVOS',  dates: '4-7 JUL'       },
+    { key: 'QUARTER_FINALS', label: 'CUARTOS',  dates: '9-12 JUL'      },
+    { key: 'SEMI_FINALS',    label: 'SEMIS',    dates: '14-15 JUL'     },
+    { key: 'FINAL',          label: 'FINAL',    dates: '19 JUL'        },
+  ]
+
+  function scrollToPhase(phaseKey: string) {
+    setSelectedPhase(phaseKey)
+    if (phaseKey === 'grupos') {
+      setCalTab('resumen')
+      return
+    }
+    const container = bracketRef.current
+    if (!container) return
+    if (phaseKey === 'FINAL') {
+      container.scrollTo({ left: (container.scrollWidth - container.clientWidth) / 2, behavior: 'smooth' })
+      return
+    }
+    const target = container.querySelector(`[data-phase="${phaseKey}"]`) as HTMLElement | null
+    if (!target) return
+    target.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'start' })
+  }
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -630,18 +658,44 @@ export default function CalendarioView({
             Los cruces definitivos se confirman al final de la fase de grupos.
           </p>
 
+          {/* Phase navigation bar */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+            {PHASES.map((phase, i) => (
+              <div key={phase.key} className="flex items-center gap-2 flex-shrink-0">
+                {i > 0 && <div style={{ width: 16, height: 1, background: 'rgba(255,255,255,0.10)' }} />}
+                <button
+                  onClick={() => scrollToPhase(phase.key)}
+                  style={{
+                    display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
+                    padding: '8px 14px', borderRadius: 12, cursor: 'pointer', transition: 'all 0.15s',
+                    background: selectedPhase === phase.key ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.04)',
+                    border: `1px solid ${selectedPhase === phase.key ? 'rgba(0,106,51,0.40)' : 'rgba(255,255,255,0.08)'}`,
+                  }}
+                >
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, letterSpacing: '0.05em',
+                    color: selectedPhase === phase.key ? '#00C46A' : 'rgba(255,255,255,0.45)',
+                  }}>
+                    {phase.label}
+                  </span>
+                  <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)' }}>{phase.dates}</span>
+                </button>
+              </div>
+            ))}
+          </div>
+
           {/* Bracket — symmetric, horizontally scrollable */}
-          <div style={{ overflowX: 'auto', paddingBottom: 16 }}>
+          <div ref={bracketRef} style={{ overflowX: 'auto', paddingBottom: 16 }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', padding: '8px 4px', minWidth: 'max-content' }}>
 
               {/* ── LEFT SIDE ──────────────────────────────────────── */}
-              <RoundCol slots={L_R32}   slotH={SLOT_H}       label="32AVOS"  />
-              <BConns pairCount={4}     pairH={SLOT_H * 2}   side="right" />
-              <RoundCol slots={L_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
-              <BConns pairCount={2}     pairH={SLOT_H * 4}   side="right" />
-              <RoundCol slots={L_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
-              <BConns pairCount={1}     pairH={SLOT_H * 8}   side="right" />
-              <RoundCol slots={[L_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
+              <RoundCol phaseKey="LAST_32"        slots={L_R32}   slotH={SLOT_H}       label="32AVOS"  />
+              <BConns pairCount={4}               pairH={SLOT_H * 2}   side="right" />
+              <RoundCol phaseKey="LAST_16"        slots={L_R16}   slotH={SLOT_H * 2}   label="OCTAVOS" />
+              <BConns pairCount={2}               pairH={SLOT_H * 4}   side="right" />
+              <RoundCol phaseKey="QUARTER_FINALS" slots={L_QF}    slotH={SLOT_H * 4}   label="CUARTOS" />
+              <BConns pairCount={1}               pairH={SLOT_H * 8}   side="right" />
+              <RoundCol phaseKey="SEMI_FINALS"    slots={[L_SF]}  slotH={SLOT_H * 8}   label="SEMIS"   />
               {/* Stub L_SF → FINAL */}
               <div style={{ flexShrink: 0, width: B_CONN_W, marginTop: 32, height: SLOT_H * 8, display: 'flex', alignItems: 'center' }}>
                 <div style={{ width: '100%', height: 1, background: B_LINE }} />
