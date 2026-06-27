@@ -299,22 +299,22 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
 }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 6, padding: '8px 12px',
+      display: 'flex', alignItems: 'center', gap: 5, padding: '5px 8px',
       background: winner ? 'rgba(0,196,106,0.08)' : 'transparent',
     }}>
       {flag
-        ? <img src={flag} alt={name} style={{ width: 20, height: 14, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
-        : <div style={{ width: 20, height: 14, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
+        ? <img src={flag} alt={name} style={{ width: 16, height: 11, objectFit: 'cover', borderRadius: 2, flexShrink: 0 }} />
+        : <div style={{ width: 16, height: 11, background: 'rgba(255,255,255,0.10)', borderRadius: 2, flexShrink: 0 }} />
       }
       <span style={{
-        fontSize: tbd ? 11 : 12,
+        fontSize: tbd ? 9 : 10,
         flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
         color: tbd ? 'rgba(75,85,99,1)' : '#fff',
         fontWeight: tbd ? 400 : 500,
         fontStyle: tbd ? 'italic' : 'normal',
       }}>{name}</span>
       {score !== null && (
-        <span style={{ fontSize: 14, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(107,114,128,1)' }}>
+        <span style={{ fontSize: 11, fontWeight: 700, flexShrink: 0, color: winner ? '#00C46A' : 'rgba(107,114,128,1)' }}>
           {score}
         </span>
       )}
@@ -334,7 +334,7 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
   const koValid = ko && !isNaN(ko.getTime())
   const isTBD  = match.homeName === 'TBD' && match.awayName === 'TBD'
 
-  const w           = isNext ? 160 : 192
+  const w           = isNext ? 110 : 140
   const borderColor = isFinal    ? 'rgba(255,215,0,0.30)'
     : isThird    ? 'rgba(205,127,50,0.25)'
     : isNext     ? 'rgba(255,255,255,0.10)'
@@ -349,12 +349,12 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
     : 'rgba(255,255,255,0.05)'
 
   return (
-    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
+    <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 8, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
       <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
       <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
       <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
       {!isNext && koValid && (
-        <div style={{ fontSize: 10, color: 'rgba(156,163,175,1)', textAlign: 'center', padding: '4px 8px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}>
+        <div style={{ fontSize: 9, color: 'rgba(156,163,175,1)', textAlign: 'center', padding: '3px 6px', borderTop: '1px solid rgba(255,255,255,0.07)', background: 'rgba(0,0,0,0.15)' }}>
           {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
         </div>
       )}
@@ -379,9 +379,9 @@ function VSep() {
 
 function BracketConnector() {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', width: 24, flexShrink: 0, alignSelf: 'stretch' }}>
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 8, marginTop: 40 }} />
-      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 8, marginBottom: 40 }} />
+    <div style={{ display: 'flex', flexDirection: 'column', width: 16, flexShrink: 0, alignSelf: 'stretch' }}>
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, marginTop: 27 }} />
+      <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, marginBottom: 27 }} />
     </div>
   )
 }
@@ -389,7 +389,7 @@ function BracketConnector() {
 function BracketPair({ m1, m2 }: { m1: KOMatch; m2: KOMatch | null }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center' }}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <KOMatchCard match={m1} />
         {m2 && <KOMatchCard match={m2} />}
       </div>
@@ -900,7 +900,7 @@ export default function CalendarioView({
                     </div>
                   </div>
 
-                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
+                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── OCTAVOS ────────────────────────────────────────── */}
                   <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
@@ -912,7 +912,7 @@ export default function CalendarioView({
                     </div>
                   </div>
 
-                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
+                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── CUARTOS ────────────────────────────────────────── */}
                   <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
@@ -924,7 +924,7 @@ export default function CalendarioView({
                     </div>
                   </div>
 
-                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
+                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── SEMIS ──────────────────────────────────────────── */}
                   <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
@@ -936,7 +936,7 @@ export default function CalendarioView({
                     </div>
                   </div>
 
-                  <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
+                  <div style={{ width: 12, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── FINAL ──────────────────────────────────────────── */}
                   <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
