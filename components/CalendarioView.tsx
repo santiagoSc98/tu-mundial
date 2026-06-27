@@ -326,8 +326,8 @@ function TeamRow({ flag, name, score, winner, tbd = false }: {
   )
 }
 
-function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }: {
-  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean
+function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false, nextPhaseLabel }: {
+  match: KOMatch; isNext?: boolean; isFinal?: boolean; isThird?: boolean; nextPhaseLabel?: string
 }) {
   const homeFlag   = getFlagUrl(match.homeCode)
   const awayFlag   = getFlagUrl(match.awayCode)
@@ -354,6 +354,11 @@ function KOMatchCard({ match, isNext = false, isFinal = false, isThird = false }
 
   return (
     <div style={{ width: w, border: `1px solid ${borderColor}`, borderRadius: 10, overflow: 'hidden', flexShrink: 0, background: bgColor, opacity: isTBD && !isNext ? 0.45 : 1 }}>
+      {isNext && nextPhaseLabel && (
+        <div style={{ fontSize: 8, color: 'rgba(107,114,128,1)', textAlign: 'center', paddingTop: 6, paddingBottom: 2, letterSpacing: '0.08em', textTransform: 'uppercase', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          {nextPhaseLabel}
+        </div>
+      )}
       <TeamRow flag={homeFlag} name={match.homeName} score={isNext ? null : match.homeScore} winner={homeWins} tbd={isTBD} />
       <div style={{ height: 1, background: 'rgba(255,255,255,0.06)' }} />
       <TeamRow flag={awayFlag} name={match.awayName} score={isNext ? null : match.awayScore} winner={awayWins} tbd={isTBD} />
@@ -405,13 +410,8 @@ function BracketPair({ m1, m2, nextMatch, phase }: {
           <BracketConnector />
           <div style={{ width: 12, borderTop: '1px solid rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
           <div style={{ alignSelf: 'center', flexShrink: 0 }}>
-            {nextLabel && (
-              <div style={{ fontSize: 8, color: 'rgba(156,163,175,0.7)', textAlign: 'center', paddingTop: 6, paddingBottom: 2, letterSpacing: '0.08em' }}>
-                {nextLabel}
-              </div>
-            )}
             {nextMatch
-              ? <KOMatchCard match={nextMatch} isNext />
+              ? <KOMatchCard match={nextMatch} isNext nextPhaseLabel={nextLabel} />
               : <div style={{ width: 110, border: '1px dashed rgba(255,255,255,0.10)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: 50 }}>
                   <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.20)', fontStyle: 'italic' }}>TBD</span>
                 </div>
