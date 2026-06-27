@@ -888,12 +888,12 @@ export default function CalendarioView({
 
             return (
               <div ref={bracketRef} style={{ overflowX: 'auto', cursor: 'grab', paddingBottom: 16, scrollSnapType: 'x mandatory', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', padding: '0 4px', minWidth: 'max-content' }}>
+                <div style={{ display: 'flex', alignItems: 'stretch', padding: '0 4px', minWidth: 'max-content' }}>
 
                   {/* ── 32AVOS ─────────────────────────────────────────── */}
-                  <div ref={r32Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <div ref={r32Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
                     <SectionLabel label="32AVOS DE FINAL" />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {p32.map(([m1, m2], i) => (
                         <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
@@ -903,9 +903,9 @@ export default function CalendarioView({
                   <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── OCTAVOS ────────────────────────────────────────── */}
-                  <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <div ref={r16Ref} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
                     <SectionLabel label="OCTAVOS DE FINAL" />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {p16.map(([m1, m2], i) => (
                         <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
@@ -915,9 +915,9 @@ export default function CalendarioView({
                   <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── CUARTOS ────────────────────────────────────────── */}
-                  <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <div ref={qfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
                     <SectionLabel label="CUARTOS DE FINAL" />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {pQF.map(([m1, m2], i) => (
                         <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
@@ -927,9 +927,9 @@ export default function CalendarioView({
                   <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── SEMIS ──────────────────────────────────────────── */}
-                  <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <div ref={sfRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
                     <SectionLabel label="SEMIFINALES" />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'space-around' }}>
                       {pSF.map(([m1, m2], i) => (
                         <BracketPair key={i} m1={m1} m2={m2} />
                       ))}
@@ -939,9 +939,9 @@ export default function CalendarioView({
                   <div style={{ width: 24, height: 1, background: 'rgba(255,255,255,0.2)', alignSelf: 'center', flexShrink: 0 }} />
 
                   {/* ── FINAL ──────────────────────────────────────────── */}
-                  <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start' }}>
+                  <div ref={finRef} style={{ flexShrink: 0, scrollSnapAlign: 'start', display: 'flex', flexDirection: 'column' }}>
                     <SectionLabel label="FINAL" gold />
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 12 }}>
                       {byStage.FINAL.length > 0
                         ? byStage.FINAL.map(m => <KOMatchCard key={m.id} match={m} isFinal />)
                         : <div style={{ width: 160, height: 56, border: '1px dashed rgba(255,215,0,0.15)', borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
