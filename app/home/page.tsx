@@ -154,12 +154,11 @@ async function HomeData() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   console.log('[home] predsRes error:', (predsRes as any).error)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] predictions count:', (predsRes.data as any[])?.length)
+  console.log('[home] total predictions:', (predsRes.data as any[])?.length)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] LAST_32 count:', (predsRes.data as any[])?.filter((p: any) => p.stage === 'LAST_32').length)
+  console.log('[home] LAST_32:', (predsRes.data as any[])?.filter((p: any) => p.stage === 'LAST_32').length)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] sample LAST_32:', (predsRes.data as any[])?.find((p: any) => p.stage === 'LAST_32'))
-  console.log('[home] PRED_COLS includes stage:', PRED_COLS.includes('stage'))
+  console.log('[home] stages:', [...new Set((predsRes.data as any[])?.map((p: any) => p.stage))])
 
   const special     = specialRes.data
   const profileData = profileRes.data
