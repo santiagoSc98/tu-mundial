@@ -10,7 +10,7 @@ function getSupabase() {
 }
 
 const MULTIPLIERS: Record<string, number> = {
-  LAST_32:        1.5,
+  LAST_32:        1,
   LAST_16:        2,
   QUARTER_FINALS: 2.5,
   SEMI_FINALS:    3,
