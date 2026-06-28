@@ -213,25 +213,19 @@ function PredictPanel({
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
-        {isKnockout && homeScore === awayScore ? (
-          <p className="text-center text-xs mb-4" style={{ color: '#CE1126' }}>
-            En eliminatoria no hay empates — ajustá el marcador
-          </p>
-        ) : (
-          <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
-          </p>
-        )}
+        <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
+        </p>
         <p className="text-center text-xs mb-4">
           <span style={{ color: '#00C46A' }}>+{resultPoints} pts resultado</span>
           <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 5px' }}>·</span>
           <span style={{ color: '#F6B73C' }}>+{exactPoints} pts exacto</span>
         </p>
         <button
-          disabled={isKnockout && homeScore === awayScore || submitting}
+          disabled={submitting}
           onClick={() => { if (!submitting && deduced) { onPredict(deduced, homeScore, awayScore); setShowPredict(false) } }}
           className="w-full text-white font-semibold text-base rounded-2xl transition-colors"
-          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: (isKnockout && homeScore === awayScore) || submitting ? 'default' : 'pointer', opacity: (isKnockout && homeScore === awayScore) || submitting ? 0.4 : 1 }}
+          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: submitting ? 'default' : 'pointer', opacity: submitting ? 0.4 : 1 }}
           onMouseEnter={e => { if (!submitting && deduced) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
@@ -399,22 +393,16 @@ function FeaturedMatchPanel({
         </p>
         <ScorePicker home={home} away={away} homeFlag={homeFlag} awayFlag={awayFlag}
           homeScore={homeScore} awayScore={awayScore} setHomeScore={setHomeScore} setAwayScore={setAwayScore} />
-        {isKnockout && homeScore === awayScore ? (
-          <p className="text-center text-xs mb-4" style={{ color: '#CE1126' }}>
-            En eliminatoria no hay empates — ajustá el marcador
-          </p>
-        ) : (
-          <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
-          </p>
-        )}
+        <p className="text-center text-sm mb-1" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Ganará: <strong style={{ color: homeScore > awayScore ? '#00C46A' : awayScore > homeScore ? '#4d9fff' : '#6E7A99' }}>{deduced}</strong>
+        </p>
         <p className="text-center text-xs mb-4">
           <span style={{ color: '#00C46A' }}>+{resultPoints} pts resultado</span>
           <span style={{ color: 'rgba(255,255,255,0.25)', margin: '0 5px' }}>·</span>
           <span style={{ color: '#F6B73C' }}>+{exactPoints} pts exacto</span>
         </p>
         <button
-          disabled={isKnockout && homeScore === awayScore}
+          disabled={!deduced}
           onClick={() => {
             if (!deduced) return
             setConfirmedData({ home: homeScore, away: awayScore, result: deduced })
@@ -427,7 +415,7 @@ function FeaturedMatchPanel({
             }, 2000)
           }}
           className="w-full text-white font-semibold text-base rounded-2xl transition-colors"
-          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: (isKnockout && homeScore === awayScore) ? 'default' : 'pointer', opacity: (isKnockout && homeScore === awayScore) ? 0.4 : 1 }}
+          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: deduced ? 'pointer' : 'default', opacity: deduced ? 1 : 0.4 }}
           onMouseEnter={e => { if (deduced) (e.currentTarget as HTMLButtonElement).style.background = '#005828' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = '#006A33' }}
         >
