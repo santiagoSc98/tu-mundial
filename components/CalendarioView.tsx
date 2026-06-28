@@ -896,9 +896,6 @@ export default function CalendarioView({
       ══════════════════════════════════════════════════════════════════════ */}
       {calTab === 'eliminatoria' && (
         <div>
-          <p className="text-xs mb-4" style={{ color: 'rgba(255,255,255,0.35)' }}>
-            Los cruces definitivos se confirman al final de la fase de grupos.
-          </p>
 
           {(() => {
             const toPred = (p: Prediction): KOMatch => {
@@ -1059,7 +1056,7 @@ export default function CalendarioView({
                 {/* ── DESKTOP (hidden md:block) ── */}
                 <div className="hidden md:block">
                   <div ref={bracketRef} style={{ overflowX: 'auto', overflowY: 'hidden', cursor: 'grab' }}>
-                    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 700, padding: '16px 8px', width: 'max-content', margin: '0 auto' }}>
+                    <div style={{ display: 'flex', alignItems: 'stretch', minHeight: 700,  width: 'max-content', margin: '0 auto' }}>
 
                       <BracketColumn matches={last32Left} side="left" />
                       <BracketConnectorGroup count={4} side="left" />
