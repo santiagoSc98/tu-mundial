@@ -795,6 +795,7 @@ export default function InicioView({
       if (!p.deadline) continue
       const d = new Date(p.deadline)
       if (isNaN(d.getTime())) continue
+      if (d < now && !existingAnswers[p.id]) continue
       const key = pyISODate(d)
       if (!map[key]) map[key] = []
       map[key].push(p)
@@ -814,7 +815,7 @@ export default function InicioView({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.log('[matchdays] LAST_32 deadlines:', predictions.filter((p: any) => p.stage === 'LAST_32').map((p: any) => p.deadline))
     return result
-  }, [predictions])
+  }, [predictions, existingAnswers, now])
 
   const [dayIdx, setDayIdx] = useState(0)
 

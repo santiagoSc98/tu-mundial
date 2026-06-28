@@ -81,7 +81,7 @@ export async function GET(request: Request) {
           .from('predictions')
           .update({
             title:          `${homeName} vs ${awayName} - Mundial 2026`,
-            options:        [homeName, awayName],
+            options:        [homeName, 'Empate', awayName],
             home_team_code: homeTla,
             away_team_code: awayTla,
           })
@@ -114,7 +114,7 @@ export async function GET(request: Request) {
         description:          `Fase: ${stage}`,
         category:             'eliminatoria',
         deadline,
-        options:              [homeName, awayName],
+        options:              [homeName, 'Empate', awayName],
         fixture_id:           fixtureId,
         status:               'open',
         stage,
