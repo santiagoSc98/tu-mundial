@@ -408,8 +408,8 @@ function BracketColumn({ matches, side = 'left' }: { matches: KOMatch[]; side?: 
   )
 }
 
-// ─── Mobile phase card ────────────────────────────────────────────────────────
-function MobilePhaseCard({ match }: { match: KOMatch }) {
+// ─── Mobile match card (pares con cruces) ────────────────────────────────────
+function MobileMatchCard({ match, isFirst = false, isLast = false }: { match: KOMatch; isFirst?: boolean; isLast?: boolean }) {
   const finished = match.status === 'resolved'
   const homeWin  = finished && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
   const awayWin  = finished && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
@@ -419,41 +419,42 @@ function MobilePhaseCard({ match }: { match: KOMatch }) {
   const awayName = match.awayName === 'TBD' ? 'Por definir' : match.awayName
   const homeFlag = getFlagUrl(match.homeCode)
   const awayFlag = getFlagUrl(match.awayCode)
+  const radius   = isFirst && isLast ? '12px' : isFirst ? '12px 12px 0 0' : isLast ? '0 0 12px 12px' : '0'
 
   return (
-    <div className={`rounded-2xl overflow-hidden border ${
+    <div style={{ borderRadius: radius, borderTop: !isFirst ? 'none' : undefined }} className={`overflow-hidden border ${
       finished ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.06)]'
-      : isTBD  ? 'border-white/[0.06] bg-white/[0.02] opacity-45'
+      : isTBD  ? 'border-white/[0.06] bg-white/[0.02] opacity-40'
       : 'border-white/[0.12] bg-white/[0.05]'
     }`}>
       {ko && (
-        <div className="text-[10px] text-gray-400 px-3 py-1.5 border-b border-white/[0.07]">
+        <div className="text-[9px] text-gray-500 px-2.5 py-1 border-b border-white/[0.07]">
           {pyDateLabel(pyISODate(ko))} · {pyTime(ko)}
         </div>
       )}
-      <div className={`flex items-center gap-2.5 px-3 py-2.5 ${homeWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
+      <div className={`flex items-center gap-2 px-2.5 py-2 ${homeWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
         {match.homeCode
-          ? <img src={homeFlag ?? undefined} alt="" className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-          : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />
+          ? <img src={homeFlag ?? undefined} alt="" className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
+          : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
         }
-        <span className={`text-sm flex-1 ${isTBD ? 'text-gray-700 italic' : homeWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
+        <span className={`text-xs flex-1 truncate ${isTBD ? 'text-gray-700 italic' : homeWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
           {homeName}
         </span>
         {finished && match.homeScore != null && (
-          <span className={`text-sm font-bold ${homeWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.homeScore}</span>
+          <span className={`text-xs font-bold ${homeWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.homeScore}</span>
         )}
       </div>
       <div className="h-px bg-white/[0.07]" />
-      <div className={`flex items-center gap-2.5 px-3 py-2.5 ${awayWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
+      <div className={`flex items-center gap-2 px-2.5 py-2 ${awayWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
         {match.awayCode
-          ? <img src={awayFlag ?? undefined} alt="" className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-          : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />
+          ? <img src={awayFlag ?? undefined} alt="" className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
+          : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
         }
-        <span className={`text-sm flex-1 ${isTBD ? 'text-gray-700 italic' : awayWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
+        <span className={`text-xs flex-1 truncate ${isTBD ? 'text-gray-700 italic' : awayWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
           {awayName}
         </span>
         {finished && match.awayScore != null && (
-          <span className={`text-sm font-bold ${awayWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.awayScore}</span>
+          <span className={`text-xs font-bold ${awayWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.awayScore}</span>
         )}
       </div>
     </div>
@@ -590,16 +591,31 @@ export default function CalendarioView({
 }) {
   const [calTab,        setCalTab]        = useState<CalTab>('resumen')
   const [dayIdx,        setDayIdx]        = useState(0)
-  const bracketRef       = useRef<HTMLDivElement>(null)
+  const bracketRef   = useRef<HTMLDivElement>(null)
+  const touchStartX  = useRef(0)
+  const touchEndX    = useRef(0)
   const [mobilePhase, setMobilePhase] = useState('LAST_32')
+  const [direction,   setDirection]   = useState<'left' | 'right'>('right')
+  const [animating,   setAnimating]   = useState(false)
 
-  const MOBILE_PHASES: Array<{ key: string; label: string; dates: string; title: string; next: string | null; nextLabel: string | null }> = [
-    { key: 'LAST_32',        label: '32AVOS',  dates: '28 JUN',    title: '32AVOS DE FINAL',  next: 'LAST_16',        nextLabel: 'Octavos de Final' },
-    { key: 'LAST_16',        label: 'OCTAVOS', dates: '4-7 JUL',   title: 'OCTAVOS DE FINAL', next: 'QUARTER_FINALS', nextLabel: 'Cuartos de Final' },
-    { key: 'QUARTER_FINALS', label: 'CUARTOS', dates: '9-12 JUL',  title: 'CUARTOS DE FINAL', next: 'SEMI_FINALS',    nextLabel: 'Semifinales' },
-    { key: 'SEMI_FINALS',    label: 'SEMIS',   dates: '14-15 JUL', title: 'SEMIFINALES',       next: 'FINAL',          nextLabel: 'Final' },
-    { key: 'FINAL',          label: 'FINAL',   dates: '19 JUL',    title: 'FINAL',             next: null,             nextLabel: null },
-  ]
+  const PHASE_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
+  const NEXT_STAGE: Record<string, string> = {
+    LAST_32: 'LAST_16', LAST_16: 'QUARTER_FINALS', QUARTER_FINALS: 'SEMI_FINALS', SEMI_FINALS: 'FINAL',
+  }
+  const NEXT_STAGE_LABEL: Record<string, string> = {
+    LAST_32: 'Octavos', LAST_16: 'Cuartos', QUARTER_FINALS: 'Semis', SEMI_FINALS: 'Final',
+  }
+  const PHASE_TAB: Record<string, { l: string; d: string }> = {
+    LAST_32:        { l: '32AVOS',  d: '28 JUN'    },
+    LAST_16:        { l: 'OCTAVOS', d: '4-7 JUL'   },
+    QUARTER_FINALS: { l: 'CUARTOS', d: '9-12 JUL'  },
+    SEMI_FINALS:    { l: 'SEMIS',   d: '14-15 JUL' },
+    FINAL:          { l: 'FINAL',   d: '19 JUL'    },
+  }
+  const PHASE_TITLE: Record<string, string> = {
+    LAST_32: '32AVOS DE FINAL', LAST_16: 'OCTAVOS DE FINAL',
+    QUARTER_FINALS: 'CUARTOS DE FINAL', SEMI_FINALS: 'SEMIFINALES', FINAL: 'FINAL',
+  }
 
   useEffect(() => {
     const el = bracketRef.current
@@ -624,6 +640,24 @@ export default function CalendarioView({
     }
   }, [])
 
+  const goToPhase = (newPhase: string) => {
+    if (newPhase === mobilePhase || animating) return
+    const ci = PHASE_ORDER.indexOf(mobilePhase)
+    const ni = PHASE_ORDER.indexOf(newPhase)
+    setDirection(ni > ci ? 'left' : 'right')
+    setAnimating(true)
+    setTimeout(() => { setMobilePhase(newPhase); setAnimating(false) }, 220)
+  }
+
+  const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
+  const handleTouchEnd   = (e: React.TouchEvent) => {
+    touchEndX.current = e.changedTouches[0].clientX
+    const diff = touchStartX.current - touchEndX.current
+    if (Math.abs(diff) < 50) return
+    const ci = PHASE_ORDER.indexOf(mobilePhase)
+    if (diff > 0 && ci < PHASE_ORDER.length - 1) goToPhase(PHASE_ORDER[ci + 1])
+    else if (diff < 0 && ci > 0)                  goToPhase(PHASE_ORDER[ci - 1])
+  }
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -875,63 +909,129 @@ export default function CalendarioView({
             const qfRight     = byStage.QUARTER_FINALS.slice(2, 4)
             const sfLeft      = byStage.SEMI_FINALS.slice(0, 1)
             const sfRight     = byStage.SEMI_FINALS.slice(1, 2)
-            const finalMatch     = byStage.FINAL[0] ?? null
-            const thirdPlace    = byStage.THIRD_PLACE[0] ?? null
-            const currentPhase  = MOBILE_PHASES.find(p => p.key === mobilePhase)
-            const currentMatches = byStage[mobilePhase] ?? []
+            const finalMatch  = byStage.FINAL[0] ?? null
+            const thirdPlace = byStage.THIRD_PLACE[0] ?? null
+
+            // Mobile — pares de partidos con cruce siguiente fase
+            const mobileMatches     = byStage[mobilePhase] ?? []
+            const mobileNextMatches = NEXT_STAGE[mobilePhase] ? (byStage[NEXT_STAGE[mobilePhase]] ?? []) : []
+            const mobilePairs: Array<{ m1: KOMatch; m2: KOMatch | null; next: KOMatch | null }> = []
+            for (let i = 0; i < mobileMatches.length; i += 2) {
+              mobilePairs.push({ m1: mobileMatches[i], m2: mobileMatches[i + 1] ?? null, next: mobileNextMatches[Math.floor(i / 2)] ?? null })
+            }
+            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
 
             return (
               <>
                 {/* ── MOBILE (md:hidden) ── */}
                 <div className="md:hidden">
-                  {/* Barra de fases */}
+
+                  {/* Tabs de fases */}
                   <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
-                    {MOBILE_PHASES.map((phase, i) => (
-                      <div key={phase.key} className="flex items-center gap-1.5 flex-shrink-0">
-                        {i > 0 && <div className="w-2 h-px bg-white/15 flex-shrink-0" />}
-                        <button
-                          onClick={() => setMobilePhase(phase.key)}
-                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl border flex-shrink-0 transition-all ${
-                            mobilePhase === phase.key
-                              ? 'bg-[rgba(0,106,51,0.25)] border-[rgba(0,106,51,0.5)]'
-                              : 'bg-white/[0.04] border-white/10'
-                          }`}
-                        >
-                          <span className={`text-[11px] font-semibold tracking-wide ${mobilePhase === phase.key ? 'text-[#00C46A]' : 'text-gray-400'}`}>{phase.label}</span>
-                          <span className="text-[9px] text-gray-600">{phase.dates}</span>
-                        </button>
-                      </div>
-                    ))}
+                    {PHASE_ORDER.map((phase, i) => {
+                      const tab = PHASE_TAB[phase]
+                      return (
+                        <div key={phase} className="flex items-center gap-1.5 flex-shrink-0">
+                          {i > 0 && <div className="w-2 h-px bg-white/15 flex-shrink-0" />}
+                          <button
+                            onClick={() => goToPhase(phase)}
+                            className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl border flex-shrink-0 transition-all ${
+                              mobilePhase === phase
+                                ? 'bg-[rgba(0,106,51,0.25)] border-[rgba(0,106,51,0.5)]'
+                                : 'bg-white/[0.04] border-white/10'
+                            }`}
+                          >
+                            <span className={`text-[10px] font-semibold tracking-wide ${mobilePhase === phase ? 'text-[#00C46A]' : 'text-gray-400'}`}>{tab.l}</span>
+                            <span className="text-[8px] text-gray-600">{tab.d}</span>
+                          </button>
+                        </div>
+                      )
+                    })}
                   </div>
 
-                  {/* Título de fase */}
-                  <p className="text-xs font-semibold text-gray-400 tracking-widest text-center mb-4">
-                    {currentPhase?.title}
-                  </p>
+                  {/* Contenido animado con swipe */}
+                  <div
+                    key={mobilePhase}
+                    onTouchStart={handleTouchStart}
+                    onTouchEnd={handleTouchEnd}
+                    style={{ animation: `${direction === 'left' ? 'slideInLeft' : 'slideInRight'} 0.22s ease-out` }}
+                  >
+                    <p className="text-[10px] text-gray-500 tracking-widest text-center mb-4">
+                      {PHASE_TITLE[mobilePhase]}
+                    </p>
 
-                  {/* Lista de partidos */}
-                  <div className="flex flex-col gap-3">
-                    {currentMatches.map((match, i) => <MobilePhaseCard key={i} match={match} />)}
-                  </div>
+                    {/* Pares con conector y cruce siguiente fase */}
+                    <div className="flex flex-col gap-4">
+                      {mobilePairs.map((pair, i) => (
+                        <div key={i} className="flex items-stretch gap-2">
 
-                  {/* Botón siguiente fase */}
-                  {currentPhase?.next && (
-                    <button
-                      onClick={() => setMobilePhase(currentPhase.next!)}
-                      className="w-full flex items-center justify-center gap-2 mt-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-sm text-gray-400 hover:bg-white/[0.07] transition"
-                    >
-                      Ver {currentPhase.nextLabel}
-                      <ChevronRight size={14} />
-                    </button>
-                  )}
+                          {/* Par de partidos */}
+                          <div className="flex-1 flex flex-col">
+                            <MobileMatchCard match={pair.m1} isFirst isLast={!pair.m2} />
+                            {pair.m2 && <MobileMatchCard match={pair.m2} isLast />}
+                          </div>
 
-                  {/* 3° lugar — solo en fase FINAL */}
-                  {mobilePhase === 'FINAL' && thirdPlace && (
-                    <div className="mt-6">
-                      <p className="text-xs text-gray-600 tracking-widest text-center mb-3">3° LUGAR</p>
-                      <MobilePhaseCard match={thirdPlace} />
+                          {/* Conector bracket */}
+                          {pair.m2 && (
+                            <div className="flex flex-col items-center w-4 flex-shrink-0">
+                              <div className="flex-1 border-r border-t border-white/20 rounded-tr-md" style={{ marginTop: 20 }} />
+                              <div className="flex-1 border-r border-b border-white/20 rounded-br-md" style={{ marginBottom: 20 }} />
+                            </div>
+                          )}
+                          {pair.m2 && <div className="w-2 h-px bg-white/20 self-center flex-shrink-0" />}
+
+                          {/* Cruce siguiente fase */}
+                          {NEXT_STAGE[mobilePhase] && (
+                            <div className="w-24 flex-shrink-0 self-center">
+                              <div className="border border-white/10 rounded-xl overflow-hidden bg-white/[0.04]">
+                                <div className="text-[8px] text-gray-600 px-2 py-1 border-b border-white/[0.06] tracking-wider uppercase">
+                                  {NEXT_STAGE_LABEL[mobilePhase]}
+                                </div>
+                                <div className="flex items-center gap-1.5 px-2 py-1.5">
+                                  {pair.next?.homeCode
+                                    ? <img src={getFlagUrl(pair.next.homeCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
+                                    : <div className="w-3.5 h-2.5 rounded-sm bg-white/10 flex-shrink-0" />
+                                  }
+                                  <span className="text-[10px] text-gray-400 truncate">
+                                    {pair.next?.homeName && pair.next.homeName !== 'TBD' ? pair.next.homeName : '-'}
+                                  </span>
+                                </div>
+                                <div className="h-px bg-white/[0.06]" />
+                                <div className="flex items-center gap-1.5 px-2 py-1.5">
+                                  {pair.next?.awayCode
+                                    ? <img src={getFlagUrl(pair.next.awayCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
+                                    : <div className="w-3.5 h-2.5 rounded-sm bg-white/10 flex-shrink-0" />
+                                  }
+                                  <span className="text-[10px] text-gray-400 truncate">
+                                    {pair.next?.awayName && pair.next.awayName !== 'TBD' ? pair.next.awayName : '-'}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      ))}
                     </div>
-                  )}
+
+                    {/* Botón siguiente fase */}
+                    {NEXT_STAGE[mobilePhase] && (
+                      <button
+                        onClick={() => goToPhase(NEXT_STAGE[mobilePhase])}
+                        className="w-full flex items-center justify-center gap-2 mt-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-xs text-gray-400 hover:bg-white/[0.07] transition"
+                      >
+                        Ver {NEXT_STAGE_LABEL[mobilePhase]}
+                        <ChevronRight size={13} />
+                      </button>
+                    )}
+
+                    {/* 3° lugar — solo en FINAL */}
+                    {mobilePhase === 'FINAL' && thirdPlace && (
+                      <div className="mt-6">
+                        <p className="text-xs text-gray-600 tracking-widest text-center mb-3">3° LUGAR</p>
+                        <MobileMatchCard match={thirdPlace} isFirst isLast />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 {/* ── DESKTOP (hidden md:block) ── */}

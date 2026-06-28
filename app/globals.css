@@ -558,3 +558,15 @@ h1, h2, h3, .font-display {
 ::-webkit-scrollbar-track        { background: var(--scrollbar-track); }
 ::-webkit-scrollbar-thumb        { background: var(--scrollbar-thumb); border-radius: 3px; }
 ::-webkit-scrollbar-thumb:hover  { filter: brightness(1.3); }
+
+/* ═══════════════════════════════════════════════════════════
+   BRACKET MOBILE ANIMATIONS
+   ═══════════════════════════════════════════════════════════ */
+@keyframes slideInLeft {
+  from { transform: translateX(40px); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes slideInRight {
+  from { transform: translateX(-40px); opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
