@@ -16,7 +16,8 @@ export async function GET(request: Request) {
         .eq('user_id', user.id)
         .maybeSingle() as { data: { champion_team: string | null; top_scorer: string | null } | null }
 
-      if (special?.champion_team && special?.top_scorer) {
+      const SPECIAL_CLOSED = Date.now() > new Date('2026-06-11T00:00:00-04:00').getTime()
+      if ((special?.champion_team && special?.top_scorer) || SPECIAL_CLOSED) {
         return NextResponse.redirect(new URL('/home', origin))
       }
     }
