@@ -295,6 +295,24 @@ export async function GET(request: Request) {
       users: matchUsersAwarded,
     })
     console.log(`[resolve-matches] resolved fixture ${pred.fixture_id}: ${correctAnswer}, ${matchUsersAwarded} users awarded`)
+
+    // Notificación push al resolver el partido
+    const matchTitle = ((pred as any).title ?? '').replace(' - Mundial 2026', '')
+    const scoreText  = `${homeGoals}-${awayGoals}`
+    fetch('https://onesignal.com/api/v1/notifications', {
+      method: 'POST',
+      headers: {
+        'Content-Type':  'application/json',
+        'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
+      },
+      body: JSON.stringify({
+        app_id:            '11c43fd4-40b2-48f3-b460-4bfcadce9213',
+        headings:          { es: `⚽ ${matchTitle}`, en: `⚽ ${matchTitle}` },
+        contents:          { es: `Resultado: ${correctAnswer} (${scoreText}). ¡Mirá cuántos puntos ganaste!`, en: `Result: ${correctAnswer} (${scoreText})` },
+        url:               'https://tu-mundial.vercel.app/home',
+        included_segments: ['All'],
+      }),
+    }).catch(e => console.error('[resolve-matches] push notification error:', e))
   }
 
   // ── Pass 2: re-score already-resolved predictions with unscored user votes ────
