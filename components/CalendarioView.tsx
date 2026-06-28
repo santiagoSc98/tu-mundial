@@ -408,69 +408,54 @@ function BracketColumn({ matches, side = 'left' }: { matches: KOMatch[]; side?: 
   )
 }
 
-// ─── Mobile bracket components ───────────────────────────────────────────────
-function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal?: boolean }) {
-  const isResolved = match.status === 'resolved'
-  const homeWins   = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
-  const awayWins   = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
-  const isTBD      = match.homeName === 'TBD' && match.awayName === 'TBD'
-  const homeFlag   = getFlagUrl(match.homeCode)
-  const awayFlag   = getFlagUrl(match.awayCode)
-  const ko         = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60000) : null
-  const koValid    = ko && !isNaN(ko.getTime())
+// ─── Mobile phase card ────────────────────────────────────────────────────────
+function MobilePhaseCard({ match }: { match: KOMatch }) {
+  const finished = match.status === 'resolved'
+  const homeWin  = finished && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
+  const awayWin  = finished && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+  const isTBD    = match.homeName === 'TBD' && match.awayName === 'TBD'
+  const ko       = match.deadline ? new Date(new Date(match.deadline).getTime() + 10 * 60000) : null
+  const homeName = match.homeName === 'TBD' ? 'Por definir' : match.homeName
+  const awayName = match.awayName === 'TBD' ? 'Por definir' : match.awayName
+  const homeFlag = getFlagUrl(match.homeCode)
+  const awayFlag = getFlagUrl(match.awayCode)
 
   return (
-    <div style={{
-      width: 150, borderRadius: 8, overflow: 'hidden', flexShrink: 0,
-      border: `1px solid ${isFinal ? 'rgba(255,215,0,0.35)' : isResolved ? 'rgba(0,196,106,0.30)' : isTBD ? 'rgba(255,255,255,0.06)' : 'rgba(255,255,255,0.12)'}`,
-      background: isFinal ? 'rgba(255,215,0,0.05)' : isResolved ? 'rgba(0,196,106,0.06)' : isTBD ? 'rgba(255,255,255,0.02)' : 'rgba(255,255,255,0.05)',
-      opacity: isTBD ? 0.5 : 1,
-    }}>
-      {koValid && (
-        <div style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)', padding: '2px 8px', borderBottom: '0.5px solid rgba(255,255,255,0.07)' }}>
-          {pyDateLabel(pyISODate(ko!))} · {pyTime(ko!)}
+    <div className={`rounded-2xl overflow-hidden border ${
+      finished ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.06)]'
+      : isTBD  ? 'border-white/[0.06] bg-white/[0.02] opacity-45'
+      : 'border-white/[0.12] bg-white/[0.05]'
+    }`}>
+      {ko && (
+        <div className="text-[10px] text-gray-400 px-3 py-1.5 border-b border-white/[0.07]">
+          {pyDateLabel(pyISODate(ko))} · {pyTime(ko)}
         </div>
       )}
-      {([
-        { name: match.homeName, flag: homeFlag, code: match.homeCode, score: match.homeScore, wins: homeWins },
-        { name: match.awayName, flag: awayFlag, code: match.awayCode, score: match.awayScore, wins: awayWins },
-      ] as const).map((team, i) => (
-        <div key={i} style={{
-          display: 'flex', alignItems: 'center', gap: 5, padding: '7px 10px',
-          borderTop: i > 0 ? '0.5px solid rgba(255,255,255,0.07)' : 'none',
-          background: team.wins ? 'rgba(0,196,106,0.07)' : 'transparent',
-        }}>
-          {team.flag && team.code
-            ? <img src={team.flag} alt="" style={{ width: 18, height: 12, borderRadius: 2, objectFit: 'cover', flexShrink: 0 }} />
-            : <div style={{ width: 18, height: 12, borderRadius: 2, background: 'rgba(255,255,255,0.1)', flexShrink: 0 }} />
-          }
-          <span style={{
-            fontSize: 12, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-            color: isTBD ? 'rgba(255,255,255,0.2)' : team.wins ? '#fff' : 'rgba(255,255,255,0.6)',
-            fontWeight: team.wins ? 600 : 400,
-            fontStyle: isTBD ? 'italic' : 'normal',
-          }}>{team.name === 'TBD' ? '-' : team.name}</span>
-          {isResolved && team.score != null && (
-            <span style={{ fontSize: 12, fontWeight: 700, flexShrink: 0, color: team.wins ? '#00C46A' : 'rgba(255,255,255,0.3)' }}>
-              {team.score}
-            </span>
-          )}
-        </div>
-      ))}
-    </div>
-  )
-}
-
-function MobileConnectors({ count }: { count: number }) {
-  const CENTER = 35 // mitad de la altura aprox de MobileBracketCard (~70px)
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0 }}>
-      {Array.from({ length: count }).map((_, i) => (
-        <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, marginTop: CENTER }} />
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, marginBottom: CENTER }} />
-        </div>
-      ))}
+      <div className={`flex items-center gap-2.5 px-3 py-2.5 ${homeWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
+        {match.homeCode
+          ? <img src={homeFlag ?? undefined} alt="" className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+          : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />
+        }
+        <span className={`text-sm flex-1 ${isTBD ? 'text-gray-700 italic' : homeWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
+          {homeName}
+        </span>
+        {finished && match.homeScore != null && (
+          <span className={`text-sm font-bold ${homeWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.homeScore}</span>
+        )}
+      </div>
+      <div className="h-px bg-white/[0.07]" />
+      <div className={`flex items-center gap-2.5 px-3 py-2.5 ${awayWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
+        {match.awayCode
+          ? <img src={awayFlag ?? undefined} alt="" className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+          : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />
+        }
+        <span className={`text-sm flex-1 ${isTBD ? 'text-gray-700 italic' : awayWin ? 'text-white font-semibold' : 'text-gray-300'}`}>
+          {awayName}
+        </span>
+        {finished && match.awayScore != null && (
+          <span className={`text-sm font-bold ${awayWin ? 'text-[#00C46A]' : 'text-gray-500'}`}>{match.awayScore}</span>
+        )}
+      </div>
     </div>
   )
 }
@@ -606,32 +591,15 @@ export default function CalendarioView({
   const [calTab,        setCalTab]        = useState<CalTab>('resumen')
   const [dayIdx,        setDayIdx]        = useState(0)
   const bracketRef       = useRef<HTMLDivElement>(null)
-  const mobileBracketRef = useRef<HTMLDivElement>(null)
-  const mobileR32Ref     = useRef<HTMLDivElement>(null)
-  const mobileR16Ref     = useRef<HTMLDivElement>(null)
-  const mobileQfRef      = useRef<HTMLDivElement>(null)
-  const mobileSfRef      = useRef<HTMLDivElement>(null)
-  const mobileFinRef     = useRef<HTMLDivElement>(null)
   const [mobilePhase, setMobilePhase] = useState('LAST_32')
 
-  const MOBILE_PHASES = [
-    { key: 'LAST_32',        label: '32AVOS',  dates: '28 JUN'    },
-    { key: 'LAST_16',        label: 'OCTAVOS', dates: '4-7 JUL'   },
-    { key: 'QUARTER_FINALS', label: 'CUARTOS', dates: '9-12 JUL'  },
-    { key: 'SEMI_FINALS',    label: 'SEMIS',   dates: '14-15 JUL' },
-    { key: 'FINAL',          label: 'FINAL',   dates: '19 JUL'    },
+  const MOBILE_PHASES: Array<{ key: string; label: string; dates: string; title: string; next: string | null; nextLabel: string | null }> = [
+    { key: 'LAST_32',        label: '32AVOS',  dates: '28 JUN',    title: '32AVOS DE FINAL',  next: 'LAST_16',        nextLabel: 'Octavos de Final' },
+    { key: 'LAST_16',        label: 'OCTAVOS', dates: '4-7 JUL',   title: 'OCTAVOS DE FINAL', next: 'QUARTER_FINALS', nextLabel: 'Cuartos de Final' },
+    { key: 'QUARTER_FINALS', label: 'CUARTOS', dates: '9-12 JUL',  title: 'CUARTOS DE FINAL', next: 'SEMI_FINALS',    nextLabel: 'Semifinales' },
+    { key: 'SEMI_FINALS',    label: 'SEMIS',   dates: '14-15 JUL', title: 'SEMIFINALES',       next: 'FINAL',          nextLabel: 'Final' },
+    { key: 'FINAL',          label: 'FINAL',   dates: '19 JUL',    title: 'FINAL',             next: null,             nextLabel: null },
   ]
-
-  function scrollToMobilePhase(phase: string) {
-    const refs: Record<string, React.RefObject<HTMLDivElement | null>> = {
-      LAST_32: mobileR32Ref, LAST_16: mobileR16Ref,
-      QUARTER_FINALS: mobileQfRef, SEMI_FINALS: mobileSfRef, FINAL: mobileFinRef,
-    }
-    const section   = refs[phase]?.current
-    const container = mobileBracketRef.current
-    if (section && container) container.scrollTo({ left: section.offsetLeft - 8, behavior: 'smooth' })
-    setMobilePhase(phase)
-  }
 
   useEffect(() => {
     const el = bracketRef.current
@@ -656,55 +624,6 @@ export default function CalendarioView({
     }
   }, [])
 
-  useEffect(() => {
-    const container = mobileBracketRef.current
-    if (!container) return
-    const phases = ['FINAL', 'SEMI_FINALS', 'QUARTER_FINALS', 'LAST_16', 'LAST_32']
-    const refs   = [mobileFinRef, mobileSfRef, mobileQfRef, mobileR16Ref, mobileR32Ref]
-    const handleScroll = () => {
-      const sl = container.scrollLeft
-      for (let i = 0; i < refs.length; i++) {
-        const el = refs[i].current
-        if (el && el.offsetLeft <= sl + 60) { setMobilePhase(phases[i]); return }
-      }
-    }
-    container.addEventListener('scroll', handleScroll, { passive: true })
-    return () => container.removeEventListener('scroll', handleScroll)
-  }, [])
-
-  useEffect(() => {
-    const el = mobileBracketRef.current
-    if (!el) return
-    let down = false, sx = 0, sl = 0
-    const md = (e: MouseEvent | TouchEvent) => {
-      down = true
-      sx = (e instanceof TouchEvent ? e.touches[0].pageX : e.pageX)
-      sl = el.scrollLeft
-      if (!(e instanceof TouchEvent)) el.style.cursor = 'grabbing'
-    }
-    const mu = () => { down = false; el.style.cursor = 'grab' }
-    const mm = (e: MouseEvent | TouchEvent) => {
-      if (!down) return
-      const x = (e instanceof TouchEvent ? e.touches[0].pageX : e.pageX)
-      el.scrollLeft = sl - (x - sx)
-    }
-    el.addEventListener('mousedown',  md as EventListener)
-    el.addEventListener('mouseup',    mu)
-    el.addEventListener('mouseleave', mu)
-    el.addEventListener('mousemove',  mm as EventListener)
-    el.addEventListener('touchstart', md as EventListener, { passive: true })
-    el.addEventListener('touchend',   mu)
-    el.addEventListener('touchmove',  mm as EventListener, { passive: true })
-    return () => {
-      el.removeEventListener('mousedown',  md as EventListener)
-      el.removeEventListener('mouseup',    mu)
-      el.removeEventListener('mouseleave', mu)
-      el.removeEventListener('mousemove',  mm as EventListener)
-      el.removeEventListener('touchstart', md as EventListener)
-      el.removeEventListener('touchend',   mu)
-      el.removeEventListener('touchmove',  mm as EventListener)
-    }
-  }, [])
 
   const wcStart = useMemo(() => {
     const first = predictions
@@ -956,104 +875,63 @@ export default function CalendarioView({
             const qfRight     = byStage.QUARTER_FINALS.slice(2, 4)
             const sfLeft      = byStage.SEMI_FINALS.slice(0, 1)
             const sfRight     = byStage.SEMI_FINALS.slice(1, 2)
-            const finalMatch  = byStage.FINAL[0] ?? null
-            const thirdPlace  = byStage.THIRD_PLACE[0] ?? null
+            const finalMatch     = byStage.FINAL[0] ?? null
+            const thirdPlace    = byStage.THIRD_PLACE[0] ?? null
+            const currentPhase  = MOBILE_PHASES.find(p => p.key === mobilePhase)
+            const currentMatches = byStage[mobilePhase] ?? []
 
             return (
               <>
                 {/* ── MOBILE (md:hidden) ── */}
                 <div className="md:hidden">
                   {/* Barra de fases */}
-                  <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: 'none' }}>
+                  <div className="flex items-center gap-1.5 overflow-x-auto pb-2 mb-4" style={{ scrollbarWidth: 'none' }}>
                     {MOBILE_PHASES.map((phase, i) => (
                       <div key={phase.key} className="flex items-center gap-1.5 flex-shrink-0">
                         {i > 0 && <div className="w-2 h-px bg-white/15 flex-shrink-0" />}
                         <button
-                          onClick={() => scrollToMobilePhase(phase.key)}
-                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-lg border flex-shrink-0 transition-all text-center ${
+                          onClick={() => setMobilePhase(phase.key)}
+                          className={`flex flex-col items-center gap-0.5 px-2.5 py-1.5 rounded-xl border flex-shrink-0 transition-all ${
                             mobilePhase === phase.key
                               ? 'bg-[rgba(0,106,51,0.25)] border-[rgba(0,106,51,0.5)]'
                               : 'bg-white/[0.04] border-white/10'
                           }`}
                         >
-                          <span className={`text-[10px] font-semibold tracking-wide ${mobilePhase === phase.key ? 'text-[#00C46A]' : 'text-gray-400'}`}>{phase.label}</span>
-                          <span className="text-[8px] text-gray-600">{phase.dates}</span>
+                          <span className={`text-[11px] font-semibold tracking-wide ${mobilePhase === phase.key ? 'text-[#00C46A]' : 'text-gray-400'}`}>{phase.label}</span>
+                          <span className="text-[9px] text-gray-600">{phase.dates}</span>
                         </button>
                       </div>
                     ))}
                   </div>
 
-                  {/* Bracket scroll horizontal */}
-                  <div ref={mobileBracketRef} className="overflow-x-auto cursor-grab select-none">
-                    <div style={{ width: 'max-content' }}>
+                  {/* Título de fase */}
+                  <p className="text-xs font-semibold text-gray-400 tracking-widest text-center mb-4">
+                    {currentPhase?.title}
+                  </p>
 
-                      {/* Fila de títulos fuera de las columnas — sin impacto en altura de conectores */}
-                      <div style={{ display: 'flex', paddingLeft: 8, paddingTop: 8, paddingBottom: 4 }}>
-                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>32AVOS</span>
-                        </div>
-                        <div style={{ width: 24, flexShrink: 0 }} />
-                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>OCTAVOS</span>
-                        </div>
-                        <div style={{ width: 24, flexShrink: 0 }} />
-                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>CUARTOS</span>
-                        </div>
-                        <div style={{ width: 24, flexShrink: 0 }} />
-                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>SEMIS</span>
-                        </div>
-                        <div style={{ width: 24, flexShrink: 0 }} />
-                        <div style={{ width: 166, textAlign: 'center', flexShrink: 0 }}>
-                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>FINAL</span>
-                        </div>
-                      </div>
-
-                      {/* Columnas sin títulos internos */}
-                      <div className="flex items-stretch px-2 pb-3" style={{ minHeight: 400 }}>
-
-                        <div ref={mobileR32Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                          {byStage.LAST_32.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                        </div>
-
-                        <MobileConnectors count={8} />
-                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
-
-                        <div ref={mobileR16Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                          {byStage.LAST_16.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                        </div>
-
-                        <MobileConnectors count={4} />
-                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
-
-                        <div ref={mobileQfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                          {byStage.QUARTER_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                        </div>
-
-                        <MobileConnectors count={2} />
-                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
-
-                        <div ref={mobileSfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                          {byStage.SEMI_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                        </div>
-
-                        <MobileConnectors count={1} />
-                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
-
-                        <div ref={mobileFinRef} className="flex flex-col justify-center flex-shrink-0 px-2" style={{ gap: 10 }}>
-                          {byStage.FINAL[0] && <MobileBracketCard match={byStage.FINAL[0]} isFinal />}
-                          {byStage.THIRD_PLACE[0] && (
-                            <>
-                              <p className="text-[9px] text-gray-600 tracking-widest text-center mt-2">3° LUGAR</p>
-                              <MobileBracketCard match={byStage.THIRD_PLACE[0]} />
-                            </>
-                          )}
-                        </div>
-
-                      </div>
-                    </div>
+                  {/* Lista de partidos */}
+                  <div className="flex flex-col gap-3">
+                    {currentMatches.map((match, i) => <MobilePhaseCard key={i} match={match} />)}
                   </div>
+
+                  {/* Botón siguiente fase */}
+                  {currentPhase?.next && (
+                    <button
+                      onClick={() => setMobilePhase(currentPhase.next!)}
+                      className="w-full flex items-center justify-center gap-2 mt-4 py-3 bg-white/[0.04] border border-white/[0.08] rounded-2xl text-sm text-gray-400 hover:bg-white/[0.07] transition"
+                    >
+                      Ver {currentPhase.nextLabel}
+                      <ChevronRight size={14} />
+                    </button>
+                  )}
+
+                  {/* 3° lugar — solo en fase FINAL */}
+                  {mobilePhase === 'FINAL' && thirdPlace && (
+                    <div className="mt-6">
+                      <p className="text-xs text-gray-600 tracking-widest text-center mb-3">3° LUGAR</p>
+                      <MobilePhaseCard match={thirdPlace} />
+                    </div>
+                  )}
                 </div>
 
                 {/* ── DESKTOP (hidden md:block) ── */}
