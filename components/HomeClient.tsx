@@ -20,6 +20,7 @@ import EspecialesTab from '@/components/EspecialesTab'
 import AdminTab from '@/components/AdminTab'
 import MisGruposView, { type Group } from '@/components/MisGruposView'
 import PerfilView from '@/components/PerfilView'
+import InstallPrompt, { useInstallPrompt } from '@/components/InstallPrompt'
 
 function SidebarDecoration() {
   return (
@@ -185,6 +186,7 @@ export default function HomeClient({
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
   const [autoJoinCode, setAutoJoinCode] = useState<string | null>(pendingJoinCode ?? null)
   const [imgError,     setImgError]     = useState(false)
+  const { showPrompt, dismissPrompt }   = useInstallPrompt()
 
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search)
@@ -546,6 +548,7 @@ export default function HomeClient({
           {activeTab === 'reglas' && <ReglasTab onTabChange={(tab: string) => setActiveTab(tab as Tab)} />}
         </div>
       </main>
+      {showPrompt && <InstallPrompt onDismiss={dismissPrompt} />}
     </div>
   )
 }
