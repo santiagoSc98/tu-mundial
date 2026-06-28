@@ -186,7 +186,15 @@ async function HomeData() {
     }
   })
 
-  if (!special?.champion_team && !special?.top_scorer) redirect('/')
+  // Only redirect to onboarding if the especial deadline hasn't passed
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const especiales = (predsRes.data ?? []) as any[]
+  const especialDeadline = especiales
+    .filter(p => p.category === 'especial')
+    .map(p => new Date(p.deadline).getTime())
+    .reduce((max, t) => Math.max(max, t), 0)
+  const especialDeadlinePassed = especialDeadline > 0 && Date.now() > especialDeadline
+  if ((!special?.champion_team || !special?.top_scorer) && !especialDeadlinePassed) redirect('/')
 
   const profile = profileData ?? { id: user.id, total_points: 0, avatar_url: null, username: null, current_streak: 0, country: 'Paraguay' }
 
