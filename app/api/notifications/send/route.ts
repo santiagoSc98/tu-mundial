@@ -10,6 +10,9 @@ export async function POST(req: Request) {
 
   const { heading, message, url, segment } = await req.json()
 
+  console.log('[notifications] ONESIGNAL_REST_API_KEY exists:', !!process.env.ONESIGNAL_REST_API_KEY)
+  console.log('[notifications] key prefix:', process.env.ONESIGNAL_REST_API_KEY?.substring(0, 20))
+
   const response = await fetch('https://onesignal.com/api/v1/notifications', {
     method: 'POST',
     headers: {
@@ -26,5 +29,6 @@ export async function POST(req: Request) {
   })
 
   const data = await response.json()
+  console.log('[notifications] OneSignal status:', response.status, '| response:', data)
   return NextResponse.json(data, { status: response.ok ? 200 : 500 })
 }
