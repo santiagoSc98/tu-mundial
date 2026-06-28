@@ -196,20 +196,28 @@ export function useInstallPrompt() {
 
   useEffect(() => {
     const ua = navigator.userAgent || ''
-    if (!/iPhone|iPad|iPod|Android/i.test(ua)) return
-
-    // Ya instalada como PWA → no mostrar
+    const isMobile = /iPhone|iPad|iPod|Android/i.test(ua)
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window.navigator as any).standalone === true
-    if (isStandalone) return
-
     const shown = localStorage.getItem(STORAGE_KEY)
-    if (!shown) {
-      const timer = setTimeout(() => setShowPrompt(true), 3000)
-      return () => clearTimeout(timer)
-    }
+
+    console.log('[InstallPrompt] ua:', ua)
+    console.log('[InstallPrompt] isMobile:', isMobile)
+    console.log('[InstallPrompt] isStandalone:', isStandalone)
+    console.log('[InstallPrompt] localStorage:', shown)
+
+    if (!isMobile) { console.log('[InstallPrompt] skipping - desktop'); return }
+    if (isStandalone) { console.log('[InstallPrompt] skipping - already installed'); return }
+    if (shown) { console.log('[InstallPrompt] skipping - already shown'); return }
+
+    console.log('[InstallPrompt] will show in 3s')
+    const timer = setTimeout(() => {
+      console.log('[InstallPrompt] showing now')
+      setShowPrompt(true)
+    }, 3000)
+    return () => clearTimeout(timer)
   }, [])
 
   const dismissPrompt = () => {
