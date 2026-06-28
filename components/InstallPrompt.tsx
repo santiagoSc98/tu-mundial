@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { Smartphone, Bell, Share, Copy, Check } from 'lucide-react'
+import OneSignal from 'react-onesignal'
 
 const KEY_INSTALL = 'tu-mundial-install-shown'
 const KEY_NOTIF   = 'tu-mundial-notif-shown'
@@ -188,9 +189,7 @@ function ScreenNotChrome({ onDismiss }: { onDismiss: () => void }) {
 function ScreenNotifications({ onDismiss }: { onDismiss: () => void }) {
   const handleActivate = async () => {
     try {
-      if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-        await Notification.requestPermission()
-      }
+      await OneSignal.Notifications.requestPermission()
     } catch { /* noop */ }
     onDismiss()
   }
