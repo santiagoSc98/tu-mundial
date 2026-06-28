@@ -3,180 +3,12 @@
 import { useState, useEffect } from 'react'
 import { Smartphone, Bell, Share, Copy, Check } from 'lucide-react'
 
-const STORAGE_KEY = 'tu-mundial-install-prompt-shown'
+const KEY_INSTALL = 'tu-mundial-install-shown'
+const KEY_NOTIF   = 'tu-mundial-notif-shown'
 
-const STEPS_IOS_SAFARI = [
-  { num: 1, text: <span key="1">Tocá el ícono <strong style={{ color: '#fff' }}>Compartir</strong> <Share size={11} style={{ display: 'inline', verticalAlign: 'middle' }} /> en la barra de Safari</span> },
-  { num: 2, text: <span key="2">Elegí <strong style={{ color: '#fff' }}>Agregar a inicio</strong></span> },
-  { num: 3, text: <span key="3">Tocá <strong style={{ color: '#fff' }}>Agregar</strong> para confirmar</span> },
-]
+// ─── Shared primitives ────────────────────────────────────────────────────────
 
-const STEPS_ANDROID = [
-  { num: 1, text: <span key="1">Tocá el menú <strong style={{ color: '#fff' }}>⋮</strong> del navegador</span> },
-  { num: 2, text: <span key="2">Elegí <strong style={{ color: '#fff' }}>Instalar app</strong> o <strong style={{ color: '#fff' }}>Agregar a inicio</strong></span> },
-  { num: 3, text: <span key="3">Tocá <strong style={{ color: '#fff' }}>Instalar</strong> para confirmar</span> },
-]
-
-const STEPS_NOTIFICATIONS = [
-  { num: 1, text: <span key="1">Recibí alertas cuando <strong style={{ color: '#fff' }}>empiecen tus partidos</strong></span> },
-  { num: 2, text: <span key="2">Te avisamos antes de que <strong style={{ color: '#fff' }}>cierre el plazo</strong> de predicción</span> },
-  { num: 3, text: <span key="3">Enterate de los <strong style={{ color: '#fff' }}>resultados</strong> al instante</span> },
-]
-
-interface Props {
-  onDismiss: () => void
-}
-
-export default function InstallPrompt({ onDismiss }: Props) {
-  const [isIOS,       setIsIOS]       = useState(false)
-  const [isSafari,    setIsSafari]    = useState(false)
-  const [isAndroid,   setIsAndroid]   = useState(false)
-  const [step,        setStep]        = useState(0)
-  const [copied,      setCopied]      = useState(false)
-
-  useEffect(() => {
-    const ua = navigator.userAgent || ''
-    const ios     = /iPhone|iPad|iPod/.test(ua)
-    const safari  = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS/.test(ua)
-    const android = /Android/.test(ua)
-    setIsIOS(ios)
-    setIsSafari(safari)
-    setIsAndroid(android)
-  }, [])
-
-  const handleNotifications = async () => {
-    try {
-      if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
-        await Notification.requestPermission()
-      }
-    } catch { /* silenciar */ }
-    onDismiss()
-  }
-
-  const handleCopyLink = async () => {
-    try {
-      await navigator.clipboard.writeText(window.location.href)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch {
-      /* fallback silencioso */
-    }
-  }
-
-  // iOS but NOT Safari → special "open in Safari" screen
-  if (isIOS && !isSafari) {
-    return (
-      <Overlay onDismiss={onDismiss}>
-        <div className="flex justify-center pt-3 pb-1">
-          <div style={{ width: 32, height: 3, background: 'rgba(255,255,255,0.15)', borderRadius: 99 }} />
-        </div>
-        <div className="p-5">
-          <div className="flex items-center justify-center mb-4"
-            style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,106,51,0.15)', border: '1px solid rgba(0,106,51,0.3)' }}>
-            <Smartphone size={22} className="text-[#00C46A]" />
-          </div>
-          <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Instalá la app</p>
-          <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            Para instalar TU MUNDIAL en tu iPhone, abrí esta página desde{' '}
-            <strong style={{ color: '#fff' }}>Safari</strong>.
-          </p>
-          <p className="text-xs mb-5" style={{ color: 'rgba(255,255,255,0.30)' }}>
-            Copiá el link y pegalo en Safari
-          </p>
-          <button
-            onClick={handleCopyLink}
-            className="w-full text-white text-sm font-medium rounded-xl flex items-center justify-center gap-2 mb-2 transition-opacity active:opacity-75"
-            style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: 'pointer' }}
-          >
-            {copied ? <><Check size={15} /> ¡Copiado!</> : <><Copy size={15} /> Copiar link</>}
-          </button>
-          <button
-            onClick={onDismiss}
-            className="w-full text-[13px] transition-opacity active:opacity-50"
-            style={{ padding: '10px 0', background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer' }}
-          >
-            Ahora no
-          </button>
-        </div>
-      </Overlay>
-    )
-  }
-
-  // Normal flow: step 0 = install, step 1 = notifications
-  const installSteps = isAndroid ? STEPS_ANDROID : STEPS_IOS_SAFARI
-  const currentSteps = step === 0 ? installSteps : STEPS_NOTIFICATIONS
-
-  const icon      = step === 0 ? <Smartphone size={22} className="text-[#00C46A]" /> : <Bell size={22} className="text-[#00C46A]" />
-  const title     = step === 0 ? 'Instalá la app' : 'Activá notificaciones'
-  const subtitle  = step === 0 ? 'Accedé más rápido desde tu pantalla de inicio' : 'No te pierdas ningún partido ni predicción'
-  const mainLabel = step === 0 ? 'Ya la instalé' : 'Activar notificaciones'
-  const skipLabel = step === 0 ? 'Ahora no' : 'Omitir'
-
-  const handleMain = () => {
-    if (step === 0) setStep(1)
-    else handleNotifications()
-  }
-
-  const handleSkip = () => {
-    if (step === 0) setStep(1)
-    else onDismiss()
-  }
-
-  return (
-    <Overlay onDismiss={onDismiss}>
-      <div className="flex justify-center pt-3 pb-1">
-        <div style={{ width: 32, height: 3, background: 'rgba(255,255,255,0.15)', borderRadius: 99 }} />
-      </div>
-      <div className="p-5">
-        {/* Step dots (2 steps) */}
-        <div className="flex items-center gap-1.5 mb-5">
-          {[0, 1].map(i => (
-            <div key={i} className="h-1.5 rounded-full transition-all duration-300"
-              style={{
-                width:      i === step ? 20 : 6,
-                background: i === step ? '#00C46A' : i < step ? 'rgba(0,196,106,0.4)' : 'rgba(255,255,255,0.15)',
-              }}
-            />
-          ))}
-        </div>
-
-        <div className="flex items-center justify-center mb-4"
-          style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,106,51,0.15)', border: '1px solid rgba(0,106,51,0.3)' }}>
-          {icon}
-        </div>
-
-        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>{title}</p>
-        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>{subtitle}</p>
-
-        <div className="flex flex-col gap-2 mb-5">
-          {currentSteps.map(s => (
-            <div key={s.num} className="flex items-center gap-3 rounded-xl"
-              style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
-              <div className="flex items-center justify-center flex-shrink-0 text-[11px] font-medium"
-                style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,106,51,0.2)', border: '1px solid rgba(0,106,51,0.4)', color: '#00C46A' }}>
-                {s.num}
-              </div>
-              <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.70)' }}>{s.text}</span>
-            </div>
-          ))}
-        </div>
-
-        <button onClick={handleMain}
-          className="w-full text-white text-sm font-medium rounded-xl flex items-center justify-center gap-2 mb-2 transition-opacity active:opacity-75"
-          style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: 'pointer' }}>
-          {mainLabel}
-        </button>
-        <button onClick={handleSkip}
-          className="w-full text-[13px] transition-opacity active:opacity-50"
-          style={{ padding: '10px 0', background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer' }}>
-          {skipLabel}
-        </button>
-      </div>
-    </Overlay>
-  )
-}
-
-function Overlay({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) {
+function Sheet({ children, onDismiss }: { children: React.ReactNode; onDismiss: () => void }) {
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center px-3 pb-3"
@@ -185,45 +17,198 @@ function Overlay({ children, onDismiss }: { children: React.ReactNode; onDismiss
     >
       <div className="w-full max-w-sm overflow-hidden"
         style={{ background: '#0A1628', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 20 }}>
+        <div className="flex justify-center pt-3 pb-0">
+          <div style={{ width: 32, height: 3, background: 'rgba(255,255,255,0.15)', borderRadius: 99 }} />
+        </div>
         {children}
       </div>
     </div>
   )
 }
 
+function StepRow({ num, children }: { num: number; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 rounded-xl"
+      style={{ padding: '10px 14px', background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div className="flex items-center justify-center flex-shrink-0 text-[11px] font-medium"
+        style={{ width: 22, height: 22, borderRadius: '50%', background: 'rgba(0,106,51,0.2)', border: '1px solid rgba(0,106,51,0.4)', color: '#00C46A' }}>
+        {num}
+      </div>
+      <span className="text-[13px]" style={{ color: 'rgba(255,255,255,0.70)' }}>{children}</span>
+    </div>
+  )
+}
+
+function IconCircle({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-center mb-4"
+      style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(0,106,51,0.15)', border: '1px solid rgba(0,106,51,0.3)' }}>
+      {children}
+    </div>
+  )
+}
+
+function PrimaryBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className="w-full text-white text-sm font-medium rounded-xl flex items-center justify-center gap-2 mb-2 transition-opacity active:opacity-75"
+      style={{ padding: '14px 0', background: '#006A33', border: 'none', cursor: 'pointer' }}>
+      {children}
+    </button>
+  )
+}
+
+function SecondaryBtn({ onClick, children }: { onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button onClick={onClick}
+      className="w-full text-[13px] transition-opacity active:opacity-50"
+      style={{ padding: '10px 0', background: 'none', border: 'none', color: 'rgba(255,255,255,0.30)', cursor: 'pointer' }}>
+      {children}
+    </button>
+  )
+}
+
+// ─── Screen A: iOS but NOT Safari ────────────────────────────────────────────
+
+function ScreenNotSafari({ onDismiss }: { onDismiss: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(window.location.href) } catch { /* noop */ }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Sheet onDismiss={onDismiss}>
+      <div className="p-5">
+        <IconCircle><Smartphone size={22} className="text-[#00C46A]" /></IconCircle>
+        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Abrí esta página en Safari</p>
+        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Para instalar TU MUNDIAL en tu iPhone necesitás Safari.
+        </p>
+        <div className="flex flex-col gap-2 mb-5">
+          <StepRow num={1}>Copiá el link</StepRow>
+          <StepRow num={2}>Abrí <strong style={{ color: '#fff' }}>Safari</strong></StepRow>
+          <StepRow num={3}>Pegá el link y abrí la página</StepRow>
+        </div>
+        <PrimaryBtn onClick={copyLink}>
+          {copied ? <><Check size={15} /> ¡Copiado!</> : <><Copy size={15} /> Copiar link</>}
+        </PrimaryBtn>
+        <SecondaryBtn onClick={onDismiss}>Cerrar</SecondaryBtn>
+      </div>
+    </Sheet>
+  )
+}
+
+// ─── Screen B: iOS Safari, not installed ─────────────────────────────────────
+
+function ScreenInstallIOS({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <Sheet onDismiss={onDismiss}>
+      <div className="p-5">
+        <IconCircle><Smartphone size={22} className="text-[#00C46A]" /></IconCircle>
+        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Instalá TU MUNDIAL</p>
+        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Agregala a tu pantalla de inicio.
+        </p>
+        <div className="flex flex-col gap-2 mb-5">
+          <StepRow num={1}>
+            Tocá el ícono <strong style={{ color: '#fff' }}>Compartir</strong>{' '}
+            <Share size={11} style={{ display: 'inline', verticalAlign: 'middle' }} />
+          </StepRow>
+          <StepRow num={2}>Elegí <strong style={{ color: '#fff' }}>Agregar a inicio</strong></StepRow>
+          <StepRow num={3}>Tocá <strong style={{ color: '#fff' }}>Agregar</strong></StepRow>
+        </div>
+        <PrimaryBtn onClick={onDismiss}>Ya la instalé</PrimaryBtn>
+        <SecondaryBtn onClick={onDismiss}>Ahora no</SecondaryBtn>
+      </div>
+    </Sheet>
+  )
+}
+
+// ─── Screen C: Running as PWA, ask for notifications ─────────────────────────
+
+function ScreenNotifications({ onDismiss }: { onDismiss: () => void }) {
+  const handleActivate = async () => {
+    try {
+      if (typeof Notification !== 'undefined' && Notification.permission !== 'denied') {
+        await Notification.requestPermission()
+      }
+    } catch { /* noop */ }
+    onDismiss()
+  }
+
+  return (
+    <Sheet onDismiss={onDismiss}>
+      <div className="p-5">
+        <IconCircle><Bell size={22} className="text-[#00C46A]" /></IconCircle>
+        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Activá las notificaciones</p>
+        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Te avisamos antes de que cierre cada predicción.
+        </p>
+        <div className="flex flex-col gap-2 mb-5">
+          <StepRow num={1}>Tocá <strong style={{ color: '#fff' }}>Activar</strong> abajo</StepRow>
+          <StepRow num={2}>Cuando aparezca el popup, tocá <strong style={{ color: '#fff' }}>Permitir</strong></StepRow>
+        </div>
+        <PrimaryBtn onClick={handleActivate}>Activar notificaciones</PrimaryBtn>
+        <SecondaryBtn onClick={onDismiss}>Ahora no</SecondaryBtn>
+      </div>
+    </Sheet>
+  )
+}
+
+// ─── Hook ─────────────────────────────────────────────────────────────────────
+
+type PromptMode = 'not-safari' | 'install-ios' | 'notifications' | null
+
 export function useInstallPrompt() {
-  const [showPrompt, setShowPrompt] = useState(false)
+  const [mode, setMode] = useState<PromptMode>(null)
 
   useEffect(() => {
-    const ua = navigator.userAgent || ''
-    const isMobile = /iPhone|iPad|iPod|Android/i.test(ua)
+    const ua           = navigator.userAgent || ''
+    const isIOS        = /iPhone|iPad|iPod/.test(ua)
+    const isSafari     = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua)
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window.navigator as any).standalone === true
-    const shown = localStorage.getItem(STORAGE_KEY)
 
     console.log('[InstallPrompt] ua:', ua)
-    console.log('[InstallPrompt] isMobile:', isMobile)
-    console.log('[InstallPrompt] isStandalone:', isStandalone)
-    console.log('[InstallPrompt] localStorage:', shown)
+    console.log('[InstallPrompt] isIOS:', isIOS, '| isSafari:', isSafari, '| isStandalone:', isStandalone)
+    console.log('[InstallPrompt] install-shown:', localStorage.getItem(KEY_INSTALL), '| notif-shown:', localStorage.getItem(KEY_NOTIF))
 
-    if (!isMobile) { console.log('[InstallPrompt] skipping - desktop'); return }
-    if (isStandalone) { console.log('[InstallPrompt] skipping - already installed'); return }
-    if (shown) { console.log('[InstallPrompt] skipping - already shown'); return }
+    if (isStandalone) {
+      if (localStorage.getItem(KEY_NOTIF)) { console.log('[InstallPrompt] skipping - notif already shown'); return }
+      console.log('[InstallPrompt] showing notifications in 3s')
+      const t = setTimeout(() => setMode('notifications'), 3000)
+      return () => clearTimeout(t)
+    }
 
-    console.log('[InstallPrompt] will show in 3s')
-    const timer = setTimeout(() => {
-      console.log('[InstallPrompt] showing now')
-      setShowPrompt(true)
-    }, 3000)
-    return () => clearTimeout(timer)
+    if (!isIOS) { console.log('[InstallPrompt] skipping - not iOS'); return }
+    if (localStorage.getItem(KEY_INSTALL)) { console.log('[InstallPrompt] skipping - install already shown'); return }
+
+    const nextMode: PromptMode = isSafari ? 'install-ios' : 'not-safari'
+    console.log(`[InstallPrompt] showing ${nextMode} in 3s`)
+    const t = setTimeout(() => setMode(nextMode), 3000)
+    return () => clearTimeout(t)
   }, [])
 
-  const dismissPrompt = () => {
-    localStorage.setItem(STORAGE_KEY, 'true')
-    setShowPrompt(false)
+  const dismiss = (key: typeof KEY_INSTALL | typeof KEY_NOTIF) => {
+    localStorage.setItem(key, 'true')
+    setMode(null)
   }
 
-  return { showPrompt, dismissPrompt }
+  return { mode, dismiss }
+}
+
+// ─── Public component ─────────────────────────────────────────────────────────
+
+export default function InstallPrompt() {
+  const { mode, dismiss } = useInstallPrompt()
+
+  if (mode === 'not-safari')    return <ScreenNotSafari    onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'install-ios')   return <ScreenInstallIOS   onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'notifications') return <ScreenNotifications onDismiss={() => dismiss(KEY_NOTIF)}  />
+  return null
 }
