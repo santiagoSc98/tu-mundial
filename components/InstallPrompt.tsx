@@ -127,6 +127,62 @@ function ScreenInstallIOS({ onDismiss }: { onDismiss: () => void }) {
   )
 }
 
+// ─── Screen D: Android + Chrome ───────────────────────────────────────────────
+
+function ScreenInstallAndroid({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <Sheet onDismiss={onDismiss}>
+      <div className="p-5">
+        <IconCircle><Smartphone size={22} className="text-[#00C46A]" /></IconCircle>
+        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Instalá TU MUNDIAL</p>
+        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Agregala a tu pantalla de inicio.
+        </p>
+        <div className="flex flex-col gap-2 mb-5">
+          <StepRow num={1}>Tocá el menú <strong style={{ color: '#fff' }}>⋮</strong> del navegador</StepRow>
+          <StepRow num={2}>Elegí <strong style={{ color: '#fff' }}>Instalar app</strong> o <strong style={{ color: '#fff' }}>Agregar a pantalla de inicio</strong></StepRow>
+          <StepRow num={3}>Tocá <strong style={{ color: '#fff' }}>Instalar</strong> para confirmar</StepRow>
+        </div>
+        <PrimaryBtn onClick={onDismiss}>Ya la instalé</PrimaryBtn>
+        <SecondaryBtn onClick={onDismiss}>Ahora no</SecondaryBtn>
+      </div>
+    </Sheet>
+  )
+}
+
+// ─── Screen E: Android + no Chrome ───────────────────────────────────────────
+
+function ScreenNotChrome({ onDismiss }: { onDismiss: () => void }) {
+  const [copied, setCopied] = useState(false)
+
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(window.location.href) } catch { /* noop */ }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  return (
+    <Sheet onDismiss={onDismiss}>
+      <div className="p-5">
+        <IconCircle><Smartphone size={22} className="text-[#00C46A]" /></IconCircle>
+        <p className="text-base font-bold mb-1" style={{ color: '#fff' }}>Abrí esta página en Chrome</p>
+        <p className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.45)' }}>
+          Para instalar TU MUNDIAL en tu Android necesitás Chrome.
+        </p>
+        <div className="flex flex-col gap-2 mb-5">
+          <StepRow num={1}>Copiá el link</StepRow>
+          <StepRow num={2}>Abrí <strong style={{ color: '#fff' }}>Chrome</strong></StepRow>
+          <StepRow num={3}>Pegá el link y abrí la página</StepRow>
+        </div>
+        <PrimaryBtn onClick={copyLink}>
+          {copied ? <><Check size={15} /> ¡Copiado!</> : <><Copy size={15} /> Copiar link</>}
+        </PrimaryBtn>
+        <SecondaryBtn onClick={onDismiss}>Cerrar</SecondaryBtn>
+      </div>
+    </Sheet>
+  )
+}
+
 // ─── Screen C: Running as PWA, ask for notifications ─────────────────────────
 
 function ScreenNotifications({ onDismiss }: { onDismiss: () => void }) {
@@ -160,7 +216,7 @@ function ScreenNotifications({ onDismiss }: { onDismiss: () => void }) {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
-type PromptMode = 'not-safari' | 'install-ios' | 'notifications' | null
+type PromptMode = 'not-safari' | 'install-ios' | 'install-android' | 'not-chrome' | 'notifications' | null
 
 export function useInstallPrompt() {
   const [mode, setMode] = useState<PromptMode>(null)
@@ -168,14 +224,16 @@ export function useInstallPrompt() {
   useEffect(() => {
     const ua           = navigator.userAgent || ''
     const isIOS        = /iPhone|iPad|iPod/.test(ua)
+    const isAndroid    = /Android/.test(ua)
     const isSafari     = /Safari/.test(ua) && !/Chrome|CriOS|FxiOS|EdgiOS/.test(ua)
+    const isChrome     = /Chrome/.test(ua) && !/Chromium|EdgA|OPR/.test(ua)
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (window.navigator as any).standalone === true
 
     console.log('[InstallPrompt] ua:', ua)
-    console.log('[InstallPrompt] isIOS:', isIOS, '| isSafari:', isSafari, '| isStandalone:', isStandalone)
+    console.log('[InstallPrompt] isIOS:', isIOS, '| isAndroid:', isAndroid, '| isSafari:', isSafari, '| isChrome:', isChrome, '| isStandalone:', isStandalone)
     console.log('[InstallPrompt] install-shown:', localStorage.getItem(KEY_INSTALL), '| notif-shown:', localStorage.getItem(KEY_NOTIF))
 
     if (isStandalone) {
@@ -185,10 +243,13 @@ export function useInstallPrompt() {
       return () => clearTimeout(t)
     }
 
-    if (!isIOS) { console.log('[InstallPrompt] skipping - not iOS'); return }
+    if (!isIOS && !isAndroid) { console.log('[InstallPrompt] skipping - desktop'); return }
     if (localStorage.getItem(KEY_INSTALL)) { console.log('[InstallPrompt] skipping - install already shown'); return }
 
-    const nextMode: PromptMode = isSafari ? 'install-ios' : 'not-safari'
+    let nextMode: PromptMode
+    if (isIOS)      nextMode = isSafari  ? 'install-ios'     : 'not-safari'
+    else            nextMode = isChrome  ? 'install-android'  : 'not-chrome'
+
     console.log(`[InstallPrompt] showing ${nextMode} in 3s`)
     const t = setTimeout(() => setMode(nextMode), 3000)
     return () => clearTimeout(t)
@@ -207,8 +268,10 @@ export function useInstallPrompt() {
 export default function InstallPrompt() {
   const { mode, dismiss } = useInstallPrompt()
 
-  if (mode === 'not-safari')    return <ScreenNotSafari    onDismiss={() => dismiss(KEY_INSTALL)} />
-  if (mode === 'install-ios')   return <ScreenInstallIOS   onDismiss={() => dismiss(KEY_INSTALL)} />
-  if (mode === 'notifications') return <ScreenNotifications onDismiss={() => dismiss(KEY_NOTIF)}  />
+  if (mode === 'not-safari')      return <ScreenNotSafari      onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'install-ios')     return <ScreenInstallIOS     onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'install-android') return <ScreenInstallAndroid onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'not-chrome')      return <ScreenNotChrome      onDismiss={() => dismiss(KEY_INSTALL)} />
+  if (mode === 'notifications')   return <ScreenNotifications  onDismiss={() => dismiss(KEY_NOTIF)}  />
   return null
 }
