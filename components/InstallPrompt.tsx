@@ -198,6 +198,8 @@ export function useInstallPrompt() {
   const [showPrompt, setShowPrompt] = useState(false)
 
   useEffect(() => {
+    const ua = navigator.userAgent || ''
+    if (!/iPhone|iPad|iPod|Android/i.test(ua)) return
     const shown = localStorage.getItem(STORAGE_KEY)
     if (!shown) {
       const timer = setTimeout(() => setShowPrompt(true), 3000)

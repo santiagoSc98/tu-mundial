@@ -170,7 +170,7 @@ function PredictPanel({
   const isKnockout = rawOpts.length === 2
   const homeRaw    = rawOpts[0] ?? ''
   const awayRaw    = isKnockout ? (rawOpts[1] ?? '') : (rawOpts[2] ?? '')
-  const draw: string | null = isKnockout ? null : (rawOpts[1] ?? 'Empate')
+  const draw: string | null = isKnockout ? 'Empate' : (rawOpts[1] ?? 'Empate')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
   const homeFlag = getFlagUrl(prediction.home_team_code)
