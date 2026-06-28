@@ -409,6 +409,9 @@ function BracketColumn({ matches, side = 'left' }: { matches: KOMatch[]; side?: 
 }
 
 // ─── Mobile match card (pares con cruces) ────────────────────────────────────
+const showFlag = (code: string | null | undefined): boolean =>
+  !!(code && code !== 'TBD' && code.trim().length > 0)
+
 function MobileMatchCard({ match, isFirst = false, isLast = false }: { match: KOMatch; isFirst?: boolean; isLast?: boolean }) {
   const finished = match.status === 'resolved'
   const homeWin  = finished && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
@@ -422,7 +425,7 @@ function MobileMatchCard({ match, isFirst = false, isLast = false }: { match: KO
   const radius   = isFirst && isLast ? '12px' : isFirst ? '12px 12px 0 0' : isLast ? '0 0 12px 12px' : '0'
 
   return (
-    <div style={{ borderRadius: radius, borderTop: !isFirst ? 'none' : undefined }} className={`overflow-hidden border ${
+    <div style={{ borderRadius: radius, borderTop: !isFirst ? '1px solid rgba(255,255,255,0.12)' : undefined }} className={`overflow-hidden border ${
       finished ? 'border-[rgba(0,196,106,0.3)] bg-[rgba(0,196,106,0.06)]'
       : isTBD  ? 'border-white/[0.06] bg-white/[0.02] opacity-40'
       : 'border-white/[0.12] bg-white/[0.05]'
@@ -433,7 +436,7 @@ function MobileMatchCard({ match, isFirst = false, isLast = false }: { match: KO
         </div>
       )}
       <div className={`flex items-center gap-2 px-2.5 py-2 ${homeWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
-        {match.homeCode
+        {showFlag(match.homeCode)
           ? <img src={homeFlag ?? undefined} alt="" className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
           : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
         }
@@ -446,7 +449,7 @@ function MobileMatchCard({ match, isFirst = false, isLast = false }: { match: KO
       </div>
       <div className="h-px bg-white/[0.07]" />
       <div className={`flex items-center gap-2 px-2.5 py-2 ${awayWin ? 'bg-[rgba(0,196,106,0.07)]' : ''}`}>
-        {match.awayCode
+        {showFlag(match.awayCode)
           ? <img src={awayFlag ?? undefined} alt="" className="w-4 h-3 rounded-sm object-cover flex-shrink-0" />
           : <div className="w-4 h-3 rounded-sm bg-white/10 flex-shrink-0" />
         }
@@ -594,8 +597,8 @@ export default function CalendarioView({
   const bracketRef   = useRef<HTMLDivElement>(null)
   const touchStartX  = useRef(0)
   const touchEndX    = useRef(0)
+  const contentRef   = useRef<HTMLDivElement>(null)
   const [mobilePhase, setMobilePhase] = useState('LAST_32')
-  const [direction,   setDirection]   = useState<'left' | 'right'>('right')
   const [animating,   setAnimating]   = useState(false)
 
   const PHASE_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
@@ -642,11 +645,31 @@ export default function CalendarioView({
 
   const goToPhase = (newPhase: string) => {
     if (newPhase === mobilePhase || animating) return
-    const ci = PHASE_ORDER.indexOf(mobilePhase)
-    const ni = PHASE_ORDER.indexOf(newPhase)
-    setDirection(ni > ci ? 'left' : 'right')
+    const ci  = PHASE_ORDER.indexOf(mobilePhase)
+    const ni  = PHASE_ORDER.indexOf(newPhase)
+    const dir = ni > ci ? 1 : -1
     setAnimating(true)
-    setTimeout(() => { setMobilePhase(newPhase); setAnimating(false) }, 220)
+    if (contentRef.current) {
+      contentRef.current.style.opacity    = '0'
+      contentRef.current.style.transform  = `translateX(${dir * -20}px)`
+      contentRef.current.style.transition = 'opacity 0.15s, transform 0.15s'
+    }
+    setTimeout(() => {
+      setMobilePhase(newPhase)
+      if (contentRef.current) {
+        contentRef.current.style.transition = 'none'
+        contentRef.current.style.opacity    = '0'
+        contentRef.current.style.transform  = `translateX(${dir * 20}px)`
+        requestAnimationFrame(() => {
+          if (contentRef.current) {
+            contentRef.current.style.transition = 'opacity 0.2s, transform 0.2s'
+            contentRef.current.style.opacity    = '1'
+            contentRef.current.style.transform  = 'translateX(0)'
+          }
+        })
+      }
+      setAnimating(false)
+    }, 150)
   }
 
   const handleTouchStart = (e: React.TouchEvent) => { touchStartX.current = e.touches[0].clientX }
@@ -951,10 +974,9 @@ export default function CalendarioView({
 
                   {/* Contenido animado con swipe */}
                   <div
-                    key={mobilePhase}
+                    ref={contentRef}
                     onTouchStart={handleTouchStart}
                     onTouchEnd={handleTouchEnd}
-                    style={{ animation: `${direction === 'left' ? 'slideInLeft' : 'slideInRight'} 0.22s ease-out` }}
                   >
                     <p className="text-[10px] text-gray-500 tracking-widest text-center mb-4">
                       {PHASE_TITLE[mobilePhase]}
@@ -973,12 +995,12 @@ export default function CalendarioView({
 
                           {/* Conector bracket */}
                           {pair.m2 && (
-                            <div className="flex flex-col items-center w-4 flex-shrink-0">
-                              <div className="flex-1 border-r border-t border-white/20 rounded-tr-md" style={{ marginTop: 20 }} />
-                              <div className="flex-1 border-r border-b border-white/20 rounded-br-md" style={{ marginBottom: 20 }} />
+                            <div className="flex flex-col w-5 flex-shrink-0 self-stretch">
+                              <div className="flex-1 border-r border-t border-white/25 rounded-tr-md" style={{ marginTop: 43 }} />
+                              <div className="flex-1 border-r border-b border-white/25 rounded-br-md" style={{ marginBottom: 43 }} />
                             </div>
                           )}
-                          {pair.m2 && <div className="w-2 h-px bg-white/20 self-center flex-shrink-0" />}
+                          {pair.m2 && <div className="w-2 h-px bg-white/25 self-center flex-shrink-0" />}
 
                           {/* Cruce siguiente fase */}
                           {NEXT_STAGE[mobilePhase] && (
@@ -988,8 +1010,8 @@ export default function CalendarioView({
                                   {NEXT_STAGE_LABEL[mobilePhase]}
                                 </div>
                                 <div className="flex items-center gap-1.5 px-2 py-1.5">
-                                  {pair.next?.homeCode
-                                    ? <img src={getFlagUrl(pair.next.homeCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
+                                  {showFlag(pair.next?.homeCode)
+                                    ? <img src={getFlagUrl(pair.next!.homeCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
                                     : <div className="w-3.5 h-2.5 rounded-sm bg-white/10 flex-shrink-0" />
                                   }
                                   <span className="text-[10px] text-gray-400 truncate">
@@ -998,8 +1020,8 @@ export default function CalendarioView({
                                 </div>
                                 <div className="h-px bg-white/[0.06]" />
                                 <div className="flex items-center gap-1.5 px-2 py-1.5">
-                                  {pair.next?.awayCode
-                                    ? <img src={getFlagUrl(pair.next.awayCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
+                                  {showFlag(pair.next?.awayCode)
+                                    ? <img src={getFlagUrl(pair.next!.awayCode) ?? undefined} alt="" className="w-3.5 h-2.5 rounded-sm object-cover flex-shrink-0" />
                                     : <div className="w-3.5 h-2.5 rounded-sm bg-white/10 flex-shrink-0" />
                                   }
                                   <span className="text-[10px] text-gray-400 truncate">
