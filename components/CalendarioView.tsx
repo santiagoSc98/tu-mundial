@@ -592,7 +592,7 @@ export default function CalendarioView({
   predictions: Prediction[]
   wcStandings: StandingsByType | null
 }) {
-  const [calTab,        setCalTab]        = useState<CalTab>('resumen')
+  const [calTab,        setCalTab]        = useState<CalTab>('eliminatoria')
   const [dayIdx,        setDayIdx]        = useState(0)
   const bracketRef   = useRef<HTMLDivElement>(null)
   const touchStartX  = useRef(0)
@@ -759,7 +759,7 @@ export default function CalendarioView({
 
       {/* ── Sub-tabs ────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 mb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 0 }}>
-        {(['resumen', 'clasificacion', 'eliminatoria'] as CalTab[]).map(t => {
+        {(['eliminatoria', 'resumen', 'clasificacion'] as CalTab[]).map(t => {
           const labels: Record<CalTab, string> = {
             resumen: 'Resumen',
             clasificacion: 'Clasificación',
