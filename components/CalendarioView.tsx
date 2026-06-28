@@ -462,12 +462,13 @@ function MobileBracketCard({ match, isFinal = false }: { match: KOMatch; isFinal
 }
 
 function MobileConnectors({ count }: { count: number }) {
+  const CENTER = 35 // mitad de la altura aprox de MobileBracketCard (~70px)
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0, paddingTop: 20 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', alignSelf: 'stretch', width: 16, flexShrink: 0 }}>
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, minHeight: 20 }} />
-          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, minHeight: 20 }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderTop: '1px solid rgba(255,255,255,0.25)', borderTopRightRadius: 4, marginTop: CENTER }} />
+          <div style={{ flex: 1, borderRight: '1px solid rgba(255,255,255,0.25)', borderBottom: '1px solid rgba(255,255,255,0.25)', borderBottomRightRadius: 4, marginBottom: CENTER }} />
         </div>
       ))}
     </div>
@@ -984,47 +985,73 @@ export default function CalendarioView({
 
                   {/* Bracket scroll horizontal */}
                   <div ref={mobileBracketRef} className="overflow-x-auto cursor-grab select-none">
-                    <div className="flex items-stretch px-2 py-3" style={{ width: 'max-content', minHeight: 400 }}>
+                    <div style={{ width: 'max-content' }}>
 
-                      <div ref={mobileR32Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">32AVOS</p>
-                        {byStage.LAST_32.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                      {/* Fila de títulos fuera de las columnas — sin impacto en altura de conectores */}
+                      <div style={{ display: 'flex', paddingLeft: 8, paddingTop: 8, paddingBottom: 4 }}>
+                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>32AVOS</span>
+                        </div>
+                        <div style={{ width: 24, flexShrink: 0 }} />
+                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>OCTAVOS</span>
+                        </div>
+                        <div style={{ width: 24, flexShrink: 0 }} />
+                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>CUARTOS</span>
+                        </div>
+                        <div style={{ width: 24, flexShrink: 0 }} />
+                        <div style={{ width: 150, textAlign: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>SEMIS</span>
+                        </div>
+                        <div style={{ width: 24, flexShrink: 0 }} />
+                        <div style={{ width: 166, textAlign: 'center', flexShrink: 0 }}>
+                          <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.30)', letterSpacing: '0.07em' }}>FINAL</span>
+                        </div>
                       </div>
 
-                      <MobileConnectors count={8} />
+                      {/* Columnas sin títulos internos */}
+                      <div className="flex items-stretch px-2 pb-3" style={{ minHeight: 400 }}>
 
-                      <div ref={mobileR16Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">OCTAVOS</p>
-                        {byStage.LAST_16.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                        <div ref={mobileR32Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
+                          {byStage.LAST_32.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                        </div>
+
+                        <MobileConnectors count={8} />
+                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
+
+                        <div ref={mobileR16Ref} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
+                          {byStage.LAST_16.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                        </div>
+
+                        <MobileConnectors count={4} />
+                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
+
+                        <div ref={mobileQfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
+                          {byStage.QUARTER_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                        </div>
+
+                        <MobileConnectors count={2} />
+                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
+
+                        <div ref={mobileSfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
+                          {byStage.SEMI_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
+                        </div>
+
+                        <MobileConnectors count={1} />
+                        <div style={{ width: 8, height: 1, background: 'rgba(255,255,255,0.25)', alignSelf: 'center', flexShrink: 0 }} />
+
+                        <div ref={mobileFinRef} className="flex flex-col justify-center flex-shrink-0 px-2" style={{ gap: 10 }}>
+                          {byStage.FINAL[0] && <MobileBracketCard match={byStage.FINAL[0]} isFinal />}
+                          {byStage.THIRD_PLACE[0] && (
+                            <>
+                              <p className="text-[9px] text-gray-600 tracking-widest text-center mt-2">3° LUGAR</p>
+                              <MobileBracketCard match={byStage.THIRD_PLACE[0]} />
+                            </>
+                          )}
+                        </div>
+
                       </div>
-
-                      <MobileConnectors count={4} />
-
-                      <div ref={mobileQfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">CUARTOS</p>
-                        {byStage.QUARTER_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                      </div>
-
-                      <MobileConnectors count={2} />
-
-                      <div ref={mobileSfRef} style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-around', alignSelf: 'stretch', gap: 8, flexShrink: 0 }}>
-                        <p className="text-[9px] text-gray-600 tracking-widest text-center mb-1">SEMIS</p>
-                        {byStage.SEMI_FINALS.map((m, i) => <MobileBracketCard key={i} match={m} />)}
-                      </div>
-
-                      <MobileConnectors count={1} />
-
-                      <div ref={mobileFinRef} className="flex flex-col justify-center flex-shrink-0 px-2" style={{ gap: 10 }}>
-                        <p className="text-[9px] text-gray-600 tracking-widest text-center">FINAL</p>
-                        {byStage.FINAL[0] && <MobileBracketCard match={byStage.FINAL[0]} isFinal />}
-                        {byStage.THIRD_PLACE[0] && (
-                          <>
-                            <p className="text-[9px] text-gray-600 tracking-widest text-center mt-2">3° LUGAR</p>
-                            <MobileBracketCard match={byStage.THIRD_PLACE[0]} />
-                          </>
-                        )}
-                      </div>
-
                     </div>
                   </div>
                 </div>
