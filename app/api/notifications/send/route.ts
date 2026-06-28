@@ -8,21 +8,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const { heading, message, url, userIds } = await req.json()
-
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const body: Record<string, any> = {
-    app_id:   '11c43fd4-40b2-48f3-b460-4bfcadce9213',
-    headings: { en: heading },
-    contents: { en: message },
-    url:      url || 'https://tu-mundial.vercel.app/home',
-  }
-
-  if (userIds?.length) {
-    body.include_external_user_ids = userIds
-  } else {
-    body.included_segments = ['All']
-  }
+  const { heading, message, url, segment } = await req.json()
 
   const response = await fetch('https://onesignal.com/api/v1/notifications', {
     method: 'POST',
@@ -30,7 +16,13 @@ export async function POST(req: Request) {
       'Content-Type':  'application/json',
       'Authorization': `Basic ${process.env.ONESIGNAL_REST_API_KEY}`,
     },
-    body: JSON.stringify(body),
+    body: JSON.stringify({
+      app_id:            '11c43fd4-40b2-48f3-b460-4bfcadce9213',
+      headings:          { en: heading, es: heading },
+      contents:          { en: message, es: message },
+      url:               url || 'https://tu-mundial.vercel.app/home',
+      included_segments: [segment || 'All'],
+    }),
   })
 
   const data = await response.json()

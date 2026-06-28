@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { Smartphone, Bell, Share, Copy, Check } from 'lucide-react'
-import OneSignal from 'react-onesignal'
 
 const KEY_INSTALL = 'tu-mundial-install-shown'
 const KEY_NOTIF   = 'tu-mundial-notif-shown'
@@ -189,8 +188,17 @@ function ScreenNotChrome({ onDismiss }: { onDismiss: () => void }) {
 function ScreenNotifications({ onDismiss }: { onDismiss: () => void }) {
   const handleActivate = async () => {
     try {
-      await OneSignal.Notifications.requestPermission()
-    } catch { /* noop */ }
+      if (window.OneSignalDeferred) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        window.OneSignalDeferred.push(async (OneSignal: any) => {
+          await OneSignal.Notifications.requestPermission()
+        })
+      } else {
+        await Notification.requestPermission()
+      }
+    } catch (e) {
+      console.error('[InstallPrompt] notif error:', e)
+    }
     onDismiss()
   }
 
