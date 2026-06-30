@@ -284,6 +284,7 @@ function BConns({ pairCount, pairH, side }: { pairCount: number; pairH: number; 
 // ─── Knockout bracket components ─────────────────────────────────────────────
 interface KOMatch {
   id: string
+  fixtureId: string | null
   homeName: string
   awayName: string
   homeCode: string | null
@@ -904,6 +905,7 @@ export default function CalendarioView({
               const a = getTeamNameES(opts[opts.length - 1] ?? '')
               return {
                 id:        p.id,
+                fixtureId: p.fixture_id ?? null,
                 homeName:  (h === 'Por definir' || !h) ? 'TBD' : h,
                 awayName:  (a === 'Por definir' || !a) ? 'TBD' : a,
                 homeCode:  p.home_team_code,
@@ -921,8 +923,10 @@ export default function CalendarioView({
                 .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
                 .map(toPred)
             }
-            const last32Left  = byStage.LAST_32.slice(0, 8)
-            const last32Right = byStage.LAST_32.slice(8, 16)
+            const BRACKET_LEFT_IDS  = ['537415','537416','537417','537418','537419','537420','537421','537422']
+            const BRACKET_RIGHT_IDS = ['537423','537424','537425','537426','537427','537428','537429','537430']
+            const last32Left  = BRACKET_LEFT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
+            const last32Right = BRACKET_RIGHT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last16Left  = byStage.LAST_16.slice(0, 4)
             const last16Right = byStage.LAST_16.slice(4, 8)
             const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
@@ -939,7 +943,7 @@ export default function CalendarioView({
             for (let i = 0; i < mobileMatches.length; i += 2) {
               mobilePairs.push({ m1: mobileMatches[i], m2: mobileMatches[i + 1] ?? null, next: mobileNextMatches[Math.floor(i / 2)] ?? null })
             }
-            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
+            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', fixtureId: null, homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
 
             return (
               <>
