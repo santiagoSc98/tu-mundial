@@ -158,6 +158,16 @@ function ReglasTab({ onTabChange }: { onTabChange?: (tab: string) => void }) {
 
       <div style={RULE_CARD}>
         <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
+          <span className="flex items-center gap-2 text-sm font-black tracking-wider" style={{ color: '#00C46A' }}><Zap className="h-4 w-4" /> ELIMINATORIA Y PENALES</span>
+        </div>
+        <div className="px-5 py-4 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
+          <p className="mb-3">En los partidos de eliminatoria (a partir de Dieciseisavos), tu predicción se evalúa según el <strong style={{ color: '#fff' }}>resultado de los 90 minutos reglamentarios</strong>.</p>
+          <p>Si el partido termina empatado en los 90 minutos y se define por prórroga o penales, tu predicción de <strong style={{ color: '#00C46A' }}>"Empate"</strong> sigue siendo válida y se evalúa normalmente, sin importar quién avance por penales.</p>
+        </div>
+      </div>
+
+      <div style={RULE_CARD}>
+        <div className="px-5 py-3" style={{ background: 'var(--mundial-header-bg)', borderBottom: '1px solid var(--mundial-header-border)' }}>
           <span className="flex items-center gap-2 text-sm font-black tracking-wider" style={{ color: '#a78bfa' }}><Trophy className="h-4 w-4" /> SISTEMA DE DESEMPATE</span>
         </div>
         <div className="px-5 py-4 text-sm" style={{ color: 'rgba(255,255,255,0.60)' }}>
