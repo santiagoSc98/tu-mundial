@@ -38,11 +38,30 @@ async function fetchMatchResult(fixtureId: string): Promise<{
     }
     const data = await res.json()
     const match = data.match ?? data
+
+    // Log score completo para diagnóstico
+    console.log(`[resolve-matches] fixture ${fixtureId} status:`, match.status)
+    console.log(`[resolve-matches] fixture ${fixtureId} score:`, JSON.stringify(match.score))
+
     if (match.status !== 'FINISHED') return { finished: false, homeScore: null, awayScore: null }
+
+    // Usar SIEMPRE regularTime (90 min exactos) si está disponible,
+    // o fullTime si no hay regularTime.
+    // NUNCA usar extraTime ni penalties para determinar el resultado de la predicción.
+    const regularTime = match.score?.regularTime
+    const fullTime    = match.score?.fullTime
+    const duration    = match.score?.duration // 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT'
+
+    console.log(`[resolve-matches] fixture ${fixtureId} duration:`, duration)
+
+    // Para partidos con prórroga/penales, fullTime en la API puede reflejar el resultado
+    // al final del tiempo extra. Si hay regularTime, ese es el score de los 90 min.
+    const scoreToUse = regularTime ?? fullTime
+
     return {
       finished: true,
-      homeScore: match.score?.fullTime?.home ?? null,
-      awayScore: match.score?.fullTime?.away ?? null,
+      homeScore: scoreToUse?.home ?? null,
+      awayScore: scoreToUse?.away ?? null,
     }
   } catch (err) {
     console.error(`[resolve-matches] fetch error for fixture ${fixtureId}:`, err)
