@@ -943,7 +943,9 @@ export default function CalendarioView({
             const mobileMatches     = mobilePhase === 'LAST_32' ? [...last32Left, ...last32Right]
                                     : mobilePhase === 'LAST_16' ? [...last16Left, ...last16Right]
                                     : byStage[mobilePhase] ?? []
-            const mobileNextMatches = NEXT_STAGE[mobilePhase] ? (byStage[NEXT_STAGE[mobilePhase]] ?? []) : []
+            const mobileNextMatches = mobilePhase === 'LAST_32' ? [...last16Left, ...last16Right]
+                                    : mobilePhase === 'LAST_16' ? (byStage['QUARTER_FINALS'] ?? [])
+                                    : NEXT_STAGE[mobilePhase] ? (byStage[NEXT_STAGE[mobilePhase]] ?? []) : []
             const mobilePairs: Array<{ m1: KOMatch; m2: KOMatch | null; next: KOMatch | null }> = []
             for (let i = 0; i < mobileMatches.length; i += 2) {
               mobilePairs.push({ m1: mobileMatches[i], m2: mobileMatches[i + 1] ?? null, next: mobileNextMatches[Math.floor(i / 2)] ?? null })
