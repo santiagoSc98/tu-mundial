@@ -940,7 +940,9 @@ export default function CalendarioView({
             const thirdPlace = byStage.THIRD_PLACE[0] ?? null
 
             // Mobile — pares de partidos con cruce siguiente fase
-            const mobileMatches     = byStage[mobilePhase] ?? []
+            const mobileMatches     = mobilePhase === 'LAST_32' ? [...last32Left, ...last32Right]
+                                    : mobilePhase === 'LAST_16' ? [...last16Left, ...last16Right]
+                                    : byStage[mobilePhase] ?? []
             const mobileNextMatches = NEXT_STAGE[mobilePhase] ? (byStage[NEXT_STAGE[mobilePhase]] ?? []) : []
             const mobilePairs: Array<{ m1: KOMatch; m2: KOMatch | null; next: KOMatch | null }> = []
             for (let i = 0; i < mobileMatches.length; i += 2) {
