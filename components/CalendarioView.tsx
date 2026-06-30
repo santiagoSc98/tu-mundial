@@ -927,8 +927,9 @@ export default function CalendarioView({
             const BRACKET_RIGHT_IDS = ['537423','537424','537425','537426','537427','537428','537429','537430']
             const last32Left  = BRACKET_LEFT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last32Right = BRACKET_RIGHT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
-            const BRACKET_L16_LEFT_IDS  = ['537375','537376','537377','537378']
-            const BRACKET_L16_RIGHT_IDS = ['537379','537380','537381','537382']
+            // Jul 4 + Jul 6 = izq, Jul 5 (Brasil) + Jul 7 = der
+            const BRACKET_L16_LEFT_IDS  = ['537375','537376','537379','537380']
+            const BRACKET_L16_RIGHT_IDS = ['537377','537378','537381','537382']
             const last16Left  = BRACKET_L16_LEFT_IDS.map(id => byStage.LAST_16.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last16Right = BRACKET_L16_RIGHT_IDS.map(id => byStage.LAST_16.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
