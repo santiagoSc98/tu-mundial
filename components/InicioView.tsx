@@ -962,18 +962,19 @@ export default function InicioView({
         {/* ── RIGHT ───────────────────────────────────────────────────── */}
         <div className="space-y-6">
           <div style={{ ...GLASS, padding: 24 }}>
-            <div className="flex items-center justify-between mb-5">
-              <h3 className="text-base font-black" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
+            <div className="flex items-center justify-between mb-5 gap-2">
+              <h3 className="text-base font-black flex-shrink-0" style={{ color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)' }}>
                 MIS ESTADÍSTICAS
               </h3>
               <button
                 onClick={onGoToMisPredicciones}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                className="flex items-center gap-1.5 px-2.5 md:px-3 py-1.5 rounded-xl text-[11px] font-medium transition-colors flex-shrink-0 whitespace-nowrap"
                 style={{ background: 'rgba(0,196,106,0.10)', border: '1px solid rgba(0,196,106,0.25)', color: '#00C46A', cursor: 'pointer' }}
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.18)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.10)')}
               >
-                Historial completo
+                <span className="hidden sm:inline">Historial completo</span>
+                <span className="sm:hidden">Ver más</span>
                 <span style={{ fontSize: 11 }}>→</span>
               </button>
             </div>
