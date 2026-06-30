@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useMemo, useEffect } from 'react'
+import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import Image from 'next/image'
 import { Trophy, Star, BookOpen, Home, LogOut, Zap, Clock, Calendar, Users } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -196,6 +196,54 @@ export default function HomeClient({
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
   const [autoJoinCode, setAutoJoinCode] = useState<string | null>(pendingJoinCode ?? null)
   const [imgError,     setImgError]     = useState(false)
+
+  const SWIPE_TABS: Tab[] = ['inicio', 'posiciones', 'grupos', 'calendario']
+  const contentRef   = useRef<HTMLDivElement>(null)
+  const touchStartX  = useRef(0)
+  const touchStartY  = useRef(0)
+
+  const goToTab = useCallback((tab: Tab) => {
+    if (tab === activeTab) return
+    const currentIdx = SWIPE_TABS.indexOf(activeTab)
+    const newIdx     = SWIPE_TABS.indexOf(tab)
+    const dir        = newIdx > currentIdx ? 1 : -1
+    const el         = contentRef.current
+    if (el) {
+      el.style.transition = 'opacity 0.15s, transform 0.15s'
+      el.style.opacity    = '0'
+      el.style.transform  = `translateX(${dir * -20}px)`
+    }
+    setTimeout(() => {
+      setActiveTab(tab)
+      if (el) {
+        el.style.transition = 'none'
+        el.style.opacity    = '0'
+        el.style.transform  = `translateX(${dir * 20}px)`
+        requestAnimationFrame(() => {
+          if (el) {
+            el.style.transition = 'opacity 0.2s, transform 0.2s'
+            el.style.opacity    = '1'
+            el.style.transform  = 'translateX(0)'
+          }
+        })
+      }
+    }, 150)
+  }, [activeTab])
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX
+    touchStartY.current = e.touches[0].clientY
+  }
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    const diffX = touchStartX.current - e.changedTouches[0].clientX
+    const diffY = touchStartY.current - e.changedTouches[0].clientY
+    if (Math.abs(diffX) < 50 || Math.abs(diffX) < Math.abs(diffY)) return
+    const currentIdx = SWIPE_TABS.indexOf(activeTab)
+    if (currentIdx === -1) return
+    if (diffX > 0 && currentIdx < SWIPE_TABS.length - 1) goToTab(SWIPE_TABS[currentIdx + 1])
+    else if (diffX < 0 && currentIdx > 0)                 goToTab(SWIPE_TABS[currentIdx - 1])
+  }
 
   useEffect(() => {
     const params    = new URLSearchParams(window.location.search)
@@ -449,7 +497,7 @@ export default function HomeClient({
             return (
               <button
                 key={item.id}
-                onClick={() => setActiveTab(item.id)}
+                onClick={() => SWIPE_TABS.includes(item.id as Tab) ? goToTab(item.id as Tab) : setActiveTab(item.id)}
                 className="flex-1 flex flex-col items-center py-2 rounded-lg gap-1"
                 style={{
                   background: isActive ? '#006A33' : 'rgba(255,255,255,0.06)',
@@ -471,8 +519,14 @@ export default function HomeClient({
       </div>
 
       {/* ── Content area ─────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto" style={{ background: 'var(--page-bg-home)' }}>
+      <main
+        className="flex-1 overflow-y-auto"
+        style={{ background: 'var(--page-bg-home)' }}
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
+      >
         <div
+          ref={contentRef}
           key={activeTab}
           className="animate-slide-up"
           style={{
