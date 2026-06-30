@@ -558,13 +558,16 @@ function MatchRow({
     </button>
   )
 
+  const isTBD = home === 'Por definir' && away === 'Por definir'
+
   const predictBtn = (
     <button
-      onClick={e => { e.stopPropagation(); onExpand() }}
-      className="text-xs bg-[#0052A5] text-white px-3.5 py-1.5 rounded-lg font-semibold"
-      style={{ cursor: 'pointer' }}
+      onClick={isTBD ? undefined : e => { e.stopPropagation(); onExpand() }}
+      disabled={isTBD}
+      className={`text-xs px-3.5 py-1.5 rounded-lg font-semibold ${isTBD ? 'bg-white/10 text-white/30 cursor-not-allowed' : 'bg-[#0052A5] text-white'}`}
+      style={{ cursor: isTBD ? 'not-allowed' : 'pointer' }}
     >
-      Pronostica
+      {isTBD ? 'Por definir' : 'Pronostica'}
     </button>
   )
 
