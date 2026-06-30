@@ -852,15 +852,6 @@ export default function InicioView({
             Vive el mundial, pronostica cada partido y compite con tus amigos.
           </p>
         </div>
-        <button
-          onClick={onCalendarioClick}
-          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold shrink-0"
-          style={{ background: 'transparent', border: '1px solid rgba(255,255,255,0.12)', color: 'rgba(255,255,255,0.60)', cursor: 'pointer', transition: 'border-color 0.15s, color 0.15s' }}
-          onMouseEnter={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)'; e.currentTarget.style.color = '#fff' }}
-          onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)'; e.currentTarget.style.color = 'rgba(255,255,255,0.60)' }}
-        >
-          <Calendar className="h-4 w-4" /> Calendario
-        </button>
       </div>
 
       {/* ── 2-column grid ──────────────────────────────────────────────── */}
@@ -987,7 +978,7 @@ export default function InicioView({
                 className="text-xs font-semibold"
                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006A33' }}
               >
-                Ver todas →
+                Historial completo →
               </button>
             </div>
             <div className="grid grid-cols-2 gap-4">
