@@ -558,7 +558,7 @@ function MatchRow({
     </button>
   )
 
-  const isTBD = home === 'Por definir' && away === 'Por definir'
+  const isTBD = home === 'Por definir' || away === 'Por definir'
 
   const predictBtn = (
     <button
