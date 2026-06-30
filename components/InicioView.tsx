@@ -973,8 +973,8 @@ export default function InicioView({
                 onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.18)')}
                 onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.10)')}
               >
-                <span className="hidden sm:inline">Historial completo</span>
-                <span className="sm:hidden">Ver más</span>
+                <span className="hidden sm:inline">Ver mis predicciones</span>
+                <span className="sm:hidden">Predicciones</span>
                 <span style={{ fontSize: 11 }}>→</span>
               </button>
             </div>
