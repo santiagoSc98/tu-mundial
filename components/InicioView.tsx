@@ -955,13 +955,6 @@ export default function InicioView({
                 </div>
               </div>
 
-              <button
-                onClick={onGoToMisPredicciones}
-                className="text-sm text-[#006A33] mt-3 w-full text-right hover:underline"
-                style={{ background: 'none', border: 'none', cursor: 'pointer' }}
-              >
-                Ver mis pronósticos →
-              </button>
             </div>
           )}
         </div>
@@ -975,10 +968,13 @@ export default function InicioView({
               </h3>
               <button
                 onClick={onGoToMisPredicciones}
-                className="text-xs font-semibold"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#006A33' }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-colors"
+                style={{ background: 'rgba(0,196,106,0.10)', border: '1px solid rgba(0,196,106,0.25)', color: '#00C46A', cursor: 'pointer' }}
+                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.18)')}
+                onMouseLeave={e => (e.currentTarget.style.background = 'rgba(0,196,106,0.10)')}
               >
-                Historial completo →
+                Historial completo
+                <span style={{ fontSize: 11 }}>→</span>
               </button>
             </div>
             <div className="grid grid-cols-2 gap-4">
