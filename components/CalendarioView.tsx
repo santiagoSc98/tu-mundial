@@ -927,6 +927,10 @@ export default function CalendarioView({
             const BRACKET_RIGHT_IDS = ['537423','537424','537425','537426','537427','537428','537429','537430']
             const last32Left  = BRACKET_LEFT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last32Right = BRACKET_RIGHT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
+            // DEBUG: mostrar fixture_ids de LAST_16 para mapear el bracket correcto
+            console.log('[bracket] LAST_16 todos (orden cronológico):',
+              byStage.LAST_16.map(m => `${m.fixtureId} ${m.homeName} vs ${m.awayName} (${m.deadline?.slice(0,10)})`)
+            )
             const last16Left  = byStage.LAST_16.slice(0, 4)
             const last16Right = byStage.LAST_16.slice(4, 8)
             const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
