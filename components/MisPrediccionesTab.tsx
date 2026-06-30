@@ -64,12 +64,13 @@ interface Props {
   existingScores: Record<string, { home: number; away: number }>
   existingVotes?: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
   onTabChange?: (tab: string) => void
+  backTab?: string
   onPredict?: (predictionId: string, answer: string, homeScore: number, awayScore: number) => Promise<void>
   rank?: number
   points?: number
 }
 
-export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, existingVotes, onTabChange, onPredict, rank, points }: Props) {
+export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, existingVotes, onTabChange, backTab = 'inicio', onPredict, rank, points }: Props) {
   const [filter, setFilter] = useState<Filter>('todas')
   const [editingId,  setEditingId]  = useState<string | null>(null)
   const [editHome,   setEditHome]   = useState(0)
@@ -152,12 +153,12 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     <div>
       {onTabChange && (
         <button
-          onClick={() => onTabChange('inicio')}
+          onClick={() => onTabChange(backTab)}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 20px', transition: 'color 0.15s' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
         >
-          <ArrowLeft size={15} /> Inicio
+          <ArrowLeft size={15} /> {backTab === 'perfil' ? 'Mi Perfil' : 'Inicio'}
         </button>
       )}
       {/* ── Header ─────────────────────────────────────────────────────── */}

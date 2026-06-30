@@ -194,8 +194,14 @@ export default function HomeClient({
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
+  const [previousTab,  setPreviousTab]  = useState<Tab>('inicio')
   const [autoJoinCode, setAutoJoinCode] = useState<string | null>(pendingJoinCode ?? null)
   const [imgError,     setImgError]     = useState(false)
+
+  const navigateTo = useCallback((tab: Tab) => {
+    if (tab === 'mis-predicciones') setPreviousTab(activeTab)
+    setActiveTab(tab)
+  }, [activeTab])
 
   const SWIPE_TABS: Tab[] = ['inicio', 'posiciones', 'grupos', 'calendario']
   const contentRef   = useRef<HTMLDivElement>(null)
@@ -550,7 +556,7 @@ export default function HomeClient({
                 voteDistributions={localVotes}
                 onPredict={handlePredict}
                 userGroups={initialGroups}
-                onGoToMisPredicciones={() => setActiveTab('mis-predicciones')}
+                onGoToMisPredicciones={() => navigateTo('mis-predicciones')}
                 onCalendarioClick={() => setActiveTab('calendario')}
               />
             </ErrorBoundary>
@@ -561,7 +567,8 @@ export default function HomeClient({
               existingAnswers={mergedAnswers}
               existingScores={mergedScores}
               existingVotes={existingVotes}
-              onTabChange={(tab: string) => setActiveTab(tab as Tab)}
+              onTabChange={(tab: string) => navigateTo(tab as Tab)}
+              backTab={previousTab}
               onPredict={handlePredict}
               rank={rank}
               points={points}
@@ -603,7 +610,7 @@ export default function HomeClient({
               isAdmin={isAdmin}
               myBadges={myBadges}
               totalUsers={globalStats.totalUsers}
-              onTabChange={(tab: string) => setActiveTab(tab as Tab)}
+              onTabChange={(tab: string) => navigateTo(tab as Tab)}
               onSignOut={signOut}
             />
           )}
