@@ -284,7 +284,6 @@ function BConns({ pairCount, pairH, side }: { pairCount: number; pairH: number; 
 // ─── Knockout bracket components ─────────────────────────────────────────────
 interface KOMatch {
   id: string
-  fixtureId: string | null
   homeName: string
   awayName: string
   homeCode: string | null
@@ -905,7 +904,6 @@ export default function CalendarioView({
               const a = getTeamNameES(opts[opts.length - 1] ?? '')
               return {
                 id:        p.id,
-                fixtureId: (p as any).fixture_id ?? null,
                 homeName:  (h === 'Por definir' || !h) ? 'TBD' : h,
                 awayName:  (a === 'Por definir' || !a) ? 'TBD' : a,
                 homeCode:  p.home_team_code,
@@ -916,32 +914,6 @@ export default function CalendarioView({
                 deadline:  p.deadline ?? null,
               }
             }
-            // Mapeo fijo de fixture_id → posición en el bracket oficial del Mundial 2026
-            const BRACKET_LAST_32 = {
-              left:  [537415, 537416, 537417, 537418, 537419, 537420, 537421, 537422],
-              right: [537423, 537424, 537425, 537426, 537427, 537428, 537429, 537430],
-            }
-            // LAST_16: completar cuando Football-Data confirme los fixture_ids
-            // left[0]= gan(ALE/PAR) vs gan(FRA/SUE), left[1]= gan(SAF/CAN) vs gan(HOL/MAR)
-            // left[2]= gan(POR/CRO) vs gan(ESP/AUT), left[3]= gan(USA/BIH) vs gan(BEL/SEN)
-            // right[0]= gan(BRA/JAP) vs gan(CDM/NOR), right[1]= gan(MEX/ECU) vs gan(ING/RDC)
-            // right[2]= gan(ARG/CBV) vs gan(AUS/EGI), right[3]= gan(SUI/AGL) vs gan(COL/GHA)
-            const BRACKET_LAST_16 = {
-              left:  [] as number[], // pendiente confirmación API
-              right: [] as number[], // pendiente confirmación API
-            }
-
-            const orderByFixture = (matches: KOMatch[], ids: number[]): KOMatch[] => {
-              if (!ids.length) return matches // fallback a orden cronológico
-              const ordered = ids
-                .map(fid => matches.find(m => m.fixtureId === String(fid)))
-                .filter((m): m is KOMatch => !!m)
-              // Agregar los que no están en el mapeo al final (por si hay TBD)
-              const mapped = new Set(ordered.map(m => m.fixtureId))
-              const rest   = matches.filter(m => !mapped.has(m.fixtureId))
-              return [...ordered, ...rest]
-            }
-
             const byStage: Record<string, KOMatch[]> = {}
             for (const s of ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL', 'THIRD_PLACE']) {
               byStage[s] = predictions
@@ -949,11 +921,10 @@ export default function CalendarioView({
                 .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
                 .map(toPred)
             }
-
-            const last32Left  = orderByFixture(byStage.LAST_32, BRACKET_LAST_32.left)
-            const last32Right = orderByFixture(byStage.LAST_32, BRACKET_LAST_32.right)
-            const last16Left  = orderByFixture(byStage.LAST_16, BRACKET_LAST_16.left)
-            const last16Right = orderByFixture(byStage.LAST_16, BRACKET_LAST_16.right)
+            const last32Left  = byStage.LAST_32.slice(0, 8)
+            const last32Right = byStage.LAST_32.slice(8, 16)
+            const last16Left  = byStage.LAST_16.slice(0, 4)
+            const last16Right = byStage.LAST_16.slice(4, 8)
             const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
             const qfRight     = byStage.QUARTER_FINALS.slice(2, 4)
             const sfLeft      = byStage.SEMI_FINALS.slice(0, 1)
@@ -968,7 +939,7 @@ export default function CalendarioView({
             for (let i = 0; i < mobileMatches.length; i += 2) {
               mobilePairs.push({ m1: mobileMatches[i], m2: mobileMatches[i + 1] ?? null, next: mobileNextMatches[Math.floor(i / 2)] ?? null })
             }
-            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', fixtureId: null, homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
+            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
 
             return (
               <>
