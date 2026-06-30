@@ -152,12 +152,12 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     <div>
       {onTabChange && (
         <button
-          onClick={() => onTabChange('perfil')}
+          onClick={() => onTabChange('inicio')}
           style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 20px', transition: 'color 0.15s' }}
           onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
           onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
         >
-          <ArrowLeft size={15} /> Mi Perfil
+          <ArrowLeft size={15} /> Inicio
         </button>
       )}
       {/* ── Header ─────────────────────────────────────────────────────── */}
