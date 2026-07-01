@@ -1,7 +1,7 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { CheckCircle, XCircle, Clock, ArrowLeft } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { CheckCircle, XCircle, Clock, ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyTime, getTeamNameES } from '@/lib/worldcup'
 import { format } from 'date-fns'
@@ -72,7 +72,10 @@ interface Props {
 
 export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, existingVotes, onTabChange, backTab = 'inicio', onPredict, rank, points }: Props) {
   const [filter, setFilter] = useState<Filter>('todas')
+  const [currentPage, setCurrentPage] = useState(1)
   const [editingId,  setEditingId]  = useState<string | null>(null)
+
+  useEffect(() => setCurrentPage(1), [filter])
   const [editHome,   setEditHome]   = useState(0)
   const [editAway,   setEditAway]   = useState(0)
   const [submitting, setSubmitting] = useState(false)
@@ -134,6 +137,14 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
       return new Date(b.deadline ?? 0).getTime() - new Date(a.deadline ?? 0).getTime()
     }),
     [filtered]
+  )
+
+  const ITEMS_PER_PAGE = 10
+  const totalItems = sorted.length
+  const totalPages = Math.ceil(totalItems / ITEMS_PER_PAGE)
+  const paginatedPredictions = sorted.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
   )
 
   const CARD: React.CSSProperties = {
@@ -219,8 +230,9 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
           </p>
         </div>
       ) : (
+        <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {sorted.map(p => {
+          {paginatedPredictions.map(p => {
             const answered   = existingAnswers[p.id]
             const score      = existingScores[p.id]
             const isFootball = !!(p.home_team_code && p.away_team_code)
@@ -435,6 +447,54 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
             )
           })}
         </div>
+
+        {totalPages > 1 && (
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/8">
+            <p className="text-xs text-gray-500">
+              {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, totalItems)} de {totalItems}
+            </p>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 text-gray-400 disabled:opacity-30 hover:bg-white/4 transition"
+              >
+                <ChevronLeft size={14} />
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1)
+                .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
+                .reduce((acc, p, i, arr) => {
+                  if (i > 0 && p - arr[i - 1] > 1) acc.push('...')
+                  acc.push(p)
+                  return acc
+                }, [] as (number | string)[])
+                .map((p, i) =>
+                  p === '...'
+                    ? <span key={i} className="text-gray-600 text-xs px-1">…</span>
+                    : <button
+                        key={p}
+                        onClick={() => setCurrentPage(p as number)}
+                        className={`w-8 h-8 flex items-center justify-center rounded-lg border text-xs transition ${
+                          currentPage === p
+                            ? 'bg-[#006A33] border-[#006A33] text-white'
+                            : 'border-white/10 text-gray-400 hover:bg-white/4'
+                        }`}
+                      >
+                        {p}
+                      </button>
+                )
+              }
+              <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border border-white/10 text-gray-400 disabled:opacity-30 hover:bg-white/4 transition"
+              >
+                <ChevronRight size={14} />
+              </button>
+            </div>
+          </div>
+        )}
+        </>
       )}
     </div>
   )
