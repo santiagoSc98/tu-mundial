@@ -1,12 +1,16 @@
 'use client'
 
-import { useMemo, useState } from 'react'
-import { CheckCircle, XCircle, Clock, ArrowLeft } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react'
 import { getFlagUrl } from '@/lib/flagCodes'
 import { pyTime, getTeamNameES } from '@/lib/worldcup'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
 import type { Database } from '@/lib/database.types'
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const ITEMS_PER_PAGE = 10
 
 const SCORE_BTN: React.CSSProperties = {
   width: 32, height: 32, borderRadius: 8,
@@ -14,15 +18,6 @@ const SCORE_BTN: React.CSSProperties = {
   color: '#fff', fontSize: 18, fontWeight: 700, cursor: 'pointer',
   display: 'flex', alignItems: 'center', justifyContent: 'center',
 }
-
-function deduceResult(home: number, away: number, homeTeam: string, awayTeam: string, draw: string) {
-  if (home > away) return homeTeam
-  if (away > home) return awayTeam
-  return draw
-}
-
-type Prediction = Database['public']['Tables']['predictions']['Row']
-type Filter = 'todas' | 'acertadas' | 'falladas' | 'pendientes'
 
 const STAGE_LABELS: Record<string, string> = {
   GROUP_STAGE:    'Grupos',
@@ -34,6 +29,17 @@ const STAGE_LABELS: Record<string, string> = {
   THIRD_PLACE:    '3er Puesto',
   FINAL:          'Final',
 }
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function deduceResult(home: number, away: number, homeTeam: string, awayTeam: string, draw: string) {
+  if (home > away) return homeTeam
+  if (away > home) return awayTeam
+  return draw
+}
+
+type Prediction = Database['public']['Tables']['predictions']['Row']
+type Filter = 'todas' | 'acertadas' | 'falladas' | 'pendientes'
 
 function getStage(description: string | null): string {
   const key = description?.match(/Fase: ([A-Z_]+)/)?.[1] ?? ''
@@ -58,6 +64,8 @@ function WhatsAppIcon() {
   )
 }
 
+// ─── Props ────────────────────────────────────────────────────────────────────
+
 interface Props {
   predictions: Prediction[]
   existingAnswers: Record<string, string>
@@ -70,20 +78,28 @@ interface Props {
   points?: number
 }
 
-export default function MisPrediccionesTab({ predictions, existingAnswers, existingScores, existingVotes, onTabChange, backTab = 'inicio', onPredict, rank, points }: Props) {
-  const [filter, setFilter] = useState<Filter>('todas')
-  const [editingId,  setEditingId]  = useState<string | null>(null)
-  const [editHome,   setEditHome]   = useState(0)
-  const [editAway,   setEditAway]   = useState(0)
-  const [submitting, setSubmitting] = useState(false)
+// ─── Component ────────────────────────────────────────────────────────────────
 
+export default function MisPrediccionesTab({
+  predictions, existingAnswers, existingScores, existingVotes,
+  onTabChange, backTab = 'inicio', onPredict, rank, points,
+}: Props) {
+  const [filter,      setFilter]      = useState<Filter>('todas')
+  const [editingId,   setEditingId]   = useState<string | null>(null)
+  const [editHome,    setEditHome]    = useState(0)
+  const [editAway,    setEditAway]    = useState(0)
+  const [submitting,  setSubmitting]  = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  useEffect(() => setCurrentPage(1), [filter])
+
+  // ── Edit helpers ────────────────────────────────────────────────────────────
   const openEdit = (p: Prediction) => {
     const s = existingScores[p.id]
     setEditHome(s?.home ?? 0)
     setEditAway(s?.away ?? 0)
     setEditingId(p.id)
   }
-
   const closeEdit = () => setEditingId(null)
 
   const handleSave = async (p: Prediction, homeTeam: string, awayTeam: string, draw: string) => {
@@ -95,6 +111,7 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     setSubmitting(false)
   }
 
+  // ── Derived data ────────────────────────────────────────────────────────────
   const myPredictions = useMemo(
     () => predictions.filter(p => existingAnswers[p.id] !== undefined),
     [predictions, existingAnswers]
@@ -108,10 +125,20 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
 
   const stats = useMemo(() => {
     const resolved = myPredictions.filter(p => p.status === 'resolved')
+    const exactos  = resolved.filter(p => (existingVotes?.[p.id]?.pointsEarned ?? 0) >= 8).length
+    const correctos = resolved.filter(p => {
+      const pts = existingVotes?.[p.id]?.pointsEarned ?? 0
+      return pts > 0 && pts < 8
+    }).length
+    const fallados = resolved.filter(p => dbIsCorrect(p) === false).length
+    const totalPuntos = myPredictions.reduce((sum, p) => sum + (existingVotes?.[p.id]?.pointsEarned ?? 0), 0)
     return {
-      total:   myPredictions.length,
-      correct: resolved.filter(p => dbIsCorrect(p) === true).length,
+      total: myPredictions.length,
+      exactos,
+      correctos,
+      fallados,
       pending: myPredictions.filter(p => p.status !== 'resolved').length,
+      totalPuntos,
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [myPredictions, existingAnswers, existingVotes])
@@ -136,11 +163,8 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     [filtered]
   )
 
-  const CARD: React.CSSProperties = {
-    background: 'rgba(255,255,255,0.05)',
-    border: '1px solid rgba(255,255,255,0.08)',
-    borderRadius: 20,
-  }
+  const totalPages  = Math.ceil(sorted.length / ITEMS_PER_PAGE)
+  const paginated   = sorted.slice((currentPage - 1) * ITEMS_PER_PAGE, currentPage * ITEMS_PER_PAGE)
 
   const FILTERS: [Filter, string][] = [
     ['todas',      `Todas (${stats.total})`],
@@ -149,59 +173,57 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
     ['pendientes', 'Pendientes ⏳'],
   ]
 
+  // ── Render ──────────────────────────────────────────────────────────────────
   return (
     <div>
-      {onTabChange && (
-        <button
-          onClick={() => onTabChange(backTab)}
-          style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.45)', fontSize: 13, padding: '0 0 20px', transition: 'color 0.15s' }}
-          onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-          onMouseLeave={e => (e.currentTarget.style.color = 'rgba(255,255,255,0.45)')}
-        >
-          <ArrowLeft size={15} /> {backTab === 'perfil' ? 'Mi Perfil' : 'Inicio'}
-        </button>
-      )}
       {/* ── Header ─────────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 28 }}>
-        <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
-          Mis Predicciones
-        </h1>
-        <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.40)', margin: 0 }}>
-          Tu historial de predicciones
-        </p>
+      <div className="flex items-center justify-between mb-5">
+        {onTabChange ? (
+          <button
+            onClick={() => onTabChange(backTab)}
+            className="flex items-center gap-1.5 text-sm text-gray-400 px-3 py-1.5 rounded-lg border border-white/10 hover:bg-white/[0.04] transition"
+            style={{ cursor: 'pointer', background: 'transparent' }}
+          >
+            <ArrowLeft size={14} />
+            {backTab === 'perfil' ? 'Mi Perfil' : 'Volver'}
+          </button>
+        ) : <div />}
+        <div className="text-right">
+          <h2 className="text-xl font-medium text-white">Mis predicciones</h2>
+          <p className="text-xs mt-0.5" style={{ color: 'rgba(255,255,255,0.40)' }}>
+            {stats.total} predicciones · {stats.exactos + stats.correctos} acertadas
+            {stats.pending > 0 ? ` · ${stats.pending} pendiente${stats.pending > 1 ? 's' : ''}` : ''}
+          </p>
+        </div>
       </div>
 
-      {/* ── Stats row ──────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      {/* ── Stats tiles ─────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-4 gap-2.5 mb-4">
         {[
-          { value: stats.total,   label: 'PREDICCIONES', color: '#60a5fa' },
-          { value: stats.correct, label: 'ACERTADAS',    color: '#22c55e' },
-          { value: stats.pending, label: 'PENDIENTES',   color: '#F6B73C' },
+          { val: stats.exactos,    label: 'Exactos +8',  color: '#00C46A' },
+          { val: stats.correctos,  label: 'Correctos +3', color: '#60a5fa' },
+          { val: stats.fallados,   label: 'Fallados',    color: 'rgba(255,255,255,0.30)' },
+          { val: stats.totalPuntos, label: 'Puntos',     color: '#F6B73C' },
         ].map(s => (
-          <div key={s.label} style={{ ...CARD, padding: '16px 12px', textAlign: 'center' }}>
-            <p style={{ fontSize: 28, fontWeight: 800, color: s.color, fontFamily: 'var(--font-montserrat, system-ui)', margin: '0 0 4px', lineHeight: 1 }}>
-              {s.value}
-            </p>
-            <p style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.07em', color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-              {s.label}
-            </p>
+          <div key={s.label} className="rounded-xl p-3 text-center" style={{ background: 'rgba(255,255,255,0.04)' }}>
+            <div className="text-xl font-medium" style={{ color: s.color }}>{s.val}</div>
+            <div className="text-[11px] mt-0.5" style={{ color: 'rgba(255,255,255,0.35)' }}>{s.label}</div>
           </div>
         ))}
       </div>
 
-      {/* ── Filter pills ───────────────────────────────────────────────── */}
-      <div className="flex gap-2 mb-6 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+      {/* ── Filter pills ────────────────────────────────────────────────── */}
+      <div className="flex items-center gap-1.5 mb-4 flex-wrap">
         {FILTERS.map(([id, label]) => (
           <button
             key={id}
             onClick={() => setFilter(id)}
-            className="px-4 py-2 rounded-full text-sm font-semibold whitespace-nowrap shrink-0"
+            className="px-3.5 py-1.5 rounded-full text-xs border transition whitespace-nowrap"
             style={{
-              background: filter === id ? '#006A33' : 'rgba(255,255,255,0.06)',
-              color:      filter === id ? '#fff'    : 'rgba(255,255,255,0.55)',
-              border:     'none',
-              cursor:     'pointer',
-              transition: 'background 0.15s, color 0.15s',
+              background: filter === id ? 'rgba(0,106,51,0.20)' : 'transparent',
+              borderColor: filter === id ? 'rgba(0,106,51,0.40)' : 'rgba(255,255,255,0.10)',
+              color: filter === id ? '#00C46A' : 'rgba(255,255,255,0.45)',
+              cursor: 'pointer',
             }}
           >
             {label}
@@ -209,18 +231,16 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
         ))}
       </div>
 
-      {/* ── Prediction list ────────────────────────────────────────────── */}
+      {/* ── List ────────────────────────────────────────────────────────── */}
       {sorted.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '64px 0' }}>
+        <div className="text-center py-16">
           <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)' }}>
-            {stats.total === 0
-              ? 'Todavía no hiciste ninguna predicción'
-              : 'No hay predicciones en esta categoría'}
+            {stats.total === 0 ? 'Todavía no hiciste ninguna predicción' : 'No hay predicciones en esta categoría'}
           </p>
         </div>
       ) : (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {sorted.map(p => {
+        <div className="flex flex-col gap-2">
+          {paginated.map(p => {
             const answered   = existingAnswers[p.id]
             const score      = existingScores[p.id]
             const isFootball = !!(p.home_team_code && p.away_team_code)
@@ -238,186 +258,189 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
             const canEdit    = onPredict && !isResolved && new Date() < new Date((p.deadline ?? 0) as string)
             const isEditing  = editingId === p.id
 
-            const STATUS = isCorrect
-              ? { icon: <CheckCircle style={{ width: 20, height: 20, color: '#22c55e' }} />,                          color: '#22c55e',               bg: 'rgba(34,197,94,0.07)',    border: 'rgba(34,197,94,0.18)'    }
-              : isFailed
-              ? { icon: <XCircle    style={{ width: 20, height: 20, color: '#f87171' }} />,                          color: '#f87171',               bg: 'rgba(248,113,113,0.07)',  border: 'rgba(248,113,113,0.18)'  }
-              : { icon: <Clock      style={{ width: 20, height: 20, color: 'rgba(255,255,255,0.28)' }} />,           color: 'rgba(255,255,255,0.55)', bg: 'rgba(255,255,255,0.04)', border: 'rgba(255,255,255,0.08)'  }
+            const ptsEarned  = existingVotes?.[p.id]?.pointsEarned ?? 0
+            const pronóstico = score ? `${answered} ${score.home}–${score.away}` : answered
 
-            const pronóstico = score
-              ? `${answered} ${score.home}–${score.away}`
-              : answered
+            // Row border/bg color
+            const rowBorderColor = !isResolved
+              ? 'rgba(246,183,60,0.25)'
+              : isCorrect ? 'rgba(34,197,94,0.18)'
+              : isFailed  ? 'rgba(248,113,113,0.18)'
+              : 'rgba(255,255,255,0.08)'
+            const rowBg = !isResolved
+              ? 'rgba(246,183,60,0.04)'
+              : isCorrect ? 'rgba(34,197,94,0.04)'
+              : isFailed  ? 'rgba(248,113,113,0.04)'
+              : 'rgba(255,255,255,0.03)'
+
+            // Points badge style
+            const badgeStyle = ptsEarned >= 8
+              ? { bg: 'rgba(0,196,106,0.15)', color: '#00C46A',   border: 'rgba(0,196,106,0.25)' }
+              : ptsEarned > 0
+              ? { bg: 'rgba(59,130,246,0.15)', color: '#60a5fa',  border: 'rgba(59,130,246,0.25)' }
+              : !isResolved
+              ? { bg: 'rgba(246,183,60,0.15)', color: '#F6B73C',  border: 'rgba(246,183,60,0.25)' }
+              : { bg: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.30)', border: 'rgba(255,255,255,0.10)' }
 
             return (
               <div
                 key={p.id}
-                style={{ background: STATUS.bg, border: `1px solid ${STATUS.border}`, borderRadius: 20, padding: '16px 20px' }}
+                className="rounded-xl transition"
+                style={{ border: `1px solid ${rowBorderColor}`, background: rowBg }}
               >
-                {/* Match info + status icon */}
-                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    {isFootball ? (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 7, flexWrap: 'wrap' }}>
-                        {homeFlag && <img src={homeFlag} alt={home} style={{ width: 22, height: 15, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />}
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{home}</span>
-                        <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>vs</span>
-                        <span style={{ fontSize: 14, fontWeight: 700, color: '#fff' }}>{away}</span>
-                        {awayFlag && <img src={awayFlag} alt={away} style={{ width: 22, height: 15, objectFit: 'cover', borderRadius: 3, flexShrink: 0 }} />}
+                {/* ── Compact row ─────────────────────────────────── */}
+                <div
+                  className="grid items-center gap-2 px-4 py-3"
+                  style={{ gridTemplateColumns: '1fr auto auto auto auto' }}
+                >
+                  {/* Left: flags + info */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {isFootball && (
+                      <div className="flex gap-0.5 flex-shrink-0">
+                        {homeFlag && <img src={homeFlag} alt="" className="w-5 h-3.5 rounded-sm object-cover" />}
+                        {awayFlag && <img src={awayFlag} alt="" className="w-5 h-3.5 rounded-sm object-cover" />}
                       </div>
-                    ) : (
-                      <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0 }}>{p.title}</p>
                     )}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, marginTop: 4 }}>
-                      {stage && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{stage}</span>}
-                      {stage && <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.18)' }}>·</span>}
-                      <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                        {format(ko, "d MMM", { locale: es }).toUpperCase()} · {pyTime(ko)}
-                      </span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-white truncate">
+                        {isFootball ? `${home} vs ${away}` : (p.title ?? '')}
+                      </p>
+                      <p className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                        {format(ko, "d MMM", { locale: es }).toUpperCase()} · {pyTime(ko)}{stage ? ` · ${stage}` : ''}
+                      </p>
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, flexShrink: 0 }}>
-                    {STATUS.icon}
-                    {isCorrect && (
-                      <span style={{ fontSize: 11, fontWeight: 800, color: '#22c55e' }}>
-                        +{existingVotes?.[p.id]?.pointsEarned ?? 3} pts
-                      </span>
-                    )}
+                  {/* Mi pronóstico */}
+                  <div className="text-xs text-right whitespace-nowrap" style={{ color: 'rgba(255,255,255,0.55)' }}>
+                    {pronóstico}
                   </div>
-                </div>
 
-                {/* Pronóstico */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: 'rgba(0,0,0,0.12)', borderRadius: 10, marginBottom: 6 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.40)', flexShrink: 0 }}>Tu pronóstico:</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: STATUS.color }}>{pronóstico}</span>
-                  {canEdit && !isEditing && (
+                  {/* Resultado */}
+                  <div className="text-xs text-center whitespace-nowrap w-12" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                    {isResolved
+                      ? (p as { exact_score_home?: number | null }).exact_score_home != null
+                        ? `${(p as { exact_score_home?: number | null }).exact_score_home}–${(p as { exact_score_away?: number | null }).exact_score_away}`
+                        : (p.correct_answer ?? '—')
+                      : 'Pend.'}
+                  </div>
+
+                  {/* Points badge */}
+                  <span
+                    className="inline-flex items-center justify-center min-w-[44px] px-2 py-1 rounded-full text-xs font-medium"
+                    style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}` }}
+                  >
+                    {!isResolved ? 'Pend.' : `+${ptsEarned}`}
+                  </span>
+
+                  {/* Editar button or spacer */}
+                  {canEdit && !isEditing ? (
                     <button
                       onClick={() => openEdit(p)}
-                      style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 8, background: 'rgba(246,183,60,0.12)', border: '1px solid rgba(246,183,60,0.25)', color: '#F6B73C', fontSize: 11, fontWeight: 700, cursor: 'pointer' }}
+                      className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] transition whitespace-nowrap"
+                      style={{ border: '1px solid rgba(246,183,60,0.30)', color: '#F6B73C', background: 'rgba(246,183,60,0.08)', cursor: 'pointer' }}
                     >
                       Editar
                     </button>
+                  ) : (
+                    <div className="w-14" />
                   )}
                 </div>
 
-                {/* Inline editor */}
+                {/* ── Inline editor ───────────────────────────────── */}
                 {isEditing && (
-                  <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px', marginBottom: 8 }}>
-                    <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>
-                      Cambiar predicción
-                    </p>
+                  <div className="px-4 pb-4">
+                    <div style={{ background: 'rgba(0,0,0,0.18)', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '14px 16px' }}>
+                      <p style={{ margin: '0 0 12px', fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.40)', textTransform: 'uppercase' }}>
+                        Cambiar predicción
+                      </p>
 
-                    {isFootball ? (
-                      <>
-                        {/* Compact score picker */}
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
-                          {/* Home */}
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {homeFlag && <img src={homeFlag} alt={home} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{home}</span>
+                      {isFootball ? (
+                        <>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, marginBottom: 12 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                {homeFlag && <img src={homeFlag} alt={home} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{home}</span>
+                              </div>
+                              <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editHome}</span>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.max(0, s - 1))}>−</button>
+                                <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.min(9, s + 1))}>+</button>
+                              </div>
                             </div>
-                            <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editHome}</span>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.max(0, s - 1))}>−</button>
-                              <button style={SCORE_BTN} onClick={() => setEditHome(s => Math.min(9, s + 1))}>+</button>
-                            </div>
-                          </div>
-
-                          <span style={{ fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat, system-ui)' }}>:</span>
-
-                          {/* Away */}
-                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{away}</span>
-                              {awayFlag && <img src={awayFlag} alt={away} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
-                            </div>
-                            <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editAway}</span>
-                            <div style={{ display: 'flex', gap: 6 }}>
-                              <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.max(0, s - 1))}>−</button>
-                              <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.min(9, s + 1))}>+</button>
+                            <span style={{ fontSize: 28, fontWeight: 900, color: 'rgba(255,255,255,0.25)', fontFamily: 'var(--font-montserrat, system-ui)' }}>:</span>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ fontSize: 12, fontWeight: 700, color: '#fff' }}>{away}</span>
+                                {awayFlag && <img src={awayFlag} alt={away} style={{ width: 28, height: 19, objectFit: 'cover', borderRadius: 3 }} />}
+                              </div>
+                              <span style={{ fontSize: 36, fontWeight: 900, color: '#fff', lineHeight: 1, fontFamily: 'var(--font-montserrat, system-ui)' }}>{editAway}</span>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.max(0, s - 1))}>−</button>
+                                <button style={SCORE_BTN} onClick={() => setEditAway(s => Math.min(9, s + 1))}>+</button>
+                              </div>
                             </div>
                           </div>
-                        </div>
-
-                        {/* Result preview */}
-                        {(() => {
-                          const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
-                          const h2 = getTeamNameES(homeRaw2), a2 = getTeamNameES(awayRaw2)
-                          const predicted = deduceResult(editHome, editAway, h2, a2, draw2)
-                          return (
-                            <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 12px' }}>
-                              Ganará: <strong style={{ color: '#fff' }}>{predicted}</strong>
-                            </p>
-                          )
-                        })()}
-
-                        <div style={{ display: 'flex', gap: 8 }}>
-                          <button onClick={closeEdit} style={{ flex: 1, padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
+                          {(() => {
+                            const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
+                            const h2 = getTeamNameES(homeRaw2), a2 = getTeamNameES(awayRaw2)
+                            const predicted = deduceResult(editHome, editAway, h2, a2, draw2)
+                            return (
+                              <p style={{ textAlign: 'center', fontSize: 12, color: 'rgba(255,255,255,0.45)', margin: '0 0 12px' }}>
+                                Ganará: <strong style={{ color: '#fff' }}>{predicted}</strong>
+                              </p>
+                            )
+                          })()}
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <button onClick={closeEdit} style={{ flex: 1, padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
+                              Cancelar
+                            </button>
+                            <button
+                              onClick={() => {
+                                const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
+                                handleSave(p, getTeamNameES(homeRaw2), getTeamNameES(awayRaw2), draw2)
+                              }}
+                              style={{ flex: 1, padding: '9px', borderRadius: 10, background: '#006A33', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}
+                            >
+                              Guardar cambio
+                            </button>
+                          </div>
+                        </>
+                      ) : (
+                        <div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
+                            {getOptions(p.options).filter(Boolean).map(opt => (
+                              <button
+                                key={opt}
+                                onClick={async () => {
+                                  if (!onPredict || submitting) return
+                                  setSubmitting(true)
+                                  closeEdit()
+                                  await onPredict(p.id, opt, 0, 0)
+                                  setSubmitting(false)
+                                }}
+                                style={{ padding: '10px 14px', borderRadius: 10, border: `1px solid ${answered === opt ? 'rgba(0,106,51,0.60)' : 'rgba(255,255,255,0.10)'}`, background: answered === opt ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.05)', color: answered === opt ? '#4ade80' : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
+                              >
+                                {opt}
+                              </button>
+                            ))}
+                          </div>
+                          <button onClick={closeEdit} style={{ width: '100%', padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
                             Cancelar
                           </button>
-                          <button
-                            onClick={() => {
-                              const [homeRaw2, draw2, awayRaw2] = getOptions(p.options)
-                              handleSave(p, getTeamNameES(homeRaw2), getTeamNameES(awayRaw2), draw2)
-                            }}
-                            style={{ flex: 1, padding: '9px', borderRadius: 10, background: '#006A33', border: 'none', cursor: 'pointer', color: '#fff', fontSize: 13, fontWeight: 700 }}
-                          >
-                            Guardar cambio
-                          </button>
                         </div>
-                      </>
-                    ) : (
-                      /* Non-football: option buttons */
-                      <div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>
-                          {getOptions(p.options).filter(Boolean).map(opt => (
-                            <button
-                              key={opt}
-                              onClick={async () => {
-                                if (!onPredict || submitting) return
-                                setSubmitting(true)
-                                closeEdit()
-                                await onPredict(p.id, opt, 0, 0)
-                                setSubmitting(false)
-                              }}
-                              style={{ padding: '10px 14px', borderRadius: 10, border: `1px solid ${answered === opt ? 'rgba(0,106,51,0.60)' : 'rgba(255,255,255,0.10)'}`, background: answered === opt ? 'rgba(0,106,51,0.20)' : 'rgba(255,255,255,0.05)', color: answered === opt ? '#4ade80' : '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}
-                            >
-                              {opt}
-                            </button>
-                          ))}
-                        </div>
-                        <button onClick={closeEdit} style={{ width: '100%', padding: '9px', borderRadius: 10, background: 'transparent', border: '1px solid rgba(255,255,255,0.10)', cursor: 'pointer', color: 'rgba(255,255,255,0.50)', fontSize: 13, fontWeight: 600 }}>
-                          Cancelar
-                        </button>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
                 )}
 
-                {/* Resultado */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, paddingLeft: 4 }}>
-                  <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.35)', flexShrink: 0 }}>Resultado:</span>
-                  {isResolved ? (
-                    <span style={{ fontSize: 12, fontWeight: 600, color: isCorrect ? '#22c55e' : '#f87171' }}>
-                      {p.correct_answer ?? '—'}
-                      {(p as { exact_score_home?: number | null }).exact_score_home != null && (
-                        <span style={{ fontWeight: 400, color: 'rgba(255,255,255,0.45)', marginLeft: 4 }}>
-                          {(p as { exact_score_home?: number | null }).exact_score_home}–{(p as { exact_score_away?: number | null }).exact_score_away}
-                        </span>
-                      )}
-                    </span>
-                  ) : (
-                    <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>Pendiente</span>
-                  )}
-                </div>
-
-                {/* Compartir (solo predicciones resueltas) */}
+                {/* ── WhatsApp share (resolved only) ──────────────── */}
                 {isResolved && (
-                  <div style={{ marginTop: 10, display: 'flex', justifyContent: 'flex-end' }}>
+                  <div className="px-4 pb-3 flex justify-end">
                     <button
                       onClick={() => {
-                        const result = isCorrect ? 'Acerté' : 'Fallé'
+                        const result    = isCorrect ? 'Acerté' : 'Fallé'
                         const matchLine = isFootball
                           ? `${home} vs ${away}: pronostiqué ${pronóstico}`
                           : `"${p.title}": pronostiqué ${pronóstico}`
@@ -425,7 +448,7 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
                         const text = `${result} en mi predicción 🏆\n${matchLine}\n${rankLine}\n¿Podés superarme? tu-mundial.vercel.app`
                         window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
                       }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 12px', borderRadius: 10, background: '#25D366', color: '#fff', border: 'none', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: '#25D366', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
                     >
                       <WhatsAppIcon /> Compartir
                     </button>
@@ -434,6 +457,68 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
               </div>
             )
           })}
+        </div>
+      )}
+
+      {/* ── Pagination ──────────────────────────────────────────────────── */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between mt-5 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <p className="text-xs" style={{ color: 'rgba(255,255,255,0.35)' }}>
+            {(currentPage - 1) * ITEMS_PER_PAGE + 1}–{Math.min(currentPage * ITEMS_PER_PAGE, sorted.length)} de {sorted.length}
+          </p>
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border transition"
+              style={{ borderColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.45)', background: 'transparent', cursor: currentPage === 1 ? 'not-allowed' : 'pointer', opacity: currentPage === 1 ? 0.3 : 1 }}
+            >
+              <ChevronLeft size={14} />
+            </button>
+
+            {Array.from({ length: Math.min(5, totalPages) }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                onClick={() => setCurrentPage(page)}
+                className="w-8 h-8 flex items-center justify-center rounded-lg border text-xs transition"
+                style={{
+                  background:   currentPage === page ? '#006A33' : 'transparent',
+                  borderColor:  currentPage === page ? '#006A33' : 'rgba(255,255,255,0.10)',
+                  color:        currentPage === page ? '#fff'    : 'rgba(255,255,255,0.45)',
+                  cursor: 'pointer',
+                }}
+              >
+                {page}
+              </button>
+            ))}
+
+            {totalPages > 5 && (
+              <>
+                <span className="text-xs px-1" style={{ color: 'rgba(255,255,255,0.25)' }}>…</span>
+                <button
+                  onClick={() => setCurrentPage(totalPages)}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg border text-xs transition"
+                  style={{
+                    background:  currentPage === totalPages ? '#006A33' : 'transparent',
+                    borderColor: currentPage === totalPages ? '#006A33' : 'rgba(255,255,255,0.10)',
+                    color:       currentPage === totalPages ? '#fff'    : 'rgba(255,255,255,0.45)',
+                    cursor: 'pointer',
+                  }}
+                >
+                  {totalPages}
+                </button>
+              </>
+            )}
+
+            <button
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className="w-8 h-8 flex items-center justify-center rounded-lg border transition"
+              style={{ borderColor: 'rgba(255,255,255,0.10)', color: 'rgba(255,255,255,0.45)', background: 'transparent', cursor: currentPage === totalPages ? 'not-allowed' : 'pointer', opacity: currentPage === totalPages ? 0.3 : 1 }}
+            >
+              <ChevronRight size={14} />
+            </button>
+          </div>
         </div>
       )}
     </div>
