@@ -244,7 +244,9 @@ export default function MisPrediccionesTab({
             const answered   = existingAnswers[p.id]
             const score      = existingScores[p.id]
             const isFootball = !!(p.home_team_code && p.away_team_code)
-            const [homeRaw,, awayRaw] = getOptions(p.options)
+            const rawOpts    = Array.isArray(p.options) ? (p.options as string[]) : []
+            const homeRaw    = rawOpts[0] ?? ''
+            const awayRaw    = rawOpts[rawOpts.length - 1] ?? ''
             const home     = getTeamNameES(homeRaw)
             const away     = getTeamNameES(awayRaw)
             const homeFlag = getFlagUrl(p.home_team_code)
@@ -288,10 +290,72 @@ export default function MisPrediccionesTab({
                 className="rounded-xl transition"
                 style={{ border: `1px solid ${rowBorderColor}`, background: rowBg }}
               >
-                {/* ── Compact row ─────────────────────────────────── */}
+                {/* ── MOBILE layout (< md) ────────────────────────── */}
+                <div className="md:hidden flex flex-col gap-1 px-3 py-2.5">
+                  {/* Línea 1: banderas + nombre + badge */}
+                  <div className="flex items-center gap-2">
+                    {isFootball && (
+                      <div className="flex gap-0.5 flex-shrink-0">
+                        {homeFlag && <img src={homeFlag} alt="" className="w-4 h-3 rounded-sm object-cover" />}
+                        {awayFlag && <img src={awayFlag} alt="" className="w-4 h-3 rounded-sm object-cover" />}
+                      </div>
+                    )}
+                    <span className="text-sm font-medium text-white flex-1 truncate">
+                      {isFootball ? `${home} vs ${away}` : (p.title ?? '')}
+                    </span>
+                    <span
+                      className="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-medium flex-shrink-0"
+                      style={{ background: badgeStyle.bg, color: badgeStyle.color, border: `1px solid ${badgeStyle.border}` }}
+                    >
+                      {!isResolved ? 'Pend.' : `+${ptsEarned}`}
+                    </span>
+                  </div>
+                  {/* Línea 2: fecha + pronóstico → resultado */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.35)' }}>
+                      {format(ko, "d MMM", { locale: es }).toUpperCase()}{stage ? ` · ${stage}` : ''}
+                    </span>
+                    <span className="text-[11px]" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                      {pronóstico}
+                      {isResolved && (p as { exact_score_home?: number | null }).exact_score_home != null && (
+                        <> → {(p as { exact_score_home?: number | null }).exact_score_home}–{(p as { exact_score_away?: number | null }).exact_score_away}</>
+                      )}
+                    </span>
+                  </div>
+                  {/* Línea 3: botones */}
+                  {(canEdit || isResolved) && (
+                    <div className="flex items-center justify-end gap-2 mt-0.5">
+                      {canEdit && !isEditing && (
+                        <button
+                          onClick={() => openEdit(p)}
+                          className="flex items-center gap-1 px-2 py-1 rounded-lg text-[11px] transition"
+                          style={{ border: '1px solid rgba(246,183,60,0.30)', color: '#F6B73C', background: 'rgba(246,183,60,0.08)', cursor: 'pointer' }}
+                        >
+                          Editar
+                        </button>
+                      )}
+                      {isResolved && (
+                        <button
+                          onClick={() => {
+                            const result    = isCorrect ? 'Acerté' : 'Fallé'
+                            const matchLine = isFootball ? `${home} vs ${away}: pronostiqué ${pronóstico}` : `"${p.title}": pronostiqué ${pronóstico}`
+                            const rankLine  = rank ? `Estoy #${rank}${points !== undefined ? ` con ${points} pts` : ''} en TU MUNDIAL.` : 'Jugá conmigo en TU MUNDIAL.'
+                            window.open(`https://wa.me/?text=${encodeURIComponent(`${result} en mi predicción 🏆\n${matchLine}\n${rankLine}\n¿Podés superarme? tu-mundial.vercel.app`)}`, '_blank')
+                          }}
+                          className="flex items-center justify-center w-7 h-7 rounded-lg transition"
+                          style={{ background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.20)', color: '#25D366', cursor: 'pointer' }}
+                        >
+                          <WhatsAppIcon />
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── DESKTOP layout (≥ md) ───────────────────────── */}
                 <div
-                  className="grid items-center gap-2 px-4 py-3"
-                  style={{ gridTemplateColumns: '1fr auto auto auto auto' }}
+                  className="hidden md:grid items-center gap-2 px-4 py-3"
+                  style={{ gridTemplateColumns: '1fr auto auto auto auto auto' }}
                 >
                   {/* Left: flags + info */}
                   <div className="flex items-center gap-2.5 min-w-0">
@@ -344,6 +408,24 @@ export default function MisPrediccionesTab({
                     </button>
                   ) : (
                     <div className="w-14" />
+                  )}
+
+                  {/* WhatsApp share icon */}
+                  {isResolved ? (
+                    <button
+                      onClick={() => {
+                        const result    = isCorrect ? 'Acerté' : 'Fallé'
+                        const matchLine = isFootball ? `${home} vs ${away}: pronostiqué ${pronóstico}` : `"${p.title}": pronostiqué ${pronóstico}`
+                        const rankLine  = rank ? `Estoy #${rank}${points !== undefined ? ` con ${points} pts` : ''} en TU MUNDIAL.` : 'Jugá conmigo en TU MUNDIAL.'
+                        window.open(`https://wa.me/?text=${encodeURIComponent(`${result} en mi predicción 🏆\n${matchLine}\n${rankLine}\n¿Podés superarme? tu-mundial.vercel.app`)}`, '_blank')
+                      }}
+                      className="flex items-center justify-center w-7 h-7 rounded-lg transition flex-shrink-0"
+                      style={{ background: 'rgba(37,211,102,0.10)', border: '1px solid rgba(37,211,102,0.20)', color: '#25D366', cursor: 'pointer' }}
+                    >
+                      <WhatsAppIcon />
+                    </button>
+                  ) : (
+                    <div className="w-7" />
                   )}
                 </div>
 
@@ -435,25 +517,6 @@ export default function MisPrediccionesTab({
                   </div>
                 )}
 
-                {/* ── WhatsApp share (resolved only) ──────────────── */}
-                {isResolved && (
-                  <div className="px-4 pb-3 flex justify-end">
-                    <button
-                      onClick={() => {
-                        const result    = isCorrect ? 'Acerté' : 'Fallé'
-                        const matchLine = isFootball
-                          ? `${home} vs ${away}: pronostiqué ${pronóstico}`
-                          : `"${p.title}": pronostiqué ${pronóstico}`
-                        const rankLine = rank ? `Estoy #${rank}${points !== undefined ? ` con ${points} pts` : ''} en TU MUNDIAL.` : 'Jugá conmigo en TU MUNDIAL.'
-                        const text = `${result} en mi predicción 🏆\n${matchLine}\n${rankLine}\n¿Podés superarme? tu-mundial.vercel.app`
-                        window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
-                      }}
-                      style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '5px 10px', borderRadius: 8, background: '#25D366', color: '#fff', border: 'none', fontSize: 11, fontWeight: 600, cursor: 'pointer' }}
-                    >
-                      <WhatsAppIcon /> Compartir
-                    </button>
-                  </div>
-                )}
               </div>
             )
           })}
