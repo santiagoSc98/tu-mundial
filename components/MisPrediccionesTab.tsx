@@ -47,6 +47,7 @@ function getKickoff(p: Prediction): Date {
 
 function getOptions(options: unknown): [string, string, string] {
   const opts = Array.isArray(options) ? (options as string[]) : []
+  if (opts.length === 2) return [opts[0] ?? '', '', opts[1] ?? '']
   return [opts[0] ?? '', opts[1] ?? 'Empate', opts[2] ?? '']
 }
 
