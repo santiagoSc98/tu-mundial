@@ -664,31 +664,26 @@ function MatchRow({
           <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">{stage}</span>
         </div>
 
-        {/* MIDDLE: equipos con ganador resaltado */}
-        <div className="flex flex-col gap-0.5 mb-2">
-          {/* Home */}
-          <div className={`flex items-center justify-between gap-1.5 px-1.5 py-1 rounded-md ${homeWins ? 'bg-[rgba(0,196,106,0.08)] border border-[rgba(0,196,106,0.15)]' : ''}`}>
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              {homeFlag
-                ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-                : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
-              <span className={`text-xs truncate ${homeWins ? 'text-white font-medium' : awayWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{home}</span>
-            </div>
-            {isResolved && pred.exact_score_home != null && (
-              <span className={`text-sm font-semibold flex-shrink-0 ${homeWins ? 'text-[#00C46A]' : 'text-gray-500'}`}>{pred.exact_score_home}</span>
-            )}
+        {/* MIDDLE: equipos en una fila + marcador si resuelto */}
+        <div className="flex items-center justify-between gap-1 mb-2">
+          <div className="flex items-center gap-1.5 flex-1 min-w-0">
+            {homeFlag
+              ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+            <span className={`text-xs truncate ${homeWins ? 'text-white font-medium' : awayWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{home}</span>
           </div>
-          {/* Away */}
-          <div className={`flex items-center justify-between gap-1.5 px-1.5 py-1 rounded-md ${awayWins ? 'bg-[rgba(0,196,106,0.08)] border border-[rgba(0,196,106,0.15)]' : ''}`}>
-            <div className="flex items-center gap-1.5 flex-1 min-w-0">
-              {awayFlag
-                ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-                : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
-              <span className={`text-xs truncate ${awayWins ? 'text-white font-medium' : homeWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{away}</span>
-            </div>
-            {isResolved && pred.exact_score_away != null && (
-              <span className={`text-sm font-semibold flex-shrink-0 ${awayWins ? 'text-[#00C46A]' : 'text-gray-500'}`}>{pred.exact_score_away}</span>
-            )}
+          {isResolved && pred.exact_score_home != null && pred.exact_score_away != null ? (
+            <span className="text-sm font-bold text-white bg-white/[0.07] rounded-lg px-2.5 py-0.5 flex-shrink-0">
+              {pred.exact_score_home}–{pred.exact_score_away}
+            </span>
+          ) : (
+            <span className="text-[10px] text-gray-500 px-2 flex-shrink-0">vs</span>
+          )}
+          <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
+            <span className={`text-xs truncate text-right ${awayWins ? 'text-white font-medium' : homeWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{away}</span>
+            {awayFlag
+              ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
           </div>
         </div>
 
