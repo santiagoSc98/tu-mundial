@@ -658,10 +658,13 @@ function MatchRow({
       {/* ── MOBILE: card vertical ──────────────────────────────────── */}
       <div className={`md:hidden rounded-2xl border p-3 mb-2 ${cardClass}`}>
 
-        {/* TOP: hora + fase */}
-        <div className="flex items-center gap-1.5 mb-2">
-          <span className="text-xs font-semibold text-white">{pyTime(ko)}</span>
-          <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">{stage}</span>
+        {/* TOP: hora + fase | points badge (arriba derecha) */}
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs font-semibold text-white">{pyTime(ko)}</span>
+            <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">{stage}</span>
+          </div>
+          {isResolved && hasMyAnswer ? pointsBadge : null}
         </div>
 
         {/* MIDDLE: equipos en fila horizontal */}
@@ -690,8 +693,7 @@ function MatchRow({
             <PenaltyBadge prediction={prediction} compact />
           </div>
           <div className="flex items-center gap-1.5 flex-shrink-0 ml-2">
-            {isResolved && hasMyAnswer ? pointsBadge
-              : !isResolved && hasMyAnswer && open ? editBtn
+            {!isResolved && hasMyAnswer && open ? editBtn
               : !isResolved && !hasMyAnswer && open ? predictBtn
               : null}
             {predictionsBtn}
