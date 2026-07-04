@@ -338,6 +338,7 @@ function FeaturedMatchPanel({
   const answered = !!existingAnswer
   const canEdit  = answered && open
   const isFootball = !!(prediction.home_team_code && prediction.away_team_code)
+  const isTBD = home === 'Por definir' || away === 'Por definir'
   const resultPoints = Math.round(3 * (prediction.difficulty_multiplier ?? 1))
   const exactPoints  = Math.round(8 * (prediction.difficulty_multiplier ?? 1))
 
@@ -477,12 +478,13 @@ function FeaturedMatchPanel({
         </div>
       ) : open && isFootball ? (
         <button
-          onClick={() => setShowPredict(true)}
-          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 0', borderRadius: 16, background: '#006A33', border: 'none', color: '#fff', fontSize: 15, fontWeight: 700, cursor: 'pointer', transition: 'opacity 0.15s' }}
-          onMouseEnter={e => (e.currentTarget.style.opacity = '0.88')}
-          onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+          onClick={isTBD ? undefined : () => setShowPredict(true)}
+          disabled={isTBD}
+          style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '16px 0', borderRadius: 16, background: isTBD ? 'rgba(255,255,255,0.06)' : '#006A33', border: 'none', color: isTBD ? 'rgba(255,255,255,0.30)' : '#fff', fontSize: 15, fontWeight: 700, cursor: isTBD ? 'not-allowed' : 'pointer', transition: 'opacity 0.15s' }}
+          onMouseEnter={e => { if (!isTBD) (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
         >
-          <Zap style={{ width: 16, height: 16 }} /> Hacer predicción
+          <Zap style={{ width: 16, height: 16 }} /> {isTBD ? 'Equipos por definir' : 'Hacer predicción'}
         </button>
       ) : null}
     </div>
