@@ -664,27 +664,23 @@ function MatchRow({
           <span className="text-[10px] text-gray-400 bg-white/[0.06] rounded-md px-1.5 py-0.5">{stage}</span>
         </div>
 
-        {/* MIDDLE: equipos en una fila + marcador si resuelto */}
-        <div className="flex items-center justify-between gap-1 mb-2">
-          <div className="flex items-center gap-1.5 flex-1 min-w-0">
-            {homeFlag
-              ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
-            <span className={`text-xs truncate ${homeWins ? 'text-white font-medium' : awayWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{home}</span>
-          </div>
-          {isResolved && pred.exact_score_home != null && pred.exact_score_away != null ? (
-            <span className="text-sm font-bold text-white bg-white/[0.07] rounded-lg px-2.5 py-0.5 flex-shrink-0">
-              {pred.exact_score_home}–{pred.exact_score_away}
-            </span>
-          ) : (
-            <span className="text-[10px] text-gray-500 px-2 flex-shrink-0">vs</span>
-          )}
-          <div className="flex items-center gap-1.5 flex-1 min-w-0 justify-end">
-            <span className={`text-xs truncate text-right ${awayWins ? 'text-white font-medium' : homeWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{away}</span>
-            {awayFlag
-              ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
-              : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
-          </div>
+        {/* MIDDLE: equipos en fila horizontal */}
+        <div className="flex items-center gap-1.5 mb-2 min-w-0">
+          {homeFlag
+            ? <img src={homeFlag} alt={home} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className={`text-xs truncate ${homeWins ? 'text-white font-medium' : awayWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{home}</span>
+          {isResolved && pred.exact_score_home != null ? (
+            <span className={`text-sm font-bold flex-shrink-0 ${homeWins ? 'text-[#00C46A]' : 'text-gray-400'}`}>{pred.exact_score_home}</span>
+          ) : null}
+          <span className="text-xs text-gray-600 flex-shrink-0">{isResolved ? '–' : 'vs'}</span>
+          {isResolved && pred.exact_score_away != null ? (
+            <span className={`text-sm font-bold flex-shrink-0 ${awayWins ? 'text-[#00C46A]' : 'text-gray-400'}`}>{pred.exact_score_away}</span>
+          ) : null}
+          {awayFlag
+            ? <img src={awayFlag} alt={away} className="w-5 h-3.5 rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-5 h-3.5 rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className={`text-xs truncate ${awayWins ? 'text-white font-medium' : homeWins ? 'text-gray-400 opacity-60' : 'text-gray-200 font-medium'}`}>{away}</span>
         </div>
 
         {/* BOTTOM: mi predicción + penalty badge + acción */}
@@ -713,26 +709,26 @@ function MatchRow({
         </div>
 
         {/* Equipos */}
-        <div className="flex flex-col gap-0.5 flex-1 min-w-0 overflow-hidden">
-          {/* Home */}
-          <div className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md ${homeWins ? 'bg-[rgba(0,196,106,0.08)] border border-[rgba(0,196,106,0.15)]' : ''}`}>
-            {homeFlag
-              ? <img src={homeFlag} alt={home} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
-              : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
-            <span className={`text-xs truncate min-w-0 ${homeWins ? 'text-white font-medium' : awayWins ? 'text-white/40' : 'text-white/75'}`}>{home}</span>
-          </div>
-          {/* Away */}
-          <div className={`flex items-center gap-1.5 px-1.5 py-0.5 rounded-md ${awayWins ? 'bg-[rgba(0,196,106,0.08)] border border-[rgba(0,196,106,0.15)]' : ''}`}>
-            {awayFlag
-              ? <img src={awayFlag} alt={away} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
-              : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
-            <span className={`text-xs truncate min-w-0 ${awayWins ? 'text-white font-medium' : homeWins ? 'text-white/40' : 'text-white/75'}`}>{away}</span>
-          </div>
+        <div className="flex items-center gap-1.5 flex-1 min-w-0 overflow-hidden">
+          {homeFlag
+            ? <img src={homeFlag} alt={home} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className={`text-xs truncate min-w-0 ${homeWins ? 'text-white font-medium' : awayWins ? 'text-white/40' : 'text-white/75'}`}>{home}</span>
+          {isResolved && pred.exact_score_home != null ? (
+            <span className={`text-sm font-bold flex-shrink-0 ${homeWins ? 'text-[#00C46A]' : 'text-gray-400'}`}>{pred.exact_score_home}</span>
+          ) : null}
+          <span className="text-[10px] text-white/25 flex-shrink-0">{isResolved ? '–' : 'vs'}</span>
+          {isResolved && pred.exact_score_away != null ? (
+            <span className={`text-sm font-bold flex-shrink-0 ${awayWins ? 'text-[#00C46A]' : 'text-gray-400'}`}>{pred.exact_score_away}</span>
+          ) : null}
+          {awayFlag
+            ? <img src={awayFlag} alt={away} className="w-[18px] h-[13px] rounded-sm object-cover flex-shrink-0" />
+            : <div className="w-[18px] h-[13px] rounded-sm bg-white/10 flex-shrink-0" />}
+          <span className={`text-xs truncate min-w-0 ${awayWins ? 'text-white font-medium' : homeWins ? 'text-white/40' : 'text-white/75'}`}>{away}</span>
         </div>
 
-        {/* Resultado final */}
-        <div className="flex flex-col items-center gap-0.5 flex-shrink-0 min-w-[52px]">
-          {resultBadge}
+        {/* Penalty badge (scores ya van inline en equipos) */}
+        <div className="flex-shrink-0">
           <PenaltyBadge prediction={prediction} compact />
         </div>
 
