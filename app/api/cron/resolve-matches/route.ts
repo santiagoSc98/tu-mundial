@@ -23,6 +23,10 @@ async function fetchMatchResult(fixtureId: string): Promise<{
   finished: boolean
   homeScore: number | null
   awayScore: number | null
+  duration: string | null
+  penaltyHome: number | null
+  penaltyAway: number | null
+  winner: string | null
 } | null> {
   try {
     const res = await fetch(
@@ -43,14 +47,18 @@ async function fetchMatchResult(fixtureId: string): Promise<{
     console.log(`[resolve-matches] fixture ${fixtureId} status:`, match.status)
     console.log(`[resolve-matches] fixture ${fixtureId} score:`, JSON.stringify(match.score))
 
-    if (match.status !== 'FINISHED') return { finished: false, homeScore: null, awayScore: null }
+    if (match.status !== 'FINISHED') {
+      return { finished: false, homeScore: null, awayScore: null, duration: null, penaltyHome: null, penaltyAway: null, winner: null }
+    }
 
     // Usar SIEMPRE regularTime (90 min exactos) si está disponible,
     // o fullTime si no hay regularTime.
     // NUNCA usar extraTime ni penalties para determinar el resultado de la predicción.
     const regularTime = match.score?.regularTime
     const fullTime    = match.score?.fullTime
-    const duration    = match.score?.duration // 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT'
+    const duration    = match.score?.duration ?? null // 'REGULAR' | 'EXTRA_TIME' | 'PENALTY_SHOOTOUT'
+    const penalties   = match.score?.penalties
+    const winner      = match.score?.winner ?? null  // 'HOME_TEAM' | 'AWAY_TEAM' | 'DRAW' | null
 
     console.log(`[resolve-matches] fixture ${fixtureId} duration:`, duration)
 
@@ -62,6 +70,10 @@ async function fetchMatchResult(fixtureId: string): Promise<{
       finished: true,
       homeScore: scoreToUse?.home ?? null,
       awayScore: scoreToUse?.away ?? null,
+      duration,
+      penaltyHome: penalties?.home ?? null,
+      penaltyAway: penalties?.away ?? null,
+      winner,
     }
   } catch (err) {
     console.error(`[resolve-matches] fetch error for fixture ${fixtureId}:`, err)
@@ -244,8 +256,14 @@ export async function GET(request: Request) {
       continue
     }
 
-    const homeGoals = result.homeScore
-    const awayGoals = result.awayScore
+    const homeGoals  = result.homeScore
+    const awayGoals  = result.awayScore
+    const duration   = result.duration
+    const penaltyHome = result.penaltyHome
+    const penaltyAway = result.penaltyAway
+    const winnerName = result.winner === 'HOME_TEAM' ? homeOpt
+      : result.winner === 'AWAY_TEAM' ? awayOpt
+      : null
 
     // FINISHED but score not yet populated — retry until 3h after deadline
     if (homeGoals === null || awayGoals === null) {
@@ -282,6 +300,10 @@ export async function GET(request: Request) {
         auto_resolved: true,
         exact_score_home: homeGoals,
         exact_score_away: awayGoals,
+        duration,
+        penalty_home: penaltyHome,
+        penalty_away: penaltyAway,
+        winner_name: winnerName,
       })
       .eq('id', pred.id)
       .select('id')

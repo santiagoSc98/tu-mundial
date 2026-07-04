@@ -51,6 +51,33 @@ function getOptions(options: unknown): [string, string, string] {
   return [opts[0] ?? '', opts[1] ?? 'Empate', opts[2] ?? '']
 }
 
+function PenaltyBadge({ p }: { p: Prediction }) {
+  const dur = p.duration
+  if (!dur || dur === 'REGULAR') return null
+  const isPenalty = dur === 'PENALTY_SHOOTOUT'
+  if (!isPenalty && dur !== 'EXTRA_TIME') return null
+  return (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 4 }}>
+      <span style={{
+        display: 'inline-flex', alignItems: 'center', padding: '1px 8px',
+        borderRadius: 99, fontSize: 10, fontWeight: 600,
+        background: isPenalty ? 'rgba(246,183,60,0.15)' : 'rgba(59,130,246,0.15)',
+        color: isPenalty ? '#F6B73C' : '#60a5fa',
+        border: `1px solid ${isPenalty ? 'rgba(246,183,60,0.25)' : 'rgba(96,165,250,0.25)'}`,
+      }}>
+        {isPenalty
+          ? `Pen. ${p.penalty_home != null && p.penalty_away != null ? `${p.penalty_home}–${p.penalty_away}` : ''}`
+          : 'Prórroga'}
+      </span>
+      {p.winner_name && (
+        <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>
+          Avanza <span style={{ color: '#fff', fontWeight: 600 }}>{p.winner_name}</span>
+        </span>
+      )}
+    </div>
+  )
+}
+
 function WhatsAppIcon() {
   return (
     <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
@@ -298,6 +325,8 @@ export default function MisPrediccionesTab({ predictions, existingAnswers, exist
                     )}
                   </div>
                 </div>
+
+                {isResolved && <PenaltyBadge p={p} />}
 
                 {/* Pronóstico */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '7px 12px', background: 'rgba(0,0,0,0.12)', borderRadius: 10, marginBottom: 6 }}>

@@ -62,6 +62,10 @@ export interface Database {
           away_team_code: string | null
           exact_score_home: number | null
           exact_score_away: number | null
+          duration: string | null
+          penalty_home: number | null
+          penalty_away: number | null
+          winner_name: string | null
           created_at: string
         }
         Insert: {
@@ -81,6 +85,10 @@ export interface Database {
           away_team_code?: string | null
           exact_score_home?: number | null
           exact_score_away?: number | null
+          duration?: string | null
+          penalty_home?: number | null
+          penalty_away?: number | null
+          winner_name?: string | null
           created_at?: string
         }
         Update: {
@@ -100,6 +108,10 @@ export interface Database {
           away_team_code?: string | null
           exact_score_home?: number | null
           exact_score_away?: number | null
+          duration?: string | null
+          penalty_home?: number | null
+          penalty_away?: number | null
+          winner_name?: string | null
           created_at?: string
         }
       }

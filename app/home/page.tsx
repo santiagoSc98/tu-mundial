@@ -13,6 +13,7 @@ const PRED_COLS = [
   'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
   'difficulty_multiplier', 'status', 'options', 'stage', 'fixture_id',
   'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
+  'duration', 'penalty_home', 'penalty_away', 'winner_name',
 ].join(', ')
 
 // ─── Timeout helper ──────────────────────────────────────────────────────────
