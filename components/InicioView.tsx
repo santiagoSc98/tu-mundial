@@ -833,7 +833,7 @@ export default function InicioView({
       if (!p.deadline) continue
       const d = new Date(p.deadline)
       if (isNaN(d.getTime())) continue
-      if (d < now && !existingAnswers[p.id]) continue
+      // Mostrar todos los partidos, con o sin predicción del usuario
       const key = pyISODate(d)
       if (!map[key]) map[key] = []
       map[key].push(p)
