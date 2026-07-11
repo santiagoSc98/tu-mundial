@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react'
 import {
   Calendar, Target, Trophy, CheckCircle, BarChart3, Zap,
   ChevronLeft, ChevronRight,
@@ -853,12 +853,15 @@ export default function InicioView({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     console.log('[matchdays] LAST_32 deadlines:', predictions.filter((p: any) => p.stage === 'LAST_32').map((p: any) => p.deadline))
     return result
-  }, [predictions, existingAnswers, now])
+  }, [predictions, existingAnswers])
 
   const [dayIdx, setDayIdx] = useState(0)
+  const autoNavigatedRef = useRef(false)
 
   useEffect(() => {
     if (matchdays.length === 0) return
+    if (autoNavigatedRef.current) return  // ya navegó, no resetear
+    autoNavigatedRef.current = true
     const today = pyISODate(new Date())
     const i = matchdays.findIndex(m => m.date >= today)
     setDayIdx(i === -1 ? matchdays.length - 1 : i)
