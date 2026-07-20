@@ -240,6 +240,41 @@ export default function HomeClient({
   predictions, existingAnswers, existingScores, existingVotes, rankings, myStats, predCounts, globalStats, voteDistributions, initialGroups, currentStreak, pendingJoinCode, wcStandings, myBadges, profileData,
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
+
+  // ── Tournament-aware predictions ──────────────────────────────────────────
+  const { activeTournament } = useTournament()
+  const [livePredictions, setLivePredictions] = useState<Prediction[]>(predictions)
+  const [predsFetching,   setPredsFetching]   = useState(false)
+  const initialTournamentId = useRef<string | null>(
+    (predictions[0] as Prediction & { tournament_id?: string | null })?.tournament_id ?? null
+  )
+
+  useEffect(() => {
+    if (!activeTournament?.id) return
+    if (activeTournament.id === initialTournamentId.current) return
+
+    const COLS = [
+      'id', 'title', 'description', 'category', 'deadline', 'correct_answer',
+      'difficulty_multiplier', 'status', 'options', 'stage', 'fixture_id',
+      'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
+      'duration', 'penalty_home', 'penalty_away', 'winner_name', 'tournament_id',
+    ].join(', ')
+
+    const fetchPreds = async () => {
+      setPredsFetching(true)
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('predictions')
+        .select(COLS)
+        .eq('tournament_id', activeTournament.id)
+        .order('deadline', { ascending: true })
+        .limit(500)
+      setLivePredictions((data ?? []) as unknown as Prediction[])
+      setPredsFetching(false)
+    }
+    fetchPreds()
+  }, [activeTournament?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
   const [previousTab,  setPreviousTab]  = useState<Tab>('inicio')
   const [autoJoinCode, setAutoJoinCode] = useState<string | null>(pendingJoinCode ?? null)
@@ -593,14 +628,30 @@ export default function HomeClient({
           }}
         >
           
-          {activeTab === 'inicio' && (
+          {predsFetching && (
+            <div className="flex items-center justify-center py-20">
+              <div className="w-8 h-8 rounded-full animate-spin" style={{ border: '2px solid rgba(0,106,51,0.20)', borderTopColor: '#006A33' }} />
+            </div>
+          )}
+          {!predsFetching && livePredictions.length === 0 && ['inicio', 'mis-predicciones', 'predicciones', 'calendario'].includes(activeTab) && (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <Trophy size={40} className="mb-4" style={{ color: 'rgba(255,255,255,0.15)' }} />
+              <p className="text-base font-medium" style={{ color: 'rgba(255,255,255,0.45)' }}>
+                {activeTournament?.name ?? 'Torneo'}
+              </p>
+              <p className="text-sm mt-2" style={{ color: 'rgba(255,255,255,0.25)' }}>
+                Las predicciones estarán disponibles cuando comience el torneo.
+              </p>
+            </div>
+          )}
+          {!predsFetching && activeTab === 'inicio' && (
             <ErrorBoundary>
               <InicioView
                 userId={userId}
                 points={points}
                 rank={rank}
                 totalPlayers={rankings.length}
-                predictions={predictions}
+                predictions={livePredictions}
                 existingAnswers={mergedAnswers}
                 existingScores={mergedScores}
                 existingVotes={existingVotes}
@@ -612,9 +663,9 @@ export default function HomeClient({
               />
             </ErrorBoundary>
           )}
-          {activeTab === 'mis-predicciones' && (
+          {!predsFetching && activeTab === 'mis-predicciones' && (
             <MisPrediccionesTab
-              predictions={predictions}
+              predictions={livePredictions}
               existingAnswers={mergedAnswers}
               existingScores={mergedScores}
               existingVotes={existingVotes}
@@ -625,10 +676,10 @@ export default function HomeClient({
               points={points}
             />
           )}
-          {activeTab === 'predicciones' && (
+          {!predsFetching && activeTab === 'predicciones' && (
             <PrediccionesTab
               userId={userId}
-              predictions={predictions}
+              predictions={livePredictions}
               existingAnswers={mergedAnswers}
               voteDistributions={localVotes}
             />
@@ -648,9 +699,9 @@ export default function HomeClient({
           {activeTab === 'especiales'   && (
             <EspecialesTab userId={userId} championTeam={championTeam} topScorer={topScorer} onTabChange={(tab: string) => setActiveTab(tab as Tab)} />
           )}
-          {activeTab === 'calendario' && (
+          {!predsFetching && activeTab === 'calendario' && (
             <ErrorBoundary>
-              <CalendarioView predictions={predictions} wcStandings={wcStandings} />
+              <CalendarioView predictions={livePredictions} wcStandings={wcStandings} />
             </ErrorBoundary>
           )}
           {activeTab === 'perfil' && (
