@@ -327,6 +327,7 @@ function BracketMatchCard({ match, side = 'left', highlight = false }: {
     display: 'flex', alignItems: 'center', gap: 4, padding: '4px 6px',
     flexDirection: side === 'right' ? 'row-reverse' : 'row',
     background: wins ? 'rgba(0,196,106,0.08)' : 'transparent',
+    boxShadow: wins && highlight ? 'inset 0px 0px 13px 1px #76682f' : 'none',
   })
   const nameStyle = (wins: boolean): React.CSSProperties => ({
     fontSize: 10, flex: 1,

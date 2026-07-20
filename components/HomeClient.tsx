@@ -2,7 +2,7 @@
 
 import { useState, useCallback, useMemo, useEffect, useRef } from 'react'
 import Image from 'next/image'
-import { Trophy, Star, BookOpen, Home, LogOut, Zap, Clock, Calendar, Users } from 'lucide-react'
+import { Trophy, Star, BookOpen, Home, LogOut, Zap, Clock, Calendar, Users, ChevronDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { savePrediction } from '@/app/actions/predictions'
 import { clearJoinCode } from '@/app/actions/join'
@@ -21,6 +21,53 @@ import AdminTab from '@/components/AdminTab'
 import MisGruposView, { type Group } from '@/components/MisGruposView'
 import PerfilView from '@/components/PerfilView'
 import InstallPrompt from '@/components/InstallPrompt'
+import { useTournament } from '@/lib/tournament-context'
+
+function TournamentSelector() {
+  const { tournaments, activeTournament, setActiveTournament } = useTournament()
+  const [open, setOpen] = useState(false)
+
+  if (tournaments.length <= 1) return null
+
+  return (
+    <div className="relative px-3 pt-3 shrink-0">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left"
+        style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', cursor: 'pointer' }}
+      >
+        <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(0,106,51,0.20)' }}>
+          <Trophy size={13} style={{ color: '#00C46A' }} />
+        </div>
+        <span className="text-sm font-medium flex-1 truncate" style={{ color: '#fff' }}>
+          {activeTournament?.name ?? 'Torneo'}
+        </span>
+        <ChevronDown size={14} style={{ color: 'rgba(255,255,255,0.35)', transform: open ? 'rotate(180deg)' : 'none', transition: 'transform 0.15s', flexShrink: 0 }} />
+      </button>
+
+      {open && (
+        <div className="absolute left-3 right-3 mt-1 rounded-xl overflow-hidden z-50" style={{ top: '100%', background: '#0A1628', border: '1px solid rgba(255,255,255,0.10)', boxShadow: '0 8px 24px rgba(0,0,0,0.4)' }}>
+          {tournaments.map(t => (
+            <button
+              key={t.id}
+              onClick={() => { setActiveTournament(t); setOpen(false) }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 text-left"
+              style={{ background: activeTournament?.id === t.id ? 'rgba(255,255,255,0.04)' : 'transparent', border: 'none', cursor: 'pointer', borderTop: '1px solid rgba(255,255,255,0.05)' }}
+            >
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{
+                background: t.status === 'active' ? '#00C46A' : t.status === 'finished' ? 'rgba(255,255,255,0.20)' : '#F6B73C'
+              }} />
+              <span className="text-sm flex-1" style={{ color: 'rgba(255,255,255,0.75)' }}>{t.name}</span>
+              {t.status === 'active'   && <span style={{ fontSize: 10, color: '#00C46A' }}>En curso</span>}
+              {t.status === 'finished' && <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>Finalizado</span>}
+              {t.status === 'upcoming' && <span style={{ fontSize: 10, color: '#F6B73C' }}>Próximo</span>}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function SidebarDecoration() {
   return (
@@ -361,6 +408,9 @@ export default function HomeClient({
             </p>
           </div>
         </div>
+
+        {/* Tournament selector */}
+        <TournamentSelector />
 
         {/* Nav */}
         <nav className="flex flex-col gap-0.5 p-3 flex-1 overflow-y-auto">

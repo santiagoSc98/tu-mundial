@@ -66,6 +66,7 @@ export interface Database {
           penalty_home: number | null
           penalty_away: number | null
           winner_name: string | null
+          tournament_id: string | null
           created_at: string
         }
         Insert: {
@@ -89,6 +90,7 @@ export interface Database {
           penalty_home?: number | null
           penalty_away?: number | null
           winner_name?: string | null
+          tournament_id?: string | null
           created_at?: string
         }
         Update: {
@@ -112,7 +114,69 @@ export interface Database {
           penalty_home?: number | null
           penalty_away?: number | null
           winner_name?: string | null
+          tournament_id?: string | null
           created_at?: string
+        }
+      }
+      tournaments: {
+        Row: {
+          id: string
+          name: string
+          slug: string
+          status: 'upcoming' | 'active' | 'finished'
+          logo_url: string | null
+          competition_id: number | null
+          start_date: string | null
+          end_date: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          slug: string
+          status?: 'upcoming' | 'active' | 'finished'
+          logo_url?: string | null
+          competition_id?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          slug?: string
+          status?: 'upcoming' | 'active' | 'finished'
+          logo_url?: string | null
+          competition_id?: number | null
+          start_date?: string | null
+          end_date?: string | null
+          created_at?: string
+        }
+      }
+      tournament_standings: {
+        Row: {
+          id: string
+          user_id: string
+          tournament_id: string
+          total_points: number
+          correct_predictions: number
+          exact_predictions: number
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          tournament_id: string
+          total_points?: number
+          correct_predictions?: number
+          exact_predictions?: number
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          tournament_id?: string
+          total_points?: number
+          correct_predictions?: number
+          exact_predictions?: number
         }
       }
       user_predictions: {

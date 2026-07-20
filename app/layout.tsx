@@ -5,6 +5,7 @@ import './globals.css'
 import ThemeProvider from '@/components/ThemeProvider'
 import QueryProvider from '@/components/QueryProvider'
 import OneSignalInit from './OneSignalInit'
+import { TournamentProvider } from '@/lib/tournament-context'
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] })
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] })
@@ -62,7 +63,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-full flex flex-col">
         <OneSignalInit />
         <QueryProvider>
-          <ThemeProvider>{children}</ThemeProvider>
+          <TournamentProvider>
+            <ThemeProvider>{children}</ThemeProvider>
+          </TournamentProvider>
         </QueryProvider>
         <Script
           async
