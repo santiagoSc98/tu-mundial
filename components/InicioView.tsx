@@ -161,19 +161,19 @@ function PenaltyBadge({ prediction, compact = false }: { prediction: Prediction;
   const ph = prediction.penalty_home
   const pa = prediction.penalty_away
   return (
-    <div className="flex items-center gap-2 flex-wrap mt-1">
+    <div className="flex items-center gap-1.5 flex-wrap mt-1">
       <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium ${
         isPenalty
-          ? 'bg-[rgba(246,183,60,0.15)] text-[#F6B73C] border border-[rgba(246,183,60,0.25)]'
-          : 'bg-[rgba(59,130,246,0.15)] text-blue-400 border border-blue-400/25'
+          ? 'bg-[rgba(246,183,60,0.12)] text-[#c8950f] border border-[rgba(246,183,60,0.25)]'
+          : 'bg-[rgba(59,130,246,0.12)] text-blue-400 border border-blue-400/25'
       }`}>
         {isPenalty
-          ? `${compact ? 'Pen.' : 'Penales'} ${ph != null && pa != null ? `${ph}–${pa}` : ''}`
+          ? `Pen. ${ph != null && pa != null ? `${ph}–${pa}` : ''}`
           : 'Prórroga'}
       </span>
-      {!compact && prediction.winner_name && (
-        <span className="text-[11px] text-gray-400">
-          Avanza <span className="text-white font-medium">{prediction.winner_name}</span>
+      {prediction.winner_name && (
+        <span className="text-[10px] text-gray-400">
+          → <span className="text-white font-medium">{prediction.winner_name}</span>
         </span>
       )}
     </div>
