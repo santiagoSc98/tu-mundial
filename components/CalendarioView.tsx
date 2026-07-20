@@ -293,6 +293,7 @@ interface KOMatch {
   awayScore: number | null
   status: string | null
   deadline: string | null
+  winnerName: string | null
 }
 
 function BracketMatchCard({ match, side = 'left', highlight = false }: {
@@ -306,8 +307,15 @@ function BracketMatchCard({ match, side = 'left', highlight = false }: {
     )
   }
   const isResolved = match.status === 'resolved'
-  const homeWins   = isResolved && match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore
-  const awayWins   = isResolved && match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore
+  // For penalty shootouts the score is tied — fall back to winner_name
+  const homeWins   = isResolved && (
+    (match.homeScore != null && match.awayScore != null && match.homeScore > match.awayScore) ||
+    (match.winnerName != null && match.winnerName === match.homeName)
+  )
+  const awayWins   = isResolved && (
+    (match.homeScore != null && match.awayScore != null && match.awayScore > match.homeScore) ||
+    (match.winnerName != null && match.winnerName === match.awayName)
+  )
   const isTBD      = match.homeName === 'TBD' && match.awayName === 'TBD'
   const homeFlag   = getFlagUrl(match.homeCode)
   const awayFlag   = getFlagUrl(match.awayCode)
@@ -905,16 +913,17 @@ export default function CalendarioView({
               const h = getTeamNameES(opts[0] ?? '')
               const a = getTeamNameES(opts[opts.length - 1] ?? '')
               return {
-                id:        p.id,
-                fixtureId: p.fixture_id ?? null,
-                homeName:  (h === 'Por definir' || !h) ? 'TBD' : h,
-                awayName:  (a === 'Por definir' || !a) ? 'TBD' : a,
-                homeCode:  p.home_team_code,
-                awayCode:  p.away_team_code,
-                homeScore: p.exact_score_home ?? null,
-                awayScore: p.exact_score_away ?? null,
-                status:    p.status,
-                deadline:  p.deadline ?? null,
+                id:         p.id,
+                fixtureId:  p.fixture_id ?? null,
+                homeName:   (h === 'Por definir' || !h) ? 'TBD' : h,
+                awayName:   (a === 'Por definir' || !a) ? 'TBD' : a,
+                homeCode:   p.home_team_code,
+                awayCode:   p.away_team_code,
+                homeScore:  p.exact_score_home ?? null,
+                awayScore:  p.exact_score_away ?? null,
+                status:     p.status,
+                deadline:   p.deadline ?? null,
+                winnerName: p.winner_name ?? null,
               }
             }
             const byStage: Record<string, KOMatch[]> = {}
@@ -951,7 +960,7 @@ export default function CalendarioView({
             for (let i = 0; i < mobileMatches.length; i += 2) {
               mobilePairs.push({ m1: mobileMatches[i], m2: mobileMatches[i + 1] ?? null, next: mobileNextMatches[Math.floor(i / 2)] ?? null })
             }
-            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', fixtureId: null, homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null }, m2: null, next: null })
+            if (mobileMatches.length === 0) mobilePairs.push({ m1: { id: '', fixtureId: null, homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeScore: null, awayScore: null, status: null, deadline: null, winnerName: null }, m2: null, next: null })
 
             return (
               <>
