@@ -800,9 +800,7 @@ function TournamentClosedBanner({
   }
 
   return (
-    <div className="relative overflow-hidden rounded-2xl mb-4">
-      {/* Fondo */}
-      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg,#071A40 0%,#0A2460 50%,#071A40 100%)' }} />
+    <div className="relative overflow-hidden rounded-2xl mb-4" style={{ background: 'rgba(255,255,255,0.05)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)', border: '1px solid rgba(255,255,255,0.08)' }}>
       {/* Glow dorado */}
       <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-64 h-40 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle,rgba(246,183,60,0.2) 0%,transparent 70%)' }} />
