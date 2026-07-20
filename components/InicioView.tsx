@@ -790,12 +790,12 @@ function TournamentClosedBanner({
 
   const handleShare = () => {
     const text =
-      `🏆 *TU MUNDIAL 2026*\n\n` +
+      `*TU MUNDIAL 2026*\n\n` +
       `Terminé el torneo en el *puesto #${rank}*${totalPlayers ? ` de ${totalPlayers} jugadores` : ''}!\n\n` +
-      `⚽ ${exactos} marcadores exactos\n` +
-      `✅ ${correctos} resultados correctos\n` +
-      `🎯 ${points} puntos totales\n\n` +
-      `¿Te animás al próximo torneo? https://tu-mundial.vercel.app`
+      `${exactos} marcadores exactos\n` +
+      `${correctos} resultados correctos\n` +
+      `${points} puntos totales\n\n` +
+      `Te animás al próximo torneo? https://tu-mundial.vercel.app`
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
   }
 
