@@ -773,12 +773,113 @@ function MatchRow({
   )
 }
 
+// ─── Tournament closed banner ─────────────────────────────────────────────────
+
+function TournamentClosedBanner({
+  points, rank, totalPlayers, existingVotes,
+}: {
+  points: number
+  rank: number
+  totalPlayers?: number
+  existingVotes?: Record<string, { isCorrect: boolean | null; pointsEarned: number | null }>
+}) {
+  const votes = Object.values(existingVotes ?? {})
+  const exactos   = votes.filter(v => (v.pointsEarned ?? 0) >= 8).length
+  const correctos = votes.filter(v => v.isCorrect === true && (v.pointsEarned ?? 0) < 8).length
+  const fallados  = votes.filter(v => v.isCorrect === false).length
+
+  const handleShare = () => {
+    const text =
+      `🏆 *TU MUNDIAL 2026*\n\n` +
+      `Terminé el torneo en el *puesto #${rank}*${totalPlayers ? ` de ${totalPlayers} jugadores` : ''}!\n\n` +
+      `⚽ ${exactos} marcadores exactos\n` +
+      `✅ ${correctos} resultados correctos\n` +
+      `🎯 ${points} puntos totales\n\n` +
+      `¿Te animás al próximo torneo? https://tu-mundial.vercel.app`
+    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank')
+  }
+
+  return (
+    <div className="relative overflow-hidden rounded-2xl mb-4">
+      {/* Fondo */}
+      <div className="absolute inset-0" style={{ background: 'linear-gradient(135deg,#071A40 0%,#0A2460 50%,#071A40 100%)' }} />
+      {/* Glow dorado */}
+      <div className="absolute top-[-40px] left-1/2 -translate-x-1/2 w-64 h-40 rounded-full pointer-events-none"
+        style={{ background: 'radial-gradient(circle,rgba(246,183,60,0.2) 0%,transparent 70%)' }} />
+
+      <div className="relative z-10 p-5 text-center">
+        {/* Tag */}
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-[rgba(246,183,60,0.12)] border border-[rgba(246,183,60,0.3)] rounded-full text-[11px] text-[#F6B73C] mb-3">
+          <Trophy style={{ width: 11, height: 11 }} />
+          Mundial 2026 · Finalizado
+        </div>
+
+        {/* Título */}
+        <h2 className="text-xl font-semibold text-white mb-1">¡El torneo terminó!</h2>
+        <p className="text-sm text-gray-500 mb-4">104 partidos · 48 equipos · 1 campeón</p>
+
+        {/* Campeón */}
+        <div className="inline-flex items-center gap-3 px-5 py-3 bg-[rgba(246,183,60,0.08)] border border-[rgba(246,183,60,0.25)] rounded-2xl mb-3">
+          <img src="https://flagcdn.com/w80/es.png" className="w-10 h-7 rounded object-cover" alt="España" />
+          <div className="text-left">
+            <p className="text-[10px] text-[rgba(246,183,60,0.7)] tracking-wider">CAMPEÓN MUNDIAL 2026</p>
+            <p className="text-base font-semibold text-[#F6B73C]">España</p>
+          </div>
+        </div>
+
+        {/* Goleador */}
+        <p className="text-xs text-gray-500 flex items-center justify-center gap-1.5 mt-1">
+          Goleador: <span className="text-gray-300 font-medium">Kylian Mbappé</span> · 10 goles
+        </p>
+      </div>
+
+      {/* Stats personales */}
+      <div className="relative z-10 grid grid-cols-4 gap-2 px-5 pb-4">
+        {([
+          { val: exactos,   label: 'Exactos',   color: 'text-[#00C46A]' },
+          { val: correctos, label: 'Correctos',  color: 'text-blue-400' },
+          { val: fallados,  label: 'Fallados',   color: 'text-gray-500' },
+          { val: points,    label: 'Puntos',     color: 'text-[#F6B73C]' },
+        ] as const).map(s => (
+          <div key={s.label} className="bg-white/[0.04] border border-white/[0.07] rounded-xl py-2.5 px-2 text-center">
+            <div className={`text-lg font-medium ${s.color}`}>{s.val}</div>
+            <div className="text-[10px] text-gray-500 mt-0.5">{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tu posición */}
+      <div className="relative z-10 mx-5 mb-4 px-4 py-2.5 bg-[rgba(0,106,51,0.1)] border border-[rgba(0,106,51,0.25)] rounded-xl flex items-center justify-between">
+        <span className="text-sm text-gray-400">Tu posición final</span>
+        <span className="text-base font-semibold text-[#00C46A]">
+          #{rank}{totalPlayers ? ` de ${totalPlayers} jugadores` : ''}
+        </span>
+      </div>
+
+      {/* Compartir */}
+      <div className="relative z-10 mx-5 mb-5">
+        <button
+          onClick={handleShare}
+          className="w-full flex items-center justify-center gap-2 py-3 bg-[rgba(37,211,102,0.1)] border border-[rgba(37,211,102,0.2)] rounded-xl text-sm text-[#25D366] hover:bg-[rgba(37,211,102,0.15)] transition-colors"
+          style={{ cursor: 'pointer' }}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/>
+          </svg>
+          Compartir mi resultado
+        </button>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main component ───────────────────────────────────────────────────────────
 
 interface Props {
   userId: string
   points: number
   rank: number
+  totalPlayers?: number
   predictions: Prediction[]
   existingAnswers: Record<string, string>
   existingScores?: Record<string, { home: number; away: number }>
@@ -791,7 +892,7 @@ interface Props {
 }
 
 export default function InicioView({
-  points, rank, predictions, existingAnswers, existingScores, existingVotes, voteDistributions,
+  points, rank, totalPlayers, predictions, existingAnswers, existingScores, existingVotes, voteDistributions,
   userGroups = [],
   onPredict, onGoToMisPredicciones, onCalendarioClick,
 }: Props) {
@@ -867,8 +968,9 @@ export default function InicioView({
     setDayIdx(i === -1 ? matchdays.length - 1 : i)
   }, [matchdays])
 
-  const totalAnswered = Object.keys(existingAnswers).length
-  const pendingCount  = openPredictions.filter(p => !existingAnswers[p.id]).length
+  const totalAnswered   = Object.keys(existingAnswers).length
+  const pendingCount    = openPredictions.filter(p => !existingAnswers[p.id]).length
+  const hasOpenMatches  = predictions.some(p => p.status === 'open')
 
   const [expandedEditId, setExpandedEditId] = useState<string | null>(null)
 
@@ -910,15 +1012,24 @@ export default function InicioView({
         {/* ── LEFT ────────────────────────────────────────────────────── */}
         <div className="space-y-4">
 
-          {/* Featured match */}
-          <FeaturedMatchPanel
-            key={featured?.id ?? 'none'}
-            prediction={featured}
-            existingAnswer={featured ? (existingAnswers[featured.id] ?? null) : null}
-            voteData={featured ? (voteDistributions[featured.id] ?? {}) : {}}
-            localScore={featured ? existingScores?.[featured.id] : undefined}
-            onPredict={(answer, hs, as) => featured && handlePredict(featured.id, answer, hs, as)}
-          />
+          {/* Featured match / torneo terminado */}
+          {!hasOpenMatches ? (
+            <TournamentClosedBanner
+              points={points}
+              rank={rank}
+              totalPlayers={totalPlayers}
+              existingVotes={existingVotes}
+            />
+          ) : (
+            <FeaturedMatchPanel
+              key={featured?.id ?? 'none'}
+              prediction={featured}
+              existingAnswer={featured ? (existingAnswers[featured.id] ?? null) : null}
+              voteData={featured ? (voteDistributions[featured.id] ?? {}) : {}}
+              localScore={featured ? existingScores?.[featured.id] : undefined}
+              onPredict={(answer, hs, as) => featured && handlePredict(featured.id, answer, hs, as)}
+            />
+          )}
 
           {/* Match list */}
           {matchdays.length > 0 && (

@@ -549,6 +549,7 @@ export default function HomeClient({
                 userId={userId}
                 points={points}
                 rank={rank}
+                totalPlayers={rankings.length}
                 predictions={predictions}
                 existingAnswers={mergedAnswers}
                 existingScores={mergedScores}
