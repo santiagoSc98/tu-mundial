@@ -11,6 +11,7 @@ import { CountdownTimer } from '@/components/CountdownTimer'
 import { PredictionsModal } from '@/components/PredictionsModal'
 import type { Group } from '@/components/MisGruposView'
 import type { Database } from '@/lib/database.types'
+import { useTournament } from '@/lib/tournament-context'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 
@@ -903,6 +904,7 @@ export default function InicioView({
   userGroups = [],
   onPredict, onGoToMisPredicciones, onCalendarioClick,
 }: Props) {
+  const { activeTournament } = useTournament()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
   const [now, setNow] = useState(() => new Date())
@@ -1000,9 +1002,9 @@ export default function InicioView({
     setDayIdx(i === -1 ? matchdays.length - 1 : i)
   }, [matchdays])
 
-  const totalAnswered   = Object.keys(existingAnswers).length
-  const pendingCount    = openPredictions.filter(p => !existingAnswers[p.id]).length
-  const hasOpenMatches  = predictions.some(p => p.status === 'open')
+  const totalAnswered      = Object.keys(existingAnswers).length
+  const pendingCount       = openPredictions.filter(p => !existingAnswers[p.id]).length
+  const isTournamentClosed = activeTournament?.status === 'finished'
 
   // Clamped index — evita crash si dayIdx queda fuera de rango durante transición de torneo
   const clampedDayIdx = matchdays.length > 0 ? Math.min(dayIdx, matchdays.length - 1) : 0
@@ -1048,7 +1050,7 @@ export default function InicioView({
         <div className="space-y-4">
 
           {/* Featured match / torneo terminado */}
-          {!hasOpenMatches ? (
+          {isTournamentClosed ? (
             <TournamentClosedBanner
               points={points}
               rank={rank}
