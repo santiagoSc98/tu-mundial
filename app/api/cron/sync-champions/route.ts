@@ -65,11 +65,9 @@ async function upsertKoMatch(
   const deadline  = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
   const multiplier = MULTIPLIERS[stage] ?? 1.5
 
-  // Final: sin empate (el ganador incluye ET/penales).
-  // Cada ida de llave eliminatoria: sí puede empatar a 90 min.
-  const options = stage === 'FINAL'
-    ? [homeName, awayName]
-    : [homeName, 'Empate', awayName]
+  // Igual que el Mundial: siempre 3 opciones [home, 'Empate', away].
+  // El sistema de puntos ya maneja ET/penales vía winner_name — no necesita opciones distintas.
+  const options = [homeName, 'Empate', awayName]
 
   const legSuffix = legNumber === 1 ? ' (Ida)' : legNumber === 2 ? ' (Vuelta)' : ''
   const title = `${homeName} vs ${awayName} - UCL ${STAGE_LABEL[stage] ?? stage}${legSuffix}`
