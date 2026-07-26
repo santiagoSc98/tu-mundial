@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getTeamNameES } from '@/lib/worldcup'
 
+const MUNDIAL_TOURNAMENT_ID = '1ea3a6b9-0a07-40af-9635-322c13ec0dad'
+
 function getSupabase() {
   return createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -84,6 +86,7 @@ export async function GET(request: Request) {
             options:        [homeName, 'Empate', awayName],
             home_team_code: homeTla,
             away_team_code: awayTla,
+            tournament_id:  MUNDIAL_TOURNAMENT_ID,
           })
           .eq('id', existing.id)
 
@@ -110,17 +113,18 @@ export async function GET(request: Request) {
     const { error: insertError } = await supabase
       .from('predictions')
       .insert({
-        title:                `${homeName} vs ${awayName} - Mundial 2026`,
-        description:          `Fase: ${stage}`,
-        category:             'eliminatoria',
+        title:                 `${homeName} vs ${awayName} - Mundial 2026`,
+        description:           `Fase: ${stage}`,
+        category:              'eliminatoria',
         deadline,
-        options:              [homeName, 'Empate', awayName],
-        fixture_id:           fixtureId,
-        status:               'open',
+        options:               [homeName, 'Empate', awayName],
+        fixture_id:            fixtureId,
+        status:                'open',
         stage,
         difficulty_multiplier: multiplier,
-        home_team_code:       homeTla,
-        away_team_code:       awayTla,
+        home_team_code:        homeTla,
+        away_team_code:        awayTla,
+        tournament_id:         MUNDIAL_TOURNAMENT_ID,
       })
 
     if (insertError) {
