@@ -25,6 +25,15 @@ function sleep(ms: number) {
   return new Promise(resolve => setTimeout(resolve, ms))
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function teamCrest(team: any): string | null {
+  if (!team) return null
+  if (team.crest) return team.crest as string
+  // Fallback: football-data.org serves crests by team id at this stable URL
+  if (team.id) return `https://crests.football-data.org/${team.id}.png`
+  return null
+}
+
 // difficulty_multiplier por fase
 const MULTIPLIERS: Record<string, number> = {
   LEAGUE_PHASE:     1.0,
@@ -66,8 +75,8 @@ async function upsertKoMatch(
   const awayName  = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
   const homeTla   = match.homeTeam?.tla   ?? null
   const awayTla   = match.awayTeam?.tla   ?? null
-  const homeCrest = match.homeTeam?.crest ?? null
-  const awayCrest = match.awayTeam?.crest ?? null
+  const homeCrest = teamCrest(match.homeTeam)
+  const awayCrest = teamCrest(match.awayTeam)
   const fixtureId = String(match.id)
   const deadline  = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
   const multiplier = MULTIPLIERS[stage] ?? 1.5
