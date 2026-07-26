@@ -1059,32 +1059,54 @@ export default function CalendarioView({
         <div>
 
           {(() => {
-            const toPred = (p: Prediction): KOMatch => {
-              const opts = Array.isArray(p.options) ? (p.options as string[]) : []
-              const h = getTeamNameES(opts[0] ?? '')
-              const a = getTeamNameES(opts[opts.length - 1] ?? '')
+            // Group multi-leg UCL ties by knockout_tie_id; single-leg stays as 1:1
+            const TWO_LEG = new Set(['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS'])
+            const tieMap: Record<string, Prediction[]> = {}
+            for (const p of predictions) {
+              if (!p.home_team_code || !p.away_team_code) continue
+              const key = (isChampions && TWO_LEG.has(p.stage ?? '') && p.knockout_tie_id)
+                ? p.knockout_tie_id
+                : p.id
+              if (!tieMap[key]) tieMap[key] = []
+              tieMap[key].push(p)
+            }
+
+            const toPredTie = (legs: Prediction[]): KOMatch => {
+              const sorted = [...legs].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+              const leg1 = sorted[0]; const leg2 = sorted[1] ?? null
+              const opts = Array.isArray(leg1.options) ? (leg1.options as string[]) : []
+              const h = getTeamNameES(opts[0] ?? ''); const a = getTeamNameES(opts[opts.length - 1] ?? '')
+              // Aggregate: Team A (leg1 home) = leg1.home + leg2.away; Team B (leg1 away) = leg1.away + leg2.home
+              const l1h = leg1.exact_score_home; const l1a = leg1.exact_score_away
+              const l2h = leg2?.exact_score_home ?? null; const l2a = leg2?.exact_score_away ?? null
+              const aggH = leg2 ? (l1h != null && l2a != null ? l1h + l2a : null) : (l1h ?? null)
+              const aggA = leg2 ? (l1a != null && l2h != null ? l1a + l2h : null) : (l1a ?? null)
+              const bothDone = leg1.status === 'resolved' && (!leg2 || leg2.status === 'resolved')
               return {
-                id:         p.id,
-                fixtureId:  p.fixture_id ?? null,
+                id:         leg1.id,
+                fixtureId:  leg1.fixture_id ?? null,
                 homeName:   (h === 'Por definir' || !h) ? 'TBD' : h,
                 awayName:   (a === 'Por definir' || !a) ? 'TBD' : a,
-                homeCode:   p.home_team_code,
-                awayCode:   p.away_team_code,
-                homeCrest:  p.home_team_crest ?? null,
-                awayCrest:  p.away_team_crest ?? null,
-                homeScore:  p.exact_score_home ?? null,
-                awayScore:  p.exact_score_away ?? null,
-                status:     p.status,
-                deadline:   p.deadline ?? null,
-                winnerName: p.winner_name ?? null,
+                homeCode:   leg1.home_team_code,
+                awayCode:   leg1.away_team_code,
+                homeCrest:  leg1.home_team_crest ?? null,
+                awayCrest:  leg1.away_team_crest ?? null,
+                homeScore:  aggH,
+                awayScore:  aggA,
+                status:     bothDone ? 'resolved' : leg1.status,
+                deadline:   leg1.deadline ?? null,
+                winnerName: leg1.winner_name ?? null,
               }
             }
+
             const byStage: Record<string, KOMatch[]> = {}
-            for (const s of ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL', 'THIRD_PLACE']) {
-              byStage[s] = predictions
-                .filter(p => (p.stage ?? '') === s && p.home_team_code && p.away_team_code)
-                .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
-                .map(toPred)
+            for (const legs of Object.values(tieMap)) {
+              const s = legs[0].stage ?? ''
+              if (!byStage[s]) byStage[s] = []
+              byStage[s].push(toPredTie(legs))
+            }
+            for (const s of Object.keys(byStage)) {
+              byStage[s].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
             }
             const BRACKET_LEFT_IDS  = ['537415','537416','537417','537418','537419','537420','537421','537422']
             const BRACKET_RIGHT_IDS = ['537423','537424','537425','537426','537427','537428','537429','537430']
