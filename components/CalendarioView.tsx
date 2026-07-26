@@ -754,12 +754,16 @@ export default function CalendarioView({
     [predictions]
   )
 
+  useEffect(() => {
+    if (isChampions && calTab === 'resumen') setCalTab('clasificacion')
+  }, [isChampions, calTab])
+
   // UCL league table computed from resolved LEAGUE_PHASE predictions
   const uclTable = useMemo(() => {
     if (!isChampions) return []
-    const map: Record<string, { code: string; crest: string | null; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; pts: number }> = {}
-    const ensure = (code: string, crest: string | null) => {
-      if (!map[code]) map[code] = { code, crest, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
+    const map: Record<string, { code: string; name: string; crest: string | null; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; pts: number }> = {}
+    const ensure = (code: string, name: string, crest: string | null) => {
+      if (!map[code]) map[code] = { code, name, crest, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
     }
     for (const p of predictions) {
       if (p.stage !== 'LEAGUE_PHASE' || p.status !== 'resolved') continue
@@ -767,8 +771,11 @@ export default function CalendarioView({
       const hc = p.home_team_code ?? ''
       const ac = p.away_team_code ?? ''
       if (!hc || !ac) continue
-      ensure(hc, p.home_team_crest ?? null)
-      ensure(ac, p.away_team_crest ?? null)
+      const opts = Array.isArray(p.options) ? (p.options as string[]) : []
+      const hn = getTeamNameES(opts[0] ?? '') || hc
+      const an = getTeamNameES(opts[opts.length - 1] ?? '') || ac
+      ensure(hc, hn, p.home_team_crest ?? null)
+      ensure(ac, an, p.away_team_crest ?? null)
       const hs = p.exact_score_home
       const as_ = p.exact_score_away
       map[hc].played++; map[hc].gf += hs; map[hc].ga += as_
@@ -804,7 +811,7 @@ export default function CalendarioView({
 
       {/* ── Sub-tabs ────────────────────────────────────────────────────────── */}
       <div className="flex gap-1 mb-6" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)', paddingBottom: 0 }}>
-        {(['eliminatoria', 'resumen', 'clasificacion'] as CalTab[]).map(t => {
+        {(['eliminatoria', 'resumen', 'clasificacion'] as CalTab[]).filter(t => !(isChampions && t === 'resumen')).map(t => {
           const labels: Record<CalTab, string> = {
             resumen: 'Resumen',
             clasificacion: 'Clasificación',
@@ -984,7 +991,8 @@ export default function CalendarioView({
                                     ? <img src={row.crest} alt={row.code} style={{ width: 22, height: 22, objectFit: 'contain' }} />
                                     : <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>{row.code}</span>
                                   }
-                                  <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{row.code}</span>
+                                  <span className="hidden sm:inline" style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{row.name}</span>
+                                  <span className="sm:hidden" style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{row.code}</span>
                                 </div>
                               </td>
                               {[row.played, row.won, row.drawn, row.lost, row.gf, row.ga].map((v, j) => (
