@@ -89,9 +89,11 @@ async function HomeData() {
     .select('id, status')
     .order('start_date', { ascending: false })
     .limit(10)
+  const tmtList = (tmtRows as { id: string; status: string }[] | null) ?? []
   const defaultTournamentId =
-    (tmtRows as { id: string; status: string }[] | null)?.find(t => t.status === 'active')?.id ??
-    (tmtRows as { id: string; status: string }[] | null)?.[0]?.id ??
+    tmtList.find(t => t.status === 'active')?.id ??
+    tmtList.find(t => t.status === 'upcoming')?.id ??
+    tmtList[0]?.id ??
     null
 
   // 3. All data in one parallel batch

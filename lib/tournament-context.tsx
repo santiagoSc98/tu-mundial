@@ -39,7 +39,10 @@ export function TournamentProvider({ children }: { children: React.ReactNode }) 
 
       if (data?.length) {
         setTournaments(data as Tournament[])
-        const active = (data as Tournament[]).find(t => t.status === 'active') ?? (data as Tournament[])[0]
+        const active =
+          (data as Tournament[]).find(t => t.status === 'active') ??
+          (data as Tournament[]).find(t => t.status === 'upcoming') ??
+          (data as Tournament[])[0]
         setActiveTournament(active)
       }
     }
