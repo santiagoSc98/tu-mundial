@@ -987,6 +987,7 @@ export default function InicioView({
     if (activeStage !== prevActiveStageRef.current) {
       prevActiveStageRef.current = activeStage
       autoNavigatedRef.current = false
+      setDayIdx(0)
     }
   }, [activeStage])
 
@@ -1002,6 +1003,9 @@ export default function InicioView({
   const totalAnswered   = Object.keys(existingAnswers).length
   const pendingCount    = openPredictions.filter(p => !existingAnswers[p.id]).length
   const hasOpenMatches  = predictions.some(p => p.status === 'open')
+
+  // Clamped index — evita crash si dayIdx queda fuera de rango durante transición de torneo
+  const clampedDayIdx = matchdays.length > 0 ? Math.min(dayIdx, matchdays.length - 1) : 0
 
   const [expandedEditId, setExpandedEditId] = useState<string | null>(null)
 
@@ -1099,18 +1103,18 @@ export default function InicioView({
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => setDayIdx(i => Math.max(0, i - 1))}
-                    disabled={dayIdx === 0}
-                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: dayIdx === 0 ? 'not-allowed' : 'pointer', opacity: dayIdx === 0 ? 0.3 : 1, color: '#fff' }}
+                    disabled={clampedDayIdx === 0}
+                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: clampedDayIdx === 0 ? 'not-allowed' : 'pointer', opacity: clampedDayIdx === 0 ? 0.3 : 1, color: '#fff' }}
                   >
                     <ChevronLeft className="h-4 w-4" />
                   </button>
                   <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.70)', minWidth: 40, textAlign: 'center' }}>
-                    Día {dayIdx + 1}
+                    Día {clampedDayIdx + 1}
                   </span>
                   <button
                     onClick={() => setDayIdx(i => Math.min(matchdays.length - 1, i + 1))}
-                    disabled={dayIdx === matchdays.length - 1}
-                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: dayIdx === matchdays.length - 1 ? 'not-allowed' : 'pointer', opacity: dayIdx === matchdays.length - 1 ? 0.3 : 1, color: '#fff' }}
+                    disabled={clampedDayIdx === matchdays.length - 1}
+                    style={{ width: 28, height: 28, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.10)', borderRadius: 6, cursor: clampedDayIdx === matchdays.length - 1 ? 'not-allowed' : 'pointer', opacity: clampedDayIdx === matchdays.length - 1 ? 0.3 : 1, color: '#fff' }}
                   >
                     <ChevronRight className="h-4 w-4" />
                   </button>
@@ -1119,12 +1123,12 @@ export default function InicioView({
 
               {/* Date label */}
               <p className="text-xs mb-3 capitalize" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                {pyDateLabel(matchdays[dayIdx].date)}
+                {pyDateLabel(matchdays[clampedDayIdx].date)}
               </p>
 
               {/* Matches for current day */}
               <div className="space-y-1.5">
-                {matchdays[dayIdx].preds.map(p => (
+                {matchdays[clampedDayIdx].preds.map(p => (
                   <div key={p.id}>
                     <MatchRow
                       prediction={p}
