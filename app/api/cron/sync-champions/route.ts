@@ -174,7 +174,8 @@ export async function GET(request: Request) {
   let tiesCreated = 0
 
   // ─── Fase de Liga (288 partidos, un solo GET) ─────────────────────────────
-  const leagueUrl = `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?season=${SEASON}&stage=LEAGUE_PHASE`
+  // La API usa "LEAGUE_STAGE"; en DB guardamos "LEAGUE_PHASE" para el frontend
+  const leagueUrl = `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?season=${SEASON}&stage=LEAGUE_STAGE`
   console.log('[sync-champions] fetching league phase:', leagueUrl)
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
