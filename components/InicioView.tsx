@@ -211,8 +211,8 @@ function PredictPanel({
   const draw: string | null = isKnockout ? 'Empate' : (rawOpts[1] ?? 'Empate')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
-  const homeFlag = getFlagUrl(prediction.home_team_code)
-  const awayFlag = getFlagUrl(prediction.away_team_code)
+  const homeFlag = prediction.home_team_crest ?? getFlagUrl(prediction.home_team_code)
+  const awayFlag = prediction.away_team_crest ?? getFlagUrl(prediction.away_team_code)
   const open     = isMatchOpen(prediction)
   const answered = !!existingAnswer
   const canEdit  = answered && open
@@ -367,8 +367,8 @@ function FeaturedMatchPanel({
   const draw: string | null = isKnockout ? 'Empate' : (rawOpts2[1] ?? 'Empate')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
-  const homeFlag = getFlagUrl(prediction.home_team_code)
-  const awayFlag = getFlagUrl(prediction.away_team_code)
+  const homeFlag = prediction.home_team_crest ?? getFlagUrl(prediction.home_team_code)
+  const awayFlag = prediction.away_team_crest ?? getFlagUrl(prediction.away_team_code)
   console.log('[stage]', prediction.fixture_id, prediction.stage, parseStage(prediction.description))
   const stage    = STAGE_LABELS[prediction.stage ?? parseStage(prediction.description)] ?? 'Fase de Grupos'
   const ko       = kickoff(prediction)
@@ -550,8 +550,8 @@ function MatchRow({
   const awayRaw = rowOpts.length === 2 ? (rowOpts[1] ?? '') : (rowOpts[2] ?? '')
   const home     = getTeamNameES(homeRaw)
   const away     = getTeamNameES(awayRaw)
-  const homeFlag = getFlagUrl(prediction.home_team_code)
-  const awayFlag = getFlagUrl(prediction.away_team_code)
+  const homeFlag = prediction.home_team_crest ?? getFlagUrl(prediction.home_team_code)
+  const awayFlag = prediction.away_team_crest ?? getFlagUrl(prediction.away_team_code)
   console.log('[stage]', prediction.fixture_id, prediction.stage, parseStage(prediction.description))
   const stage    = STAGE_LABELS[prediction.stage ?? parseStage(prediction.description)] ?? 'Grupos'
   const ko       = kickoff(prediction)
@@ -1238,8 +1238,8 @@ export default function InicioView({
             const awayRaw = liveOpts.length === 2 ? (liveOpts[1] ?? '') : (liveOpts[2] ?? '')
             const home = getTeamNameES(homeRaw)
             const away = getTeamNameES(awayRaw)
-            const homeFlag = getFlagUrl(liveMatch.home_team_code)
-            const awayFlag = getFlagUrl(liveMatch.away_team_code)
+            const homeFlag = liveMatch.home_team_crest ?? getFlagUrl(liveMatch.home_team_code)
+            const awayFlag = liveMatch.away_team_crest ?? getFlagUrl(liveMatch.away_team_code)
             const score    = existingScores?.[liveMatch.id]
             const answered = existingAnswers[liveMatch.id]
             return (
@@ -1278,8 +1278,8 @@ export default function InicioView({
             const awayRaw = nextOpts.length === 2 ? (nextOpts[1] ?? '') : (nextOpts[2] ?? '')
             const home = getTeamNameES(homeRaw)
             const away = getTeamNameES(awayRaw)
-            const homeFlag = getFlagUrl(nextMatch.home_team_code)
-            const awayFlag = getFlagUrl(nextMatch.away_team_code)
+            const homeFlag = nextMatch.home_team_crest ?? getFlagUrl(nextMatch.home_team_code)
+            const awayFlag = nextMatch.away_team_crest ?? getFlagUrl(nextMatch.away_team_code)
             return (
               <div className="rounded-2xl p-4" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)' }}>
                 <p className="text-xs uppercase tracking-wide mb-2" style={{ color: 'rgba(255,255,255,0.40)' }}>

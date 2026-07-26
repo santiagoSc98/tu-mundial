@@ -241,9 +241,10 @@ export default function HomeClient({
 }: Props) {
   console.log('[HomeClient] mounting — userId:', userId, 'predictions:', predictions.length)
 
-  // ── Tournament-aware predictions ──────────────────────────────────────────
+  // ── Tournament-aware predictions + rankings ───────────────────────────────
   const { activeTournament } = useTournament()
   const [livePredictions, setLivePredictions] = useState<Prediction[]>(predictions)
+  const [liveRankings,    setLiveRankings]    = useState<RankEntry[]>(rankings)
   const [predsFetching,   setPredsFetching]   = useState(false)
   const lastFetchedIdRef = useRef<string | null>(null)
 
@@ -257,21 +258,33 @@ export default function HomeClient({
       'difficulty_multiplier', 'status', 'options', 'stage', 'fixture_id',
       'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
       'duration', 'penalty_home', 'penalty_away', 'winner_name', 'tournament_id',
+      'home_team_crest', 'away_team_crest',
     ].join(', ')
 
-    const fetchPreds = async () => {
+    const fetchAll = async () => {
       setPredsFetching(true)
       const supabase = createClient()
-      const { data } = await supabase
-        .from('predictions')
-        .select(COLS)
-        .eq('tournament_id', activeTournament.id)
-        .order('deadline', { ascending: true })
-        .limit(500)
-      setLivePredictions((data ?? []) as unknown as Prediction[])
+      const [{ data: predsData }, { data: rankData }] = await Promise.all([
+        supabase
+          .from('predictions')
+          .select(COLS)
+          .eq('tournament_id', activeTournament.id)
+          .order('deadline', { ascending: true })
+          .limit(500),
+        // Per-tournament ranking: sum points_earned from user_predictions for this tournament's predictions
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (supabase as any).rpc('get_tournament_rankings', { p_tournament_id: activeTournament.id }),
+      ])
+      setLivePredictions((predsData ?? []) as unknown as Prediction[])
+      if (rankData && Array.isArray(rankData) && rankData.length > 0) {
+        setLiveRankings(rankData as RankEntry[])
+      } else {
+        // Fallback to global rankings if RPC not available or no data
+        setLiveRankings(rankings)
+      }
       setPredsFetching(false)
     }
-    fetchPreds()
+    fetchAll()
   }, [activeTournament?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const [activeTab,    setActiveTab]    = useState<Tab>(pendingJoinCode ? 'grupos' : 'inicio')
@@ -649,7 +662,7 @@ export default function HomeClient({
                 userId={userId}
                 points={points}
                 rank={rank}
-                totalPlayers={rankings.length}
+                totalPlayers={liveRankings.length}
                 predictions={livePredictions}
                 existingAnswers={mergedAnswers}
                 existingScores={mergedScores}
@@ -686,7 +699,7 @@ export default function HomeClient({
           {activeTab === 'posiciones'   && (
             <RankingsTab
               currentUserId={userId}
-              rankings={rankings}
+              rankings={liveRankings}
               myStats={myStats}
               predCounts={predCounts}
               globalStats={globalStats}

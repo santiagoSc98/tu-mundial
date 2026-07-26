@@ -4,6 +4,8 @@ import { useState, useCallback, useEffect } from 'react'
 import { Users, Plus, Hash, Copy, ChevronRight, X, CheckCircle, Edit2, Trophy, Layers, UserPlus, LogIn } from 'lucide-react'
 import { createGroup, joinGroup, getGroupMembers, updateGroup, removeMember, getGroupPhases, type GroupPhase } from '@/app/actions/groups'
 import { GroupPhasesView } from './GroupPhasesView'
+import { useTournament } from '@/lib/tournament-context'
+import { createClient } from '@/lib/supabase/client'
 
 export interface Group {
   id: string
@@ -127,6 +129,7 @@ function ModalWrap({ onClose, children }: { onClose: () => void; children: React
 }
 
 export default function MisGruposView({ userId, initialGroups, autoJoinCode, onAutoJoinConsumed }: Props) {
+  const { activeTournament } = useTournament()
   const [groups, setGroups] = useState<Group[]>(initialGroups)
   const [modal, setModal] = useState<null | 'create' | 'share' | 'join' | 'edit'>(null)
   const [selectedGroup, setSelectedGroup] = useState<Group | null>(null)
@@ -171,6 +174,25 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
     }
   }, [autoJoinCode, onAutoJoinConsumed])
 
+  // Re-fetch groups when tournament changes
+  useEffect(() => {
+    if (!activeTournament?.id) return
+    const supabase = createClient()
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(supabase as any)
+      .from('group_members')
+      .select('groups(id, name, code, created_by, prize_amount, entry_fee, currency, tournament_id)')
+      .eq('user_id', userId)
+      .then(({ data }: { data: { groups: Group & { tournament_id: string | null } }[] | null }) => {
+        const all = (data ?? []).map(r => r.groups).filter(Boolean)
+        setGroups(all.filter(g => g.tournament_id === activeTournament.id))
+        setAllGroupMembers({})
+        setAllGroupPhases({})
+        setMemberCounts({})
+        setViewingGroup(null)
+      })
+  }, [activeTournament?.id, userId])
+
   // Load members + phases for all groups (used in desktop list cards)
   useEffect(() => {
     if (groups.length === 0) return
@@ -210,6 +232,7 @@ export default function MisGruposView({ userId, initialGroups, autoJoinCode, onA
         cleanNumber(createPrize),
         cleanNumber(createEntry),
         createCurrency,
+        activeTournament?.id ?? null,
       )
       if (result.error || !result.data) throw new Error(result.error ?? 'Error al crear grupo')
       setGroups(prev => [...prev, result.data!])

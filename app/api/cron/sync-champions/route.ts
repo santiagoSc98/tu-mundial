@@ -62,16 +62,17 @@ async function upsertKoMatch(
 ): Promise<'created' | 'updated' | 'skipped'> {
   const homeRaw: string | undefined = match.homeTeam?.name
   const awayRaw: string | undefined = match.awayTeam?.name
-  const homeName = homeRaw ? getTeamNameES(homeRaw) : 'Por definir'
-  const awayName = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
-  const homeTla  = match.homeTeam?.tla ?? null
-  const awayTla  = match.awayTeam?.tla ?? null
+  const homeName  = homeRaw ? getTeamNameES(homeRaw) : 'Por definir'
+  const awayName  = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
+  const homeTla   = match.homeTeam?.tla   ?? null
+  const awayTla   = match.awayTeam?.tla   ?? null
+  const homeCrest = match.homeTeam?.crest ?? null
+  const awayCrest = match.awayTeam?.crest ?? null
   const fixtureId = String(match.id)
   const deadline  = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
   const multiplier = MULTIPLIERS[stage] ?? 1.5
 
   // Igual que el Mundial: siempre 3 opciones [home, 'Empate', away].
-  // El sistema de puntos ya maneja ET/penales vía winner_name — no necesita opciones distintas.
   const options = [homeName, 'Empate', awayName]
 
   const legSuffix = legNumber === 1 ? ' (Ida)' : legNumber === 2 ? ' (Vuelta)' : ''
@@ -79,7 +80,7 @@ async function upsertKoMatch(
 
   const { data: existing } = await supabase
     .from('predictions')
-    .select('id, options, home_team_code, away_team_code, knockout_tie_id')
+    .select('id, options, home_team_code, away_team_code, knockout_tie_id, home_team_crest')
     .eq('fixture_id', fixtureId)
     .maybeSingle()
 
@@ -89,7 +90,8 @@ async function upsertKoMatch(
     const needsUpdate =
       (opts[0] === 'Por definir' && homeName !== 'Por definir') ||
       (opts[opts.length - 1] === 'Por definir' && awayName !== 'Por definir') ||
-      (!existing.knockout_tie_id && tieId)
+      (!existing.knockout_tie_id && tieId) ||
+      (!existing.home_team_crest && homeCrest)
 
     if (needsUpdate) {
       await supabase
@@ -97,10 +99,12 @@ async function upsertKoMatch(
         .update({
           title,
           options,
-          home_team_code:  homeTla,
-          away_team_code:  awayTla,
-          knockout_tie_id: tieId,
-          leg_number:      legNumber,
+          home_team_code:   homeTla,
+          away_team_code:   awayTla,
+          home_team_crest:  homeCrest,
+          away_team_crest:  awayCrest,
+          knockout_tie_id:  tieId,
+          leg_number:       legNumber,
         })
         .eq('id', existing.id)
 
@@ -116,19 +120,21 @@ async function upsertKoMatch(
     .from('predictions')
     .insert({
       title,
-      description:          `Champions League 2025/26 - ${STAGE_LABEL[stage] ?? stage}${legSuffix}`,
-      category:             'eliminatoria',
+      description:           `Champions League 2025/26 - ${STAGE_LABEL[stage] ?? stage}${legSuffix}`,
+      category:              'eliminatoria',
       deadline,
       options,
-      fixture_id:           fixtureId,
-      status:               'open',
+      fixture_id:            fixtureId,
+      status:                'open',
       stage,
       difficulty_multiplier: multiplier,
-      home_team_code:       homeTla,
-      away_team_code:       awayTla,
-      tournament_id:        CHAMPIONS_TOURNAMENT_ID,
-      knockout_tie_id:      tieId,
-      leg_number:           legNumber,
+      home_team_code:        homeTla,
+      away_team_code:        awayTla,
+      home_team_crest:       homeCrest,
+      away_team_crest:       awayCrest,
+      tournament_id:         CHAMPIONS_TOURNAMENT_ID,
+      knockout_tie_id:       tieId,
+      leg_number:            legNumber,
     })
     .select('id')
     .single()
@@ -223,17 +229,19 @@ export async function GET(request: Request) {
   for (const match of leagueMatches) {
     const homeRaw: string | undefined = match.homeTeam?.name
     const awayRaw: string | undefined = match.awayTeam?.name
-    const homeName = homeRaw ? getTeamNameES(homeRaw) : 'Por definir'
-    const awayName = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
-    const homeTla  = match.homeTeam?.tla ?? null
-    const awayTla  = match.awayTeam?.tla ?? null
+    const homeName  = homeRaw ? getTeamNameES(homeRaw) : 'Por definir'
+    const awayName  = awayRaw ? getTeamNameES(awayRaw) : 'Por definir'
+    const homeTla   = match.homeTeam?.tla   ?? null
+    const awayTla   = match.awayTeam?.tla   ?? null
+    const homeCrest = match.homeTeam?.crest ?? null
+    const awayCrest = match.awayTeam?.crest ?? null
     const fixtureId = String(match.id)
     const deadline  = new Date(new Date(match.utcDate).getTime() - 10 * 60_000).toISOString()
     const title     = `${homeName} vs ${awayName} - UCL Fase de Liga`
 
     const { data: existing } = await supabase
       .from('predictions')
-      .select('id, options, home_team_code, away_team_code')
+      .select('id, options, home_team_code, away_team_code, home_team_crest')
       .eq('fixture_id', fixtureId)
       .maybeSingle()
 
@@ -242,14 +250,17 @@ export async function GET(request: Request) {
       const opts = existing.options as any[]
       const needsUpdate =
         (opts[0] === 'Por definir' && homeName !== 'Por definir') ||
-        (opts[opts.length - 1] === 'Por definir' && awayName !== 'Por definir')
+        (opts[opts.length - 1] === 'Por definir' && awayName !== 'Por definir') ||
+        (!existing.home_team_crest && homeCrest)
 
       if (needsUpdate) {
         await supabase.from('predictions').update({
           title,
-          options:        [homeName, 'Empate', awayName],
-          home_team_code: homeTla,
-          away_team_code: awayTla,
+          options:         [homeName, 'Empate', awayName],
+          home_team_code:  homeTla,
+          away_team_code:  awayTla,
+          home_team_crest: homeCrest,
+          away_team_crest: awayCrest,
         }).eq('id', existing.id)
         updated++
       } else {
@@ -270,6 +281,8 @@ export async function GET(request: Request) {
       difficulty_multiplier: MULTIPLIERS.LEAGUE_PHASE,
       home_team_code:        homeTla,
       away_team_code:        awayTla,
+      home_team_crest:       homeCrest,
+      away_team_crest:       awayCrest,
       tournament_id:         CHAMPIONS_TOURNAMENT_ID,
     })
 

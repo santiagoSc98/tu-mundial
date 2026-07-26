@@ -14,6 +14,7 @@ const PRED_COLS = [
   'difficulty_multiplier', 'status', 'options', 'stage', 'fixture_id',
   'home_team_code', 'away_team_code', 'exact_score_home', 'exact_score_away',
   'duration', 'penalty_home', 'penalty_away', 'winner_name', 'tournament_id',
+  'home_team_crest', 'away_team_crest',
 ].join(', ')
 
 // ─── Timeout helper ──────────────────────────────────────────────────────────
@@ -154,11 +155,11 @@ async function HomeData() {
         supabase
           .from('user_predictions')
           .select('prediction_id, predicted_answer'),
-        // Groups the current user belongs to
+        // Groups the current user belongs to — filtered by active tournament
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
           .from('group_members')
-          .select('groups(id, name, code, created_by, prize_amount, entry_fee, currency)')
+          .select('groups(id, name, code, created_by, prize_amount, entry_fee, currency, tournament_id)')
           .eq('user_id', user.id),
         // User badges
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -241,7 +242,11 @@ async function HomeData() {
       (voteDistributions[r.prediction_id][r.predicted_answer] ?? 0) + 1
   })
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const initialGroups = (groupsRes.data ?? []).map((r: any) => r.groups).filter(Boolean)
+  const initialGroups = (groupsRes.data ?? [])
+    .map((r: any) => r.groups)
+    .filter(Boolean)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    .filter((g: any) => !defaultTournamentId || g.tournament_id === defaultTournamentId)
 
   const globalStats = {
     totalUsers:       (totalUsersRes as { count: number | null }).count ?? 0,

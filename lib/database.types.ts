@@ -69,6 +69,8 @@ export interface Database {
           tournament_id: string | null
           knockout_tie_id: string | null
           leg_number: number | null
+          home_team_crest: string | null
+          away_team_crest: string | null
           created_at: string
         }
         Insert: {
@@ -95,6 +97,8 @@ export interface Database {
           tournament_id?: string | null
           knockout_tie_id?: string | null
           leg_number?: number | null
+          home_team_crest?: string | null
+          away_team_crest?: string | null
           created_at?: string
         }
         Update: {
@@ -121,6 +125,8 @@ export interface Database {
           tournament_id?: string | null
           knockout_tie_id?: string | null
           leg_number?: number | null
+          home_team_crest?: string | null
+          away_team_crest?: string | null
           created_at?: string
         }
       }

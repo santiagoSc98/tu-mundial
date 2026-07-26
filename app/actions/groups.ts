@@ -7,6 +7,7 @@ export async function createGroup(
   prizeAmount?: number | null,
   entryFee?: number | null,
   currency: string = 'Gs',
+  tournamentId?: string | null,
 ) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
@@ -23,9 +24,10 @@ export async function createGroup(
     .from('groups')
     .insert({
       name, code, created_by: user.id,
-      prize_amount: prizeAmount ?? null,
-      entry_fee:    entryFee    ?? null,
+      prize_amount:  prizeAmount  ?? null,
+      entry_fee:     entryFee     ?? null,
       currency,
+      tournament_id: tournamentId ?? null,
     })
     .select()
     .single()
@@ -37,7 +39,7 @@ export async function createGroup(
     .from('group_members')
     .insert({ group_id: group.id, user_id: user.id })
 
-  return { data: group as { id: string; name: string; code: string; created_by: string; prize_amount: number | null; entry_fee: number | null; currency: string }, error: null }
+  return { data: group as { id: string; name: string; code: string; created_by: string; prize_amount: number | null; entry_fee: number | null; currency: string; tournament_id: string | null }, error: null }
 }
 
 export async function joinGroup(code: string) {
