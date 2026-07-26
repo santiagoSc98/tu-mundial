@@ -6,6 +6,7 @@ import { getFlagUrl } from '@/lib/flagCodes'
 import { pyISODate, pyTime, pyDateTimeMed, pyDateLabel, getTeamNameES } from '@/lib/worldcup'
 import type { Database } from '@/lib/database.types'
 import type { GroupTeam, StandingsByType } from '@/lib/grupos'
+import { useTournament } from '@/lib/tournament-context'
 
 type Prediction = Database['public']['Tables']['predictions']['Row']
 type CalTab = 'resumen' | 'clasificacion' | 'eliminatoria'
@@ -602,6 +603,7 @@ export default function CalendarioView({
   predictions: Prediction[]
   wcStandings: StandingsByType | null
 }) {
+  const { activeTournament } = useTournament()
   const [calTab,        setCalTab]        = useState<CalTab>('eliminatoria')
   const [dayIdx,        setDayIdx]        = useState(0)
   const bracketRef   = useRef<HTMLDivElement>(null)
@@ -760,10 +762,10 @@ export default function CalendarioView({
     <div>
       <div style={{ marginBottom: 28 }}>
         <h1 style={{ fontSize: 28, fontWeight: 700, color: '#fff', fontFamily: 'var(--font-montserrat, system-ui)', margin: 0, marginBottom: 4, letterSpacing: '-0.01em' }}>
-          Copa del Mundo
+          {activeTournament?.name ?? 'Torneo'}
         </h1>
         <p style={{ fontSize: 11, fontWeight: 600, letterSpacing: '0.10em', color: 'rgba(255,255,255,0.35)', margin: 0, textTransform: 'uppercase' }}>
-          FIFA World Cup 2026 · Internacional
+          {activeTournament?.slug?.replace(/-/g, ' ').toUpperCase() ?? ''}
         </p>
       </div>
 
@@ -851,7 +853,7 @@ export default function CalendarioView({
                   ))}
                 </div>
               ) : (
-                <p style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>¡El Mundial está en juego!</p>
+                <p style={{ fontSize: 13, color: '#22c55e', fontWeight: 700 }}>¡{activeTournament?.name ?? 'El torneo'} está en juego!</p>
               )}
               <p className="mt-3" style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', fontWeight: 600 }}>
                 {pyDateTimeMed(kickoffTime)} PY
