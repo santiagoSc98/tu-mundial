@@ -82,7 +82,18 @@ async function HomeData() {
   const cookieStore = await cookies()
   const pendingJoinCode = cookieStore.get('pending_join_code')?.value ?? null
 
-  // 2. All data in one parallel batch
+  // 2. Resolve default tournament (used to filter initial predictions)
+  const { data: tmtRows } = await supabase
+    .from('tournaments')
+    .select('id, status')
+    .order('start_date', { ascending: false })
+    .limit(10)
+  const defaultTournamentId =
+    (tmtRows as { id: string; status: string }[] | null)?.find(t => t.status === 'active')?.id ??
+    (tmtRows as { id: string; status: string }[] | null)?.[0]?.id ??
+    null
+
+  // 3. All data in one parallel batch
   const t1 = Date.now()
   const [
     specialRes, profileRes, predsRes, answersRes,
@@ -102,11 +113,18 @@ async function HomeData() {
           .select('id, total_points, avatar_url, username, current_streak, country')
           .eq('id', user.id)
           .single(),
-        supabase
-          .from('predictions')
-          .select(PRED_COLS)
-          .order('deadline', { ascending: true })
-          .limit(500),
+        defaultTournamentId
+          ? supabase
+              .from('predictions')
+              .select(PRED_COLS)
+              .eq('tournament_id', defaultTournamentId)
+              .order('deadline', { ascending: true })
+              .limit(500)
+          : supabase
+              .from('predictions')
+              .select(PRED_COLS)
+              .order('deadline', { ascending: true })
+              .limit(500),
         // Current user's predictions — for existingAnswers + existingScores + existingVotes
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         (supabase as any)
@@ -154,15 +172,7 @@ async function HomeData() {
       'all-data'
     )
   )
-  console.log(`[home] parallel fetch: ${Date.now() - t1}ms`)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] predsRes error:', (predsRes as any).error)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] total predictions:', (predsRes.data as any[])?.length)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] LAST_32:', (predsRes.data as any[])?.filter((p: any) => p.stage === 'LAST_32').length)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  console.log('[home] stages:', [...new Set((predsRes.data as any[])?.map((p: any) => p.stage))])
+  console.log(`[home] parallel fetch: ${Date.now() - t1}ms — tournament: ${defaultTournamentId} — preds: ${(predsRes.data as unknown[])?.length}`)
 
   const special     = specialRes.data
   const profileData = profileRes.data

@@ -25,6 +25,15 @@ const STAGE_LABELS: Record<string, string> = {
   FINAL:          'Final',
 }
 
+const UCL_STAGES = [
+  { key: 'LEAGUE_PHASE',     label: 'Fase de liga' },
+  { key: 'KNOCKOUT_PLAYOFF', label: 'Playoff' },
+  { key: 'LAST_16',          label: 'Octavos' },
+  { key: 'QUARTER_FINALS',   label: 'Cuartos' },
+  { key: 'SEMI_FINALS',      label: 'Semis' },
+  { key: 'FINAL',            label: 'Final' },
+]
+
 function parseStage(desc: string | null): string {
   return desc?.match(/Fase: ([A-Z_]+)/)?.[1] ?? ''
 }
@@ -902,33 +911,57 @@ export default function InicioView({
     return () => clearInterval(t)
   }, [])
 
-  const liveMatch = useMemo(() => predictions.find(p => {
+  const isChampions = useMemo(() => predictions.some(p => p.stage === 'LEAGUE_PHASE'), [predictions])
+
+  const availableStages = useMemo(
+    () => UCL_STAGES.filter(s => predictions.some(p => p.stage === s.key)),
+    [predictions]
+  )
+
+  const [activeStage, setActiveStage] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isChampions && availableStages.length > 0 && activeStage === null) {
+      setActiveStage(availableStages[0].key)
+    }
+    if (!isChampions && activeStage !== null) {
+      setActiveStage(null)
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isChampions, availableStages.length])
+
+  const visiblePredictions = useMemo(
+    () => (isChampions && activeStage) ? predictions.filter(p => p.stage === activeStage) : predictions,
+    [isChampions, activeStage, predictions]
+  )
+
+  const liveMatch = useMemo(() => visiblePredictions.find(p => {
     if (!p.home_team_code || !p.away_team_code) return false
     const start = new Date(p.deadline ?? 0)
     const diff = (now.getTime() - start.getTime()) / 60000
     return diff >= 0 && diff <= 120
-  }), [predictions, now])
+  }), [visiblePredictions, now])
 
   const nextMatch = useMemo(() => {
-    const sorted = predictions
+    const sorted = visiblePredictions
       .filter(p => p.home_team_code && p.away_team_code && new Date(p.deadline ?? 0) > now)
       .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
     return sorted[0] ?? null
-  }, [predictions, now])
+  }, [visiblePredictions, now])
 
   const openPredictions = useMemo(
-    () => predictions.filter(p => p.status === 'open' && new Date(p.deadline ?? 0) > now),
-    [predictions, now]
+    () => visiblePredictions.filter(p => p.status === 'open' && new Date(p.deadline ?? 0) > now),
+    [visiblePredictions, now]
   )
 
   const featured = useMemo(
-    () => openPredictions.find(p => !existingAnswers[p.id]) ?? openPredictions[0] ?? predictions[0] ?? null,
-    [openPredictions, existingAnswers, predictions]
+    () => openPredictions.find(p => !existingAnswers[p.id]) ?? openPredictions[0] ?? visiblePredictions[0] ?? null,
+    [openPredictions, existingAnswers, visiblePredictions]
   )
 
   const matchdays = useMemo(() => {
     const map: Record<string, Prediction[]> = {}
-    for (const p of predictions) {
+    for (const p of visiblePredictions) {
       if (!p.deadline) continue
       const d = new Date(p.deadline)
       if (isNaN(d.getTime())) continue
@@ -943,23 +976,23 @@ export default function InicioView({
         date,
         preds: preds.sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime()),
       }))
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log('[matchdays] total predictions in:', predictions.length, '— days:', result.length)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log('[matchdays] stages present:', [...new Set(predictions.map((p: any) => p.stage))])
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log('[matchdays] LAST_32 in predictions:', predictions.filter((p: any) => p.stage === 'LAST_32').length)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    console.log('[matchdays] LAST_32 deadlines:', predictions.filter((p: any) => p.stage === 'LAST_32').map((p: any) => p.deadline))
     return result
-  }, [predictions, existingAnswers])
+  }, [visiblePredictions])
 
   const [dayIdx, setDayIdx] = useState(0)
   const autoNavigatedRef = useRef(false)
+  const prevActiveStageRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (activeStage !== prevActiveStageRef.current) {
+      prevActiveStageRef.current = activeStage
+      autoNavigatedRef.current = false
+    }
+  }, [activeStage])
 
   useEffect(() => {
     if (matchdays.length === 0) return
-    if (autoNavigatedRef.current) return  // ya navegó, no resetear
+    if (autoNavigatedRef.current) return
     autoNavigatedRef.current = true
     const today = pyISODate(new Date())
     const i = matchdays.findIndex(m => m.date >= today)
@@ -1027,6 +1060,32 @@ export default function InicioView({
               localScore={featured ? existingScores?.[featured.id] : undefined}
               onPredict={(answer, hs, as) => featured && handlePredict(featured.id, answer, hs, as)}
             />
+          )}
+
+          {/* Stage tabs — Champions League only */}
+          {isChampions && availableStages.length > 1 && (
+            <div style={{ display: 'flex', gap: 6, overflowX: 'auto', paddingBottom: 2 }}>
+              {availableStages.map(s => (
+                <button
+                  key={s.key}
+                  onClick={() => setActiveStage(s.key)}
+                  style={{
+                    flexShrink: 0,
+                    padding: '6px 14px',
+                    borderRadius: 99,
+                    fontSize: 12,
+                    fontWeight: 700,
+                    cursor: 'pointer',
+                    transition: 'all 0.15s',
+                    border: activeStage === s.key ? '1px solid #16a34a' : '1px solid rgba(255,255,255,0.12)',
+                    background: activeStage === s.key ? 'rgba(22,163,74,0.18)' : 'rgba(255,255,255,0.04)',
+                    color: activeStage === s.key ? '#4ade80' : 'rgba(255,255,255,0.50)',
+                  }}
+                >
+                  {s.label}
+                </button>
+              ))}
+            </div>
           )}
 
           {/* Match list */}

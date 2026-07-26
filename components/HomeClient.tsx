@@ -245,13 +245,12 @@ export default function HomeClient({
   const { activeTournament } = useTournament()
   const [livePredictions, setLivePredictions] = useState<Prediction[]>(predictions)
   const [predsFetching,   setPredsFetching]   = useState(false)
-  const initialTournamentId = useRef<string | null>(
-    (predictions[0] as Prediction & { tournament_id?: string | null })?.tournament_id ?? null
-  )
+  const lastFetchedIdRef = useRef<string | null>(null)
 
   useEffect(() => {
     if (!activeTournament?.id) return
-    if (activeTournament.id === initialTournamentId.current) return
+    if (activeTournament.id === lastFetchedIdRef.current) return
+    lastFetchedIdRef.current = activeTournament.id
 
     const COLS = [
       'id', 'title', 'description', 'category', 'deadline', 'correct_answer',

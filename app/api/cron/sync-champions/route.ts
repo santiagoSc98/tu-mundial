@@ -2,9 +2,14 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { getTeamNameES } from '@/lib/worldcup'
 
+export const maxDuration = 60
+
 // Champions League 2025/26 — tournament_id en Supabase
 const CHAMPIONS_TOURNAMENT_ID = 'ebbc9141-c438-4bc3-9f5f-49c0987ef5d6'
 const COMPETITION_ID = 2001
+// Sin season=XXXX, football-data.org devuelve la temporada "actual" según su
+// calendario — desde julio 2026 eso sería 2026/27 (vacía). Fijamos 2025 explícito.
+const SEASON = 2025
 
 // 10 req/min en el free tier de football-data.org
 const DELAY_MS = 6200
@@ -169,20 +174,50 @@ export async function GET(request: Request) {
   let tiesCreated = 0
 
   // ─── Fase de Liga (288 partidos, un solo GET) ─────────────────────────────
-  console.log('[sync-champions] fetching league phase...')
-  const leagueRes = await fetch(
-    `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?stage=LEAGUE_PHASE`,
-    { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY! }, cache: 'no-store' },
-  )
+  const leagueUrl = `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?season=${SEASON}&stage=LEAGUE_PHASE`
+  console.log('[sync-champions] fetching league phase:', leagueUrl)
 
-  if (!leagueRes.ok) {
-    console.error('[sync-champions] league API error:', leagueRes.status)
-    return NextResponse.json({ error: `League API ${leagueRes.status}` }, { status: 502 })
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let leagueBody: any
+  let leagueRawText = ''
+
+  try {
+    const leagueAbort = new AbortController()
+    const leagueTimer = setTimeout(() => leagueAbort.abort(), 25_000)
+
+    const leagueRes = await fetch(leagueUrl, {
+      headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY! },
+      cache: 'no-store',
+      signal: leagueAbort.signal,
+    })
+    clearTimeout(leagueTimer)
+
+    console.log('[sync-champions] league phase status:', leagueRes.status, leagueRes.statusText)
+    leagueRawText = await leagueRes.text()
+    console.log('[sync-champions] league phase raw (first 800 chars):', leagueRawText.slice(0, 800))
+
+    if (!leagueRes.ok) {
+      return NextResponse.json(
+        { error: `League API ${leagueRes.status}`, body: leagueRawText.slice(0, 400) },
+        { status: 502 },
+      )
+    }
+
+    leagueBody = JSON.parse(leagueRawText)
+  } catch (e) {
+    console.error('[sync-champions] league phase fetch/parse failed:', e)
+    return NextResponse.json(
+      { error: String(e), rawPreview: leagueRawText.slice(0, 400) },
+      { status: 502 },
+    )
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const leagueMatches: any[] = (await leagueRes.json()).matches ?? []
-  console.log(`[sync-champions] league phase: ${leagueMatches.length} matches`)
+  const leagueMatches: any[] = leagueBody.matches ?? []
+  console.log(`[sync-champions] league phase: ${leagueMatches.length} matches — top-level keys: ${Object.keys(leagueBody).join(', ')}`)
+  if (leagueMatches.length > 0) {
+    console.log('[sync-champions] first match stage:', leagueMatches[0]?.stage, '— season:', leagueBody.competition?.id, '— filters:', JSON.stringify(leagueBody.filters))
+  }
 
   for (const match of leagueMatches) {
     const homeRaw: string | undefined = match.homeTeam?.name
@@ -250,7 +285,7 @@ export async function GET(request: Request) {
 
   const koStages = 'KNOCKOUT_PLAYOFF,LAST_16,QUARTER_FINALS,SEMI_FINALS,FINAL'
   const koRes = await fetch(
-    `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?stage=${koStages}`,
+    `https://api.football-data.org/v4/competitions/${COMPETITION_ID}/matches?season=${SEASON}&stage=${koStages}`,
     { headers: { 'X-Auth-Token': process.env.FOOTBALL_DATA_API_KEY! }, cache: 'no-store' },
   )
 
