@@ -612,6 +612,14 @@ export default function CalendarioView({
   const contentRef   = useRef<HTMLDivElement>(null)
   const [mobilePhase, setMobilePhase] = useState('LAST_32')
   const [animating,   setAnimating]   = useState(false)
+  const [uclPhase,    setUclPhase]    = useState('LAST_16')
+
+  const UCL_KO_STAGE_LABELS: Record<string, string> = {
+    LAST_16:        'Octavos',
+    QUARTER_FINALS: 'Cuartos',
+    SEMI_FINALS:    'Semis',
+    FINAL:          'Final',
+  }
 
   const PHASE_ORDER = ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
   const NEXT_STAGE: Record<string, string> = {
@@ -757,6 +765,14 @@ export default function CalendarioView({
   useEffect(() => {
     if (isChampions && calTab === 'resumen') setCalTab('clasificacion')
   }, [isChampions, calTab])
+
+  useEffect(() => {
+    if (!isChampions) return
+    const first = ['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL'].find(s =>
+      predictions.some(p => p.stage === s)
+    )
+    if (first) setUclPhase(first)
+  }, [isChampions, predictions])
 
   // UCL league table computed from resolved LEAGUE_PHASE predictions
   const uclTable = useMemo(() => {
@@ -1040,7 +1056,178 @@ export default function CalendarioView({
       {calTab === 'eliminatoria' && (
         <div>
 
-          {(() => {
+          {isChampions ? (() => {
+            /* ── UCL: phase list with tie cards ── */
+            const uclKoStages = ['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
+              .filter(s => predictions.some(p => p.stage === s))
+
+            const phasePredict = predictions
+              .filter(p => p.stage === uclPhase)
+              .sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+
+            // Group by knockout_tie_id (or fixture_id as fallback) for 2-leg ties
+            const tieMap: Record<string, Prediction[]> = {}
+            for (const p of phasePredict) {
+              const k = p.knockout_tie_id ?? p.fixture_id ?? p.id
+              if (!tieMap[k]) tieMap[k] = []
+              tieMap[k].push(p)
+            }
+            const ties = Object.values(tieMap).sort((a, b) =>
+              new Date(a[0]?.deadline ?? 0).getTime() - new Date(b[0]?.deadline ?? 0).getTime()
+            )
+
+            return (
+              <>
+                {/* Phase tabs */}
+                <div className="flex gap-1 mb-5 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
+                  {uclKoStages.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setUclPhase(s)}
+                      className="flex-shrink-0 px-4 py-1.5 text-xs font-bold rounded-full border transition-all"
+                      style={{
+                        background:   uclPhase === s ? 'rgba(0,106,51,0.25)' : 'rgba(255,255,255,0.04)',
+                        border:       uclPhase === s ? '1px solid rgba(0,106,51,0.5)' : '1px solid rgba(255,255,255,0.1)',
+                        color:        uclPhase === s ? '#00C46A' : 'rgba(255,255,255,0.45)',
+                      }}
+                    >
+                      {UCL_KO_STAGE_LABELS[s] ?? s}
+                    </button>
+                  ))}
+                </div>
+
+                {ties.length === 0 && (
+                  <p style={{ textAlign: 'center', color: 'rgba(255,255,255,0.30)', fontSize: 13, padding: '32px 0' }}>
+                    Sin partidos registrados para esta fase
+                  </p>
+                )}
+
+                <div className="space-y-3">
+                  {ties.map((legs, ti) => {
+                    const leg1 = legs[0]
+                    const leg2 = legs[1] ?? null
+                    const isFinal = uclPhase === 'FINAL'
+
+                    // Team identification from leg1 perspective
+                    const homeCode  = leg1.home_team_code ?? ''
+                    const awayCode  = leg1.away_team_code ?? ''
+                    const opts1     = Array.isArray(leg1.options) ? (leg1.options as string[]) : []
+                    const homeName  = getTeamNameES(opts1[0] ?? '') || homeCode || 'TBD'
+                    const awayName  = getTeamNameES(opts1[opts1.length - 1] ?? '') || awayCode || 'TBD'
+                    const homeCrest = leg1.home_team_crest ?? null
+                    const awayCrest = leg1.away_team_crest ?? null
+
+                    // Scores
+                    const l1hs = leg1.exact_score_home
+                    const l1as = leg1.exact_score_away
+                    const l2hs = leg2?.exact_score_home ?? null
+                    const l2as = leg2?.exact_score_away ?? null
+
+                    // Aggregate (Team A = home in leg1)
+                    const aggA = (l1hs ?? 0) + (l2as ?? 0)
+                    const aggB = (l1as ?? 0) + (l2hs ?? 0)
+                    const aggKnown = l1hs != null && l1as != null && (!leg2 || (l2hs != null && l2as != null))
+
+                    const isResolved = leg1.status === 'resolved' && (!leg2 || leg2.status === 'resolved')
+
+                    return (
+                      <div key={ti} style={{
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        borderRadius: 12,
+                        overflow: 'hidden',
+                      }}>
+                        {/* Teams row */}
+                        <div className="flex items-center justify-between px-4 py-3">
+                          {/* Home team */}
+                          <div className="flex flex-col items-center gap-1.5" style={{ width: '38%' }}>
+                            {homeCrest
+                              ? <img src={homeCrest} alt={homeCode} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                              : <img src={getFlagUrl(homeCode) ?? undefined} alt={homeCode} style={{ width: 36, height: 24, objectFit: 'cover', borderRadius: 3 }} />
+                            }
+                            <span className="text-center leading-tight" style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{homeName}</span>
+                          </div>
+
+                          {/* Score / VS */}
+                          <div className="flex flex-col items-center" style={{ width: '24%' }}>
+                            {aggKnown ? (
+                              <>
+                                <div className="flex items-center gap-2">
+                                  <span style={{ fontSize: 22, fontWeight: 900, color: aggA > aggB ? '#22c55e' : '#fff' }}>{aggA}</span>
+                                  <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.30)' }}>–</span>
+                                  <span style={{ fontSize: 22, fontWeight: 900, color: aggB > aggA ? '#22c55e' : '#fff' }}>{aggB}</span>
+                                </div>
+                                <span style={{ fontSize: 9, color: 'rgba(255,255,255,0.25)', fontWeight: 700, letterSpacing: '0.08em' }}>AGG</span>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: 13, color: 'rgba(255,255,255,0.30)', fontWeight: 700 }}>VS</span>
+                            )}
+                          </div>
+
+                          {/* Away team */}
+                          <div className="flex flex-col items-center gap-1.5" style={{ width: '38%' }}>
+                            {awayCrest
+                              ? <img src={awayCrest} alt={awayCode} style={{ width: 36, height: 36, objectFit: 'contain' }} />
+                              : <img src={getFlagUrl(awayCode) ?? undefined} alt={awayCode} style={{ width: 36, height: 24, objectFit: 'cover', borderRadius: 3 }} />
+                            }
+                            <span className="text-center leading-tight" style={{ fontSize: 12, fontWeight: 600, color: '#fff' }}>{awayName}</span>
+                          </div>
+                        </div>
+
+                        {/* Legs */}
+                        {!isFinal && (
+                          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+                            {[leg1, leg2].map((leg, li) => {
+                              if (!leg) return null
+                              const legOpts = Array.isArray(leg.options) ? (leg.options as string[]) : []
+                              const lhName  = getTeamNameES(legOpts[0] ?? '') || leg.home_team_code || 'TBD'
+                              const laName  = getTeamNameES(legOpts[legOpts.length - 1] ?? '') || leg.away_team_code || 'TBD'
+                              const hs      = leg.exact_score_home
+                              const as_     = leg.exact_score_away
+                              const ko      = leg.deadline ? new Date(new Date(leg.deadline).getTime() + 10 * 60_000) : null
+                              return (
+                                <div key={li} className="flex items-center justify-between px-4 py-2"
+                                  style={{ borderTop: li > 0 ? '1px solid rgba(255,255,255,0.05)' : undefined, background: 'rgba(255,255,255,0.02)' }}>
+                                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', fontWeight: 700, width: 32, flexShrink: 0 }}>
+                                    {li === 0 ? 'IDA' : 'VUELTA'}
+                                  </span>
+                                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flex: 1, textAlign: 'right', paddingRight: 8 }}>{lhName}</span>
+                                  <div className="flex items-center gap-1 flex-shrink-0" style={{ minWidth: 48, justifyContent: 'center' }}>
+                                    {hs != null && as_ != null
+                                      ? <span style={{ fontSize: 13, fontWeight: 800, color: '#fff' }}>{hs} – {as_}</span>
+                                      : ko
+                                        ? <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)' }}>{pyDateLabel(ko.toISOString())}</span>
+                                        : <span style={{ fontSize: 12, color: 'rgba(255,255,255,0.25)' }}>–</span>
+                                    }
+                                  </div>
+                                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.55)', flex: 1, textAlign: 'left', paddingLeft: 8 }}>{laName}</span>
+                                  {isResolved && leg1.winner_name && (
+                                    <span style={{ fontSize: 9, color: '#22c55e', fontWeight: 700, width: 32, textAlign: 'right', flexShrink: 0 }}>✓</span>
+                                  )}
+                                  {!isResolved && (
+                                    <span style={{ width: 32, flexShrink: 0 }} />
+                                  )}
+                                </div>
+                              )
+                            })}
+                          </div>
+                        )}
+
+                        {/* Winner badge */}
+                        {isResolved && leg1.winner_name && (
+                          <div style={{ borderTop: '1px solid rgba(34,197,94,0.15)', background: 'rgba(34,197,94,0.05)', padding: '6px 16px', textAlign: 'center' }}>
+                            <span style={{ fontSize: 10, color: '#22c55e', fontWeight: 700, letterSpacing: '0.08em' }}>
+                              CLASIFICA: {getTeamNameES(leg1.winner_name)}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </>
+            )
+          })() : (() => {
             const toPred = (p: Prediction): KOMatch => {
               const opts = Array.isArray(p.options) ? (p.options as string[]) : []
               const h = getTeamNameES(opts[0] ?? '')
@@ -1249,6 +1436,8 @@ export default function CalendarioView({
           })()}
         </div>
       )}
+
     </div>
   )
 }
+
