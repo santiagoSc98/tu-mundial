@@ -749,6 +749,39 @@ export default function CalendarioView({
       .sort((a, b) => a.letter.localeCompare(b.letter))
   }, [wcStandings])
 
+  const isChampions = useMemo(
+    () => predictions.some(p => p.stage === 'LEAGUE_PHASE'),
+    [predictions]
+  )
+
+  // UCL league table computed from resolved LEAGUE_PHASE predictions
+  const uclTable = useMemo(() => {
+    if (!isChampions) return []
+    const map: Record<string, { code: string; crest: string | null; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; pts: number }> = {}
+    const ensure = (code: string, crest: string | null) => {
+      if (!map[code]) map[code] = { code, crest, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
+    }
+    for (const p of predictions) {
+      if (p.stage !== 'LEAGUE_PHASE' || p.status !== 'resolved') continue
+      if (p.exact_score_home == null || p.exact_score_away == null) continue
+      const hc = p.home_team_code ?? ''
+      const ac = p.away_team_code ?? ''
+      if (!hc || !ac) continue
+      ensure(hc, p.home_team_crest ?? null)
+      ensure(ac, p.away_team_crest ?? null)
+      const hs = p.exact_score_home
+      const as_ = p.exact_score_away
+      map[hc].played++; map[hc].gf += hs; map[hc].ga += as_
+      map[ac].played++; map[ac].gf += as_; map[ac].ga += hs
+      if (hs > as_)       { map[hc].won++;   map[hc].pts += 3; map[ac].lost++ }
+      else if (hs < as_)  { map[ac].won++;   map[ac].pts += 3; map[hc].lost++ }
+      else                { map[hc].drawn++; map[hc].pts++;    map[ac].drawn++; map[ac].pts++ }
+    }
+    return Object.values(map).sort((a, b) =>
+      b.pts - a.pts || (b.gf - b.ga) - (a.gf - a.ga) || b.gf - a.gf
+    )
+  }, [isChampions, predictions])
+
   const CARD: React.CSSProperties = {
     background: 'var(--mundial-card-bg, rgba(255,255,255,0.04))',
     border: '1px solid var(--mundial-card-border, rgba(255,255,255,0.08))',
@@ -803,35 +836,37 @@ export default function CalendarioView({
           TAB: RESUMEN
       ══════════════════════════════════════════════════════════════════════ */}
       {calTab === 'resumen' && (
-        <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-          {/* Left: groups 2-col grid */}
-          <div className="lg:col-span-3">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              {activeGroups.map(({ letter, table }) => (
-                <CompactGroupTable key={letter} letter={letter} table={table} />
-              ))}
-            </div>
-
-            {/* Legend */}
-            <div className="flex items-center gap-4 mt-3 px-1">
-              <div className="flex items-center gap-1.5">
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>Clasifican a Octavos</span>
+        <div className={`grid grid-cols-1 ${!isChampions ? 'lg:grid-cols-5' : ''} gap-6`}>
+          {/* Left: groups (Mundial only) */}
+          {!isChampions && (
+            <div className="lg:col-span-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {activeGroups.map(({ letter, table }) => (
+                  <CompactGroupTable key={letter} letter={letter} table={table} />
+                ))}
               </div>
-              <div className="flex items-center gap-1.5">
-                <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
-                <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>Posible repechaje</span>
+              <div className="flex items-center gap-4 mt-3 px-1">
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#22c55e' }} />
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>Clasifican a Octavos</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#f59e0b' }} />
+                  <span style={{ fontSize: 10, color: 'rgba(255,255,255,0.35)' }}>Posible repechaje</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Right: countdown + matchday */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className={`${!isChampions ? 'lg:col-span-2' : ''} space-y-4`}>
             {/* Countdown */}
             <div style={{ ...CARD, padding: '20px 16px', textAlign: 'center' }}>
-              <img src="/logo-mundial.png" alt="WC 2026" style={{ width: 44, height: 44, objectFit: 'contain', margin: '0 auto 8px' }} />
+              {!isChampions && (
+                <img src="/logo-mundial.png" alt="WC 2026" style={{ width: 44, height: 44, objectFit: 'contain', margin: '0 auto 8px' }} />
+              )}
               <p className="text-xs font-black tracking-widest mb-4" style={{ color: 'rgba(255,255,255,0.40)' }}>
-                {isStarted ? 'EN CURSO' : 'INICIO DEL MUNDIAL'}
+                {isStarted ? 'EN CURSO' : `INICIO · ${activeTournament?.name?.toUpperCase() ?? 'TORNEO'}`}
               </p>
               {!isStarted ? (
                 <div className="flex justify-center gap-3">
@@ -858,9 +893,11 @@ export default function CalendarioView({
               <p className="mt-3" style={{ fontSize: 13, color: 'rgba(255,255,255,0.50)', fontWeight: 600 }}>
                 {pyDateTimeMed(kickoffTime)} PY
               </p>
-              <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
-                {mxHora} CDT · Ciudad de México
-              </p>
+              {!isChampions && (
+                <p style={{ fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>
+                  {mxHora} CDT · Ciudad de México
+                </p>
+              )}
             </div>
 
             {/* Matchday panel */}
@@ -882,24 +919,110 @@ export default function CalendarioView({
       ══════════════════════════════════════════════════════════════════════ */}
       {calTab === 'clasificacion' && (
         <div>
-          {/* Legend */}
-          <div className="flex items-center gap-4 mb-4 px-1">
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: 3, height: 16, background: '#22c55e', borderRadius: 2 }} />
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Clasificados a Octavos</span>
-            </div>
-            <div className="flex items-center gap-1.5">
-              <div style={{ width: 3, height: 16, background: '#f59e0b', borderRadius: 2 }} />
-              <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Posible repechaje (3°)</span>
-            </div>
-          </div>
+          {isChampions ? (
+            /* ── UCL single-table ── */
+            <div>
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-4 mb-4 px-1">
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 3, height: 16, background: '#22c55e', borderRadius: 2 }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Octavos directos (1–8)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 3, height: 16, background: '#f59e0b', borderRadius: 2 }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Playoffs (9–24)</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 3, height: 16, background: '#6b7280', borderRadius: 2 }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Eliminados (25–36)</span>
+                </div>
+              </div>
 
-          {/* All groups */}
-          <div className="space-y-4">
-            {activeGroups.map(({ letter, table }) => (
-              <FullGroupTable key={letter} letter={letter} table={table} />
-            ))}
-          </div>
+              {uclTable.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '32px 0', color: 'rgba(255,255,255,0.30)', fontSize: 13 }}>
+                  Tabla disponible cuando se resuelvan partidos de Fase de Liga
+                </div>
+              ) : (
+                <div style={{
+                  background: 'rgba(255,255,255,0.03)',
+                  border: '1px solid rgba(255,255,255,0.07)',
+                  borderRadius: 12,
+                  overflow: 'hidden',
+                }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 380 }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
+                          {['#', 'Equipo', 'J', 'G', 'E', 'P', 'GF', 'GC', 'DG', 'PTS'].map(h => (
+                            <th
+                              key={h}
+                              className={`py-2 ${h === 'Equipo' ? 'text-left px-3' : 'text-center px-2'}`}
+                              style={{ fontSize: 10, color: 'rgba(255,255,255,0.30)', fontWeight: 700, letterSpacing: '0.06em' }}
+                            >
+                              {h}
+                            </th>
+                          ))}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {uclTable.map((row, i) => {
+                          const zone = i < 8 ? '#22c55e' : i < 24 ? '#f59e0b' : '#6b7280'
+                          const dg = row.gf - row.ga
+                          return (
+                            <tr
+                              key={row.code}
+                              style={{
+                                borderTop: '1px solid rgba(255,255,255,0.05)',
+                                borderLeft: `3px solid ${zone}`,
+                                background: i < 8 ? 'rgba(34,197,94,0.03)' : 'transparent',
+                              }}
+                            >
+                              <td className="py-2.5 text-center px-2" style={{ fontSize: 12, color: zone, fontWeight: 700 }}>{i + 1}</td>
+                              <td className="py-2.5 px-3">
+                                <div className="flex items-center gap-2">
+                                  {row.crest
+                                    ? <img src={row.crest} alt={row.code} style={{ width: 22, height: 22, objectFit: 'contain' }} />
+                                    : <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)', fontWeight: 700 }}>{row.code}</span>
+                                  }
+                                  <span style={{ fontSize: 13, color: '#fff', fontWeight: 500 }}>{row.code}</span>
+                                </div>
+                              </td>
+                              {[row.played, row.won, row.drawn, row.lost, row.gf, row.ga].map((v, j) => (
+                                <td key={j} className="py-2.5 text-center px-2" style={{ fontSize: 12, color: 'rgba(255,255,255,0.55)' }}>{v}</td>
+                              ))}
+                              <td className="py-2.5 text-center px-2" style={{ fontSize: 12, color: dg > 0 ? '#22c55e' : dg < 0 ? '#f87171' : 'rgba(255,255,255,0.55)' }}>
+                                {dg > 0 ? `+${dg}` : dg}
+                              </td>
+                              <td className="py-2.5 text-center px-2" style={{ fontSize: 14, fontWeight: 800, color: i < 8 ? '#22c55e' : '#fff' }}>{row.pts}</td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Mundial group tables ── */
+            <div>
+              <div className="flex items-center gap-4 mb-4 px-1">
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 3, height: 16, background: '#22c55e', borderRadius: 2 }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Clasificados a Octavos</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <div style={{ width: 3, height: 16, background: '#f59e0b', borderRadius: 2 }} />
+                  <span style={{ fontSize: 11, color: 'rgba(255,255,255,0.40)' }}>Posible repechaje (3°)</span>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {activeGroups.map(({ letter, table }) => (
+                  <FullGroupTable key={letter} letter={letter} table={table} />
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
