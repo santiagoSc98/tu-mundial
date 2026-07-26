@@ -1099,7 +1099,9 @@ export default function CalendarioView({
               }
             }
 
-            const byStage: Record<string, KOMatch[]> = {}
+            const byStage: Record<string, KOMatch[]> = {
+              LAST_32: [], LAST_16: [], QUARTER_FINALS: [], SEMI_FINALS: [], FINAL: [], THIRD_PLACE: [],
+            }
             for (const legs of Object.values(tieMap)) {
               const s = legs[0].stage ?? ''
               if (!byStage[s]) byStage[s] = []
