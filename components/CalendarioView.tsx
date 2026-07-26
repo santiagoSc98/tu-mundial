@@ -1059,15 +1059,25 @@ export default function CalendarioView({
         <div>
 
           {(() => {
-            // Group multi-leg UCL ties: prefer knockout_tie_id, fall back to sorted team pair
             const TWO_LEG = new Set(['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS'])
+
+            // Group predictions into ties.
+            // UCL two-leg: group by knockout_tie_id first; fall back to sorted team pair.
+            // Include legs even if one has null team codes — toPredTie picks the best reference.
             const tieMap: Record<string, Prediction[]> = {}
             for (const p of predictions) {
-              if (!p.home_team_code || !p.away_team_code) continue
+              const stage = p.stage ?? ''
+              const isUCLTwoLeg = isChampions && TWO_LEG.has(stage)
+              if (!isUCLTwoLeg && (!p.home_team_code || !p.away_team_code)) continue
               let key: string
-              if (isChampions && TWO_LEG.has(p.stage ?? '')) {
-                key = p.knockout_tie_id
-                  ?? ([p.home_team_code, p.away_team_code].sort().join('_') + '_' + (p.stage ?? ''))
+              if (isUCLTwoLeg) {
+                if (p.knockout_tie_id) {
+                  key = p.knockout_tie_id
+                } else if (p.home_team_code && p.away_team_code) {
+                  key = [p.home_team_code, p.away_team_code].sort().join('_') + '_' + stage
+                } else {
+                  continue // can't group without either field
+                }
               } else {
                 key = p.id
               }
@@ -1077,29 +1087,43 @@ export default function CalendarioView({
 
             const toPredTie = (legs: Prediction[]): KOMatch => {
               const sorted = [...legs].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
+              // Prefer the leg that has real team codes for display
+              const ref  = sorted.find(l => l.home_team_code && l.away_team_code) ?? sorted[0]
               const leg1 = sorted[0]; const leg2 = sorted[1] ?? null
-              const opts = Array.isArray(leg1.options) ? (leg1.options as string[]) : []
-              const h = getTeamNameES(opts[0] ?? ''); const a = getTeamNameES(opts[opts.length - 1] ?? '')
-              // Aggregate: Team A (leg1 home) = leg1.home + leg2.away; Team B (leg1 away) = leg1.away + leg2.home
+              const opts = Array.isArray(ref.options) ? (ref.options as string[]) : []
+              const h = getTeamNameES(opts[0] ?? ''); const aa = getTeamNameES(opts[opts.length - 1] ?? '')
+              // Aggregate: homeScore = ref-home team total, awayScore = ref-away team total
+              // leg1 home = Team A; leg2 home = Team B (swapped)
+              // If ref === leg1: aggH = l1h + l2a, aggA = l1a + l2h
+              // If ref === leg2: aggH = l2h + l1a, aggA = l2a + l1h (still correct by same formula if we just swap)
               const l1h = leg1.exact_score_home; const l1a = leg1.exact_score_away
               const l2h = leg2?.exact_score_home ?? null; const l2a = leg2?.exact_score_away ?? null
-              const aggH = leg2 ? (l1h != null && l2a != null ? l1h + l2a : null) : (l1h ?? null)
-              const aggA = leg2 ? (l1a != null && l2h != null ? l1a + l2h : null) : (l1a ?? null)
+              let aggH: number | null, aggA: number | null
+              if (!leg2) {
+                aggH = l1h ?? null; aggA = l1a ?? null
+              } else if (ref === leg1) {
+                aggH = (l1h != null && l2a != null) ? l1h + l2a : null
+                aggA = (l1a != null && l2h != null) ? l1a + l2h : null
+              } else {
+                // ref is leg2: homeName = leg2 home = Team B in leg1 perspective
+                aggH = (l2h != null && l1a != null) ? l2h + l1a : null
+                aggA = (l2a != null && l1h != null) ? l2a + l1h : null
+              }
               const bothDone = leg1.status === 'resolved' && (!leg2 || leg2.status === 'resolved')
               return {
-                id:         leg1.id,
-                fixtureId:  leg1.fixture_id ?? null,
+                id:         ref.id,
+                fixtureId:  ref.fixture_id ?? null,
                 homeName:   (h === 'Por definir' || !h) ? 'TBD' : h,
-                awayName:   (a === 'Por definir' || !a) ? 'TBD' : a,
-                homeCode:   leg1.home_team_code,
-                awayCode:   leg1.away_team_code,
-                homeCrest:  leg1.home_team_crest ?? null,
-                awayCrest:  leg1.away_team_crest ?? null,
+                awayName:   (aa === 'Por definir' || !aa) ? 'TBD' : aa,
+                homeCode:   ref.home_team_code,
+                awayCode:   ref.away_team_code,
+                homeCrest:  ref.home_team_crest ?? null,
+                awayCrest:  ref.away_team_crest ?? null,
                 homeScore:  aggH,
                 awayScore:  aggA,
-                status:     bothDone ? 'resolved' : leg1.status,
-                deadline:   leg1.deadline ?? null,
-                winnerName: leg1.winner_name ?? null,
+                status:     bothDone ? 'resolved' : ref.status,
+                deadline:   ref.deadline ?? null,
+                winnerName: ref.winner_name ?? null,
               }
             }
 
@@ -1114,24 +1138,63 @@ export default function CalendarioView({
             for (const s of Object.keys(byStage)) {
               byStage[s].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
             }
+
+            // Helper: winner code of a resolved tie
+            const winnerCode = (m: KOMatch): string | null => {
+              if (m.homeScore != null && m.awayScore != null && m.homeScore !== m.awayScore)
+                return m.homeScore > m.awayScore ? m.homeCode : m.awayCode
+              if (m.winnerName) {
+                if (m.homeName === m.winnerName) return m.homeCode
+                if (m.awayName === m.winnerName) return m.awayCode
+              }
+              return null
+            }
+
+            // For Champions: align next round by winner of each pair in previous round
+            const alignByWinner = (prevSide: KOMatch[], allNext: KOMatch[], used: Set<string>): KOMatch[] => {
+              const result: KOMatch[] = []
+              for (let i = 0; i < prevSide.length; i += 2) {
+                const w1 = winnerCode(prevSide[i])
+                const w2 = i + 1 < prevSide.length ? winnerCode(prevSide[i + 1]) : null
+                const found = allNext.find(m =>
+                  !used.has(m.id) && (
+                    (w1 && (m.homeCode === w1 || m.awayCode === w1)) ||
+                    (w2 && (m.homeCode === w2 || m.awayCode === w2))
+                  )
+                ) ?? allNext.find(m => !used.has(m.id))
+                if (found) { result.push(found); used.add(found.id) }
+              }
+              return result
+            }
+
             const BRACKET_LEFT_IDS  = ['537415','537416','537417','537418','537419','537420','537421','537422']
             const BRACKET_RIGHT_IDS = ['537423','537424','537425','537426','537427','537428','537429','537430']
             const last32Left  = BRACKET_LEFT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last32Right = BRACKET_RIGHT_IDS.map(id => byStage.LAST_32.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
-            // Mundial: fixture IDs hardcoded; Champions: split by date order
             const BRACKET_L16_LEFT_IDS  = ['537375','537376','537379','537380']
             const BRACKET_L16_RIGHT_IDS = ['537377','537378','537381','537382']
-            const l16all    = byStage.LAST_16
+            const l16all = byStage.LAST_16
             const last16Left  = isChampions
               ? l16all.slice(0, Math.ceil(l16all.length / 2))
               : BRACKET_L16_LEFT_IDS.map(id => l16all.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
             const last16Right = isChampions
               ? l16all.slice(Math.ceil(l16all.length / 2))
               : BRACKET_L16_RIGHT_IDS.map(id => l16all.find(m => m.fixtureId === id)).filter(Boolean) as KOMatch[]
-            const qfLeft      = byStage.QUARTER_FINALS.slice(0, 2)
-            const qfRight     = byStage.QUARTER_FINALS.slice(2, 4)
-            const sfLeft      = byStage.SEMI_FINALS.slice(0, 1)
-            const sfRight     = byStage.SEMI_FINALS.slice(1, 2)
+
+            let qfLeft: KOMatch[], qfRight: KOMatch[], sfLeft: KOMatch[], sfRight: KOMatch[]
+            if (isChampions) {
+              const usedQF = new Set<string>()
+              qfLeft  = alignByWinner(last16Left,  byStage.QUARTER_FINALS, usedQF)
+              qfRight = alignByWinner(last16Right, byStage.QUARTER_FINALS, usedQF)
+              const usedSF = new Set<string>()
+              sfLeft  = alignByWinner(qfLeft,  byStage.SEMI_FINALS, usedSF)
+              sfRight = alignByWinner(qfRight, byStage.SEMI_FINALS, usedSF)
+            } else {
+              qfLeft  = byStage.QUARTER_FINALS.slice(0, 2)
+              qfRight = byStage.QUARTER_FINALS.slice(2, 4)
+              sfLeft  = byStage.SEMI_FINALS.slice(0, 1)
+              sfRight = byStage.SEMI_FINALS.slice(1, 2)
+            }
             const finalMatch  = byStage.FINAL[0] ?? null
             const thirdPlace = byStage.THIRD_PLACE[0] ?? null
 
