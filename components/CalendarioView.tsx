@@ -1059,14 +1059,18 @@ export default function CalendarioView({
         <div>
 
           {(() => {
-            // Group multi-leg UCL ties by knockout_tie_id; single-leg stays as 1:1
+            // Group multi-leg UCL ties: prefer knockout_tie_id, fall back to sorted team pair
             const TWO_LEG = new Set(['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS'])
             const tieMap: Record<string, Prediction[]> = {}
             for (const p of predictions) {
               if (!p.home_team_code || !p.away_team_code) continue
-              const key = (isChampions && TWO_LEG.has(p.stage ?? '') && p.knockout_tie_id)
-                ? p.knockout_tie_id
-                : p.id
+              let key: string
+              if (isChampions && TWO_LEG.has(p.stage ?? '')) {
+                key = p.knockout_tie_id
+                  ?? ([p.home_team_code, p.away_team_code].sort().join('_') + '_' + (p.stage ?? ''))
+              } else {
+                key = p.id
+              }
               if (!tieMap[key]) tieMap[key] = []
               tieMap[key].push(p)
             }
