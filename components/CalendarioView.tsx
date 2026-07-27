@@ -622,6 +622,14 @@ export default function CalendarioView({
   const contentRef   = useRef<HTMLDivElement>(null)
   const [mobilePhase, setMobilePhase] = useState('LAST_32')
   const [animating,   setAnimating]   = useState(false)
+  const [knockoutTies, setKnockoutTies] = useState<{
+    id: string
+    stage: string | null
+    leg1_match_id: string | null
+    leg2_match_id: string | null
+    aggregate_home: number | null
+    aggregate_away: number | null
+  }[]>([])
 
   const NEXT_STAGE: Record<string, string> = {
     LAST_32: 'LAST_16', LAST_16: 'QUARTER_FINALS', QUARTER_FINALS: 'SEMI_FINALS', SEMI_FINALS: 'FINAL',
@@ -763,6 +771,19 @@ export default function CalendarioView({
     [predictions]
   )
 
+  const uclTournamentId = useMemo(
+    () => predictions.find(p => p.stage === 'LEAGUE_PHASE')?.tournament_id ?? null,
+    [predictions]
+  )
+
+  const predsByFixtureId = useMemo(() => {
+    const map: Record<string, Prediction> = {}
+    for (const p of predictions) {
+      if (p.fixture_id) map[p.fixture_id] = p
+    }
+    return map
+  }, [predictions])
+
   const PHASE_ORDER = isChampions
     ? ['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
     : ['LAST_32', 'LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS', 'FINAL']
@@ -775,6 +796,20 @@ export default function CalendarioView({
     if (isChampions) setMobilePhase('LAST_16')
     else setMobilePhase('LAST_32')
   }, [isChampions])
+
+  useEffect(() => {
+    if (!isChampions || !uclTournamentId) return
+    const load = async () => {
+      const { createClient } = await import('@/lib/supabase/client')
+      const supabase = createClient()
+      const { data } = await supabase
+        .from('knockout_ties')
+        .select('id, stage, leg1_match_id, leg2_match_id, aggregate_home, aggregate_away')
+        .eq('tournament_id', uclTournamentId)
+      if (data) setKnockoutTies(data as typeof knockoutTies)
+    }
+    load()
+  }, [isChampions, uclTournamentId])
 
   // UCL league table computed from resolved LEAGUE_PHASE predictions
   const uclTable = useMemo(() => {
@@ -1059,57 +1094,40 @@ export default function CalendarioView({
         <div>
 
           {(() => {
-            const TWO_LEG = new Set(['LAST_16', 'QUARTER_FINALS', 'SEMI_FINALS'])
-
-            // Group predictions into ties.
-            // UCL two-leg: group by knockout_tie_id first; fall back to sorted team pair.
-            // Include legs even if one has null team codes — toPredTie picks the best reference.
-            const tieMap: Record<string, Prediction[]> = {}
-            for (const p of predictions) {
-              const stage = p.stage ?? ''
-              const isUCLTwoLeg = isChampions && TWO_LEG.has(stage)
-              if (!isUCLTwoLeg && (!p.home_team_code || !p.away_team_code)) continue
-              let key: string
-              if (isUCLTwoLeg) {
-                if (p.knockout_tie_id) {
-                  key = p.knockout_tie_id
-                } else if (p.home_team_code && p.away_team_code) {
-                  key = [p.home_team_code, p.away_team_code].sort().join('_') + '_' + stage
-                } else {
-                  continue // can't group without either field
-                }
-              } else {
-                key = p.id
-              }
-              if (!tieMap[key]) tieMap[key] = []
-              tieMap[key].push(p)
-            }
-
-            const toPredTie = (legs: Prediction[]): KOMatch => {
-              const sorted = [...legs].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
-              // Prefer the leg that has real team codes for display
-              const ref  = sorted.find(l => l.home_team_code && l.away_team_code) ?? sorted[0]
-              const leg1 = sorted[0]; const leg2 = sorted[1] ?? null
+            // Convert a pair of legs (or single) into a KOMatch
+            const toPredTie = (leg1: Prediction | null, leg2: Prediction | null, aggHome: number | null, aggAway: number | null, _winnerTeamId: number | null): KOMatch => {
+              const ref = (leg1?.home_team_code ? leg1 : leg2) ?? leg1 ?? leg2
+              if (!ref) return { id: '', fixtureId: null, homeName: 'TBD', awayName: 'TBD', homeCode: null, awayCode: null, homeCrest: null, awayCrest: null, homeScore: null, awayScore: null, status: null, deadline: null, winnerName: null }
               const opts = Array.isArray(ref.options) ? (ref.options as string[]) : []
-              const h = getTeamNameES(opts[0] ?? ''); const aa = getTeamNameES(opts[opts.length - 1] ?? '')
-              // Aggregate: homeScore = ref-home team total, awayScore = ref-away team total
-              // leg1 home = Team A; leg2 home = Team B (swapped)
-              // If ref === leg1: aggH = l1h + l2a, aggA = l1a + l2h
-              // If ref === leg2: aggH = l2h + l1a, aggA = l2a + l1h (still correct by same formula if we just swap)
-              const l1h = leg1.exact_score_home; const l1a = leg1.exact_score_away
-              const l2h = leg2?.exact_score_home ?? null; const l2a = leg2?.exact_score_away ?? null
-              let aggH: number | null, aggA: number | null
-              if (!leg2) {
-                aggH = l1h ?? null; aggA = l1a ?? null
-              } else if (ref === leg1) {
-                aggH = (l1h != null && l2a != null) ? l1h + l2a : null
-                aggA = (l1a != null && l2h != null) ? l1a + l2h : null
-              } else {
-                // ref is leg2: homeName = leg2 home = Team B in leg1 perspective
-                aggH = (l2h != null && l1a != null) ? l2h + l1a : null
-                aggA = (l2a != null && l1h != null) ? l2a + l1h : null
+              const h  = getTeamNameES(opts[0] ?? '')
+              const aa = getTeamNameES(opts[opts.length - 1] ?? '')
+              // Prefer server-computed aggregate if available
+              let homeScore = aggHome
+              let awayScore = aggAway
+              if (homeScore == null || awayScore == null) {
+                // fallback: compute from leg scores
+                // leg1 is first match (team A at home), leg2 is return leg (team B at home)
+                // ref-home team goals = leg1.home + leg2.away; ref-away team goals = leg1.away + leg2.home
+                if (leg1 && leg2) {
+                  if (ref === leg1) {
+                    homeScore = (leg1.exact_score_home != null && leg2.exact_score_away != null) ? leg1.exact_score_home + leg2.exact_score_away : null
+                    awayScore = (leg1.exact_score_away != null && leg2.exact_score_home != null) ? leg1.exact_score_away + leg2.exact_score_home : null
+                  } else {
+                    homeScore = (leg2.exact_score_home != null && leg1.exact_score_away != null) ? leg2.exact_score_home + leg1.exact_score_away : null
+                    awayScore = (leg2.exact_score_away != null && leg1.exact_score_home != null) ? leg2.exact_score_away + leg1.exact_score_home : null
+                  }
+                } else {
+                  homeScore = (ref.exact_score_home ?? null)
+                  awayScore = (ref.exact_score_away ?? null)
+                }
               }
-              const bothDone = leg1.status === 'resolved' && (!leg2 || leg2.status === 'resolved')
+              const bothDone = (!leg1 || leg1.status === 'resolved') && (!leg2 || leg2.status === 'resolved')
+              // Determine winner name from winnerTeamId or scores
+              let winnerName: string | null = null
+              if (homeScore != null && awayScore != null && homeScore !== awayScore) {
+                winnerName = homeScore > awayScore ? (h || null) : (aa || null)
+              }
+              winnerName = winnerName ?? ref.winner_name ?? null
               return {
                 id:         ref.id,
                 fixtureId:  ref.fixture_id ?? null,
@@ -1119,22 +1137,38 @@ export default function CalendarioView({
                 awayCode:   ref.away_team_code,
                 homeCrest:  ref.home_team_crest ?? null,
                 awayCrest:  ref.away_team_crest ?? null,
-                homeScore:  aggH,
-                awayScore:  aggA,
-                status:     bothDone ? 'resolved' : ref.status,
+                homeScore,
+                awayScore,
+                status:     bothDone ? 'resolved' : (ref.status ?? null),
                 deadline:   ref.deadline ?? null,
-                winnerName: ref.winner_name ?? null,
+                winnerName,
               }
             }
 
             const byStage: Record<string, KOMatch[]> = {
               LAST_32: [], LAST_16: [], QUARTER_FINALS: [], SEMI_FINALS: [], FINAL: [], THIRD_PLACE: [],
             }
-            for (const legs of Object.values(tieMap)) {
-              const s = legs[0].stage ?? ''
-              if (!byStage[s]) byStage[s] = []
-              byStage[s].push(toPredTie(legs))
+
+            if (isChampions && knockoutTies.length > 0) {
+              // Use knockoutTies to reliably pair legs
+              for (const tie of knockoutTies) {
+                const stage = tie.stage ?? ''
+                if (!byStage[stage]) byStage[stage] = []
+                const leg1 = tie.leg1_match_id ? (predsByFixtureId[tie.leg1_match_id] ?? null) : null
+                const leg2 = tie.leg2_match_id ? (predsByFixtureId[tie.leg2_match_id] ?? null) : null
+                if (!leg1 && !leg2) continue
+                byStage[stage].push(toPredTie(leg1, leg2, tie.aggregate_home, tie.aggregate_away, null))
+              }
+            } else {
+              // Mundial (or Champions before ties load): group single-leg predictions
+              for (const p of predictions) {
+                if (!p.home_team_code || !p.away_team_code) continue
+                const stage = p.stage ?? ''
+                if (!byStage[stage]) byStage[stage] = []
+                byStage[stage].push(toPredTie(p, null, null, null, null))
+              }
             }
+
             for (const s of Object.keys(byStage)) {
               byStage[s].sort((a, b) => new Date(a.deadline ?? 0).getTime() - new Date(b.deadline ?? 0).getTime())
             }
