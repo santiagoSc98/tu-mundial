@@ -779,16 +779,30 @@ export default function CalendarioView({
   // UCL league table computed from resolved LEAGUE_PHASE predictions
   const uclTable = useMemo(() => {
     if (!isChampions) return []
+    // Deduplicate by team pair: UCL league phase each pair plays only once.
+    // If the same pair appears twice (data mix from two seasons), keep only one.
+    const seenPairs = new Set<string>()
+    const deduped: typeof predictions = []
+    for (const p of predictions) {
+      if (p.stage !== 'LEAGUE_PHASE') continue
+      const hc = p.home_team_code ?? ''
+      const ac = p.away_team_code ?? ''
+      if (!hc || !ac) continue
+      const pairKey = [hc, ac].sort().join('|')
+      if (seenPairs.has(pairKey)) continue
+      seenPairs.add(pairKey)
+      deduped.push(p)
+    }
+
     const map: Record<string, { code: string; name: string; crest: string | null; played: number; won: number; drawn: number; lost: number; gf: number; ga: number; pts: number }> = {}
     const ensure = (code: string, name: string, crest: string | null) => {
       if (!map[code]) map[code] = { code, name, crest, played: 0, won: 0, drawn: 0, lost: 0, gf: 0, ga: 0, pts: 0 }
     }
-    for (const p of predictions) {
-      if (p.stage !== 'LEAGUE_PHASE' || p.status !== 'resolved') continue
+    for (const p of deduped) {
+      if (p.status !== 'resolved') continue
       if (p.exact_score_home == null || p.exact_score_away == null) continue
       const hc = p.home_team_code ?? ''
       const ac = p.away_team_code ?? ''
-      if (!hc || !ac) continue
       const opts = Array.isArray(p.options) ? (p.options as string[]) : []
       const hn = getTeamNameES(opts[0] ?? '') || hc
       const an = getTeamNameES(opts[opts.length - 1] ?? '') || ac
